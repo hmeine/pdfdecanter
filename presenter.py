@@ -53,6 +53,7 @@ def addSlide(slide):
     rect = QtCore.QRect(QtCore.QPoint(0, 0), slide.size())
     result = QtGui.QGraphicsRectItem(QtCore.QRectF(rect))
     result.setBrush(QtCore.Qt.white)
+    result.setPen(QtGui.QPen(QtCore.Qt.NoPen))
     g._scene.addItem(result)
 
     for r, patch in slide._frames[0]:
