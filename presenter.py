@@ -1,5 +1,5 @@
 from PyQt4 import QtCore, QtGui
-import qimage2ndarray, numpy
+import numpy
 import pdftoppm_renderer, slide
 
 __version__ = "0.1"
@@ -19,6 +19,8 @@ class PDFPresenter(QtGui.QGraphicsView):
     def __init__(self):
         QtGui.QGraphicsView.__init__(self)
         self.resize(w, h)
+
+        self.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.SmoothPixmapTransform)
 
         self.setFrameStyle(QtGui.QFrame.NoFrame)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
@@ -49,23 +51,6 @@ def start():
     return result
 
 
-def addSlide(slide):
-    rect = QtCore.QRect(QtCore.QPoint(0, 0), slide.size())
-    result = QtGui.QGraphicsRectItem(QtCore.QRectF(rect))
-    result.setBrush(QtCore.Qt.white)
-    result.setPen(QtGui.QPen(QtCore.Qt.NoPen))
-    g._scene.addItem(result)
-
-    for pos, patch in slide._frames[0]:
-        pixmap = QtGui.QPixmap.fromImage(patch)
-        pmItem = QtGui.QGraphicsPixmapItem(result)
-        pmItem.setPos(QtCore.QPointF(pos))
-        pmItem.setPixmap(pixmap)
-        pmItem.setTransformationMode(QtCore.Qt.SmoothTransformation)
-
-    return result
-
-
 if __name__ == "__main__":
     import sys
 
@@ -83,12 +68,13 @@ if __name__ == "__main__":
         pdfFilename = '../testtalks/defense.pdf'
         slides = list(pdftoppm_renderer.renderAllPages(pdfFilename, (w, h)))
 
+    if not 'comp' in globals():
         comp = slide.stack_frames(slides)
         pixelCount = sum(s.pixelCount() for s in comp)
         rawCount = len(slides) * numpy.prod(slides[0].shape[:2])
         print "%d pixels out of %d retained. (%.1f%%)" % (pixelCount, rawCount, 100.0 * pixelCount / rawCount)
     
-    pms = [addSlide(s) for s in comp]
+    renderers = [slide.SlideRenderer(s) for s in comp]
 
     cols = 5
     rows = (len(comp) + cols - 1) / cols
@@ -99,7 +85,9 @@ if __name__ == "__main__":
                           rows * (h + marginY) - marginY)
     g._scene.setBackgroundBrush(QtCore.Qt.black)
 
-    for i, pm in enumerate(pms):
+    for i, renderer in enumerate(renderers):
+        pm = renderer.showFrame(0)
+        g._scene.addItem(pm)
         pm.setPos((w + marginX) * (i % cols), (h + marginY) * (i / cols))
 
     # overview_factor = float(w) / g._scene.sceneRect().width()

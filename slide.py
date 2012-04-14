@@ -30,6 +30,55 @@ class Slide(object):
         return result
 
 
+class SlideRenderer(object):
+	def __init__(self, slide):
+		self._slide = slide
+		self._items = {}
+		self._currentFrame = None
+
+	def _slideItem(self):
+		result = self._items.get('bg', None)
+		
+		if result is None:
+			rect = QtCore.QRect(QtCore.QPoint(0, 0), self._slide.size())
+			result = QtGui.QGraphicsRectItem(QtCore.QRectF(rect))
+			result.setBrush(QtCore.Qt.white)
+			result.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+			self._items['bg'] = result
+
+		return result
+
+	def _frameItems(self, frameIndex):
+		result = self._items.get(frameIndex, None)
+		
+		if result is None:
+			result = []
+			
+			for pos, patch in self._slide._frames[frameIndex]:
+				pixmap = QtGui.QPixmap.fromImage(patch)
+				pmItem = QtGui.QGraphicsPixmapItem(self._slideItem())
+				pmItem.setPos(QtCore.QPointF(pos))
+				pmItem.setPixmap(pixmap)
+				pmItem.setTransformationMode(QtCore.Qt.SmoothTransformation)
+				result.append(pmItem)
+
+			self._items[frameIndex] = result
+
+		return result
+
+	def showFrame(self, frameIndex = 0):
+		result = self._slideItem()
+
+		for item in result.childItems():
+			item.setVisible(False)
+
+		for i in range(0, frameIndex + 1):
+			for item in self._frameItems(i):
+				item.setVisible(True)
+
+		return result
+
+
 def changed_rects(a, b):
     changed = (b - a).any(-1)
     changed_row = changed.any(-1)
