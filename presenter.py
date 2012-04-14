@@ -53,16 +53,14 @@ def addSlide(slide):
     rect = QtCore.QRect(QtCore.QPoint(0, 0), slide.size())
     result = QtGui.QGraphicsRectItem(QtCore.QRectF(rect))
     result.setBrush(QtCore.Qt.white)
-    pms = []
-    pmis = []
+    g._scene.addItem(result)
+
     for r, patch in slide._frames[0]:
         pixmap = QtGui.QPixmap.fromImage(patch)
-        pms.append(pms)
         pmItem = QtGui.QGraphicsPixmapItem(result)
         pmItem.setPos(QtCore.QPointF(r.topLeft()))
-        pmis.append(pmItem)
+        pmItem.setPixmap(pixmap)
 
-    g._scene.addItem(result)
     return result
 
 
