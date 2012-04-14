@@ -26,7 +26,7 @@ class Slide(object):
         result = 0
         for frame in self._frames:
             for r, data in frame:
-                result += r.area()
+                result += r.width() * r.height()
         return result
 
 def changed_rects(a, b):

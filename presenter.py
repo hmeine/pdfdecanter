@@ -1,5 +1,5 @@
 from PyQt4 import QtCore, QtGui
-import qimage2ndarray
+import qimage2ndarray, numpy
 import pdftoppm_renderer, slide
 
 __version__ = "0.1"
@@ -84,7 +84,9 @@ if __name__ == "__main__":
         slides = list(pdftoppm_renderer.renderAllPages(pdfFilename, (w, h)))
 
         comp = slide.stack_frames(slides)
-        print sum(s.pixelCount() for s in comp)
+        pixelCount = sum(s.pixelCount() for s in comp)
+        rawCount = len(slides) * numpy.prod(slides[0].shape[:2])
+        print "%d pixels out of %d retained. (%.1f%%)" % (pixelCount, rawCount, 100.0 * pixelCount / rawCount)
     
     pms = [addSlide(s) for s in comp]
 
