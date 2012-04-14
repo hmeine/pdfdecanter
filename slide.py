@@ -1,6 +1,6 @@
 import numpy
 import qimage2ndarray
-from PyQt4 import QtCore
+from PyQt4 import QtCore, QtGui
 
 class Slide(object):
     def __init__(self, size):
@@ -10,24 +10,25 @@ class Slide(object):
     def size(self):
         return self._size
 
-    def __nonzero__(self):
-        return bool(self._frames)
+    def __len__(self):
+        return len(self._frames)
 
     def add_frame(self, frame, rects):
         patches = []
         for r in rects:
             x1, y1 = r.x(), r.y()
             x2, y2 = r.right() + 1, r.bottom() + 1
-            patches.append(qimage2ndarray.array2qimage(frame[y1:y2,x1:x2]))
+            patches.append((r.topLeft(), qimage2ndarray.array2qimage(frame[y1:y2,x1:x2])))
 
-        self._frames.append(zip(rects, patches))
+        self._frames.append(patches)
 
     def pixelCount(self):
         result = 0
         for frame in self._frames:
-            for r, data in frame:
-                result += r.width() * r.height()
+            for pos, patch in frame:
+                result += patch.width() * patch.height()
         return result
+
 
 def changed_rects(a, b):
     changed = (b - a).any(-1)
@@ -46,6 +47,7 @@ def changed_rects(a, b):
         x1, x2 = changed_columns[0], changed_columns[-1] + 1
         result.append(QtCore.QRect(x1, y1, x2-x1, y2-y1))
     return result
+
 
 def stack_frames(raw_frames):
     frame_size = QtCore.QSize(raw_frames[0].shape[1], raw_frames[0].shape[0])

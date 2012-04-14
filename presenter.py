@@ -56,11 +56,12 @@ def addSlide(slide):
     result.setPen(QtGui.QPen(QtCore.Qt.NoPen))
     g._scene.addItem(result)
 
-    for r, patch in slide._frames[0]:
+    for pos, patch in slide._frames[0]:
         pixmap = QtGui.QPixmap.fromImage(patch)
         pmItem = QtGui.QGraphicsPixmapItem(result)
-        pmItem.setPos(QtCore.QPointF(r.topLeft()))
+        pmItem.setPos(QtCore.QPointF(pos))
         pmItem.setPixmap(pixmap)
+        pmItem.setTransformationMode(QtCore.Qt.SmoothTransformation)
 
     return result
 
