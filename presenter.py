@@ -27,12 +27,57 @@ class PDFPresenter(QtGui.QGraphicsView):
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
 
         self._scene = QtGui.QGraphicsScene(0, 0, w, h)
+        self._scene.setBackgroundBrush(QtCore.Qt.black)
         self.setScene(self._scene)
+
+        self._renderers = None
 
     # def resizeEvent(self, e):
     #     self.fitInView(0, 0, w, h, QtCore.Qt.KeepAspectRatio)
     #     return QtGui.QGraphicsView.resizeEvent(self, e)
 
+    def setSlides(self, slides):
+        self._slides = slides
+        assert not self._renderers, "FIXME: delete old renderers / graphisc items"
+        self._renderers = [slide.SlideRenderer(s) for s in slides]
+        self._setupGrid()
+
+        self._frameSlide = []
+        for i, s in enumerate(slides):
+            self._frameSlide.extend([(i, j) for j in range(len(s))])
+
+    def _setupGrid(self):
+        cols = 5
+        rows = (len(slides) + cols - 1) / cols
+        marginX = 20
+        marginY = 20
+        self._scene.setSceneRect(0, 0,
+            cols * (w + marginX) - marginX,
+            rows * (h + marginY) - marginY)
+
+        for i, renderer in enumerate(self._renderers):
+            pm = renderer.slideItem()
+            self._scene.addItem(pm)
+            print pm
+            pm.setPos((w + marginX) * (i % cols), (h + marginY) * (i / cols))
+
+    def showOverview(self):
+        self._setupGrid()
+        overview_factor = float(self.width()) / self._scene.sceneRect().width()
+        self.scale(overview_factor, overview_factor)
+
+        # cursor = self._scene.addRect(renderers[11].slideItem().sceneBoundingRect())
+        # cursor.setPen(QtGui.QPen(QtCore.Qt.yellow, 25))
+        # cursor.setBrush(QtGui.QBrush(QtGui.QColor(255, 255, 0, 100)))
+
+    def gotoFrame(self, frameIndex):
+        slideIndex, subFrame = self._frameSlide[frameIndex]
+        slide = self._slides[slideIndex]
+        renderer = self._renderers[slideIndex]
+        slidePos = renderer.slideItem().pos()
+        self.horizontalScrollBar().setValue(slidePos.x())
+        self.verticalScrollBar().setValue(slidePos.y())
+        renderer.showFrame(subFrame)
 
 
 def start():
@@ -64,34 +109,18 @@ if __name__ == "__main__":
     op = OptionParser(usage = "%prog [options] <filename1> <filename2>")
     options, args = op.parse_args()
 
-    if not 'slides' in globals():
+    if not 'raw_frames' in globals():
         pdfFilename = '../testtalks/defense.pdf'
-        slides = list(pdftoppm_renderer.renderAllPages(pdfFilename, (w, h)))
+        #        pdfFilename = '../testtalks/infiltrate12-thestackisback.pdf'
+        raw_frames = list(pdftoppm_renderer.renderAllPages(pdfFilename, (w, h)))
 
-    if not 'comp' in globals():
-        comp = slide.stack_frames(slides)
-        pixelCount = sum(s.pixelCount() for s in comp)
-        rawCount = len(slides) * numpy.prod(slides[0].shape[:2])
+    if not 'slides' in globals():
+        slides = slide.stack_frames(raw_frames)
+        pixelCount = sum(s.pixelCount() for s in slides)
+        rawCount = len(raw_frames) * numpy.prod(raw_frames[0].shape[:2])
         print "%d pixels out of %d retained. (%.1f%%)" % (pixelCount, rawCount, 100.0 * pixelCount / rawCount)
+
+    g.setSlides(slides)
     
-    renderers = [slide.SlideRenderer(s) for s in comp]
-
-    cols = 5
-    rows = (len(comp) + cols - 1) / cols
-    marginX = 20
-    marginY = 20
-    g._scene.setSceneRect(0, 0,
-                          cols * (w + marginX) - marginX,
-                          rows * (h + marginY) - marginY)
-    g._scene.setBackgroundBrush(QtCore.Qt.black)
-
-    for i, renderer in enumerate(renderers):
-        pm = renderer.showFrame(0)
-        g._scene.addItem(pm)
-        pm.setPos((w + marginX) * (i % cols), (h + marginY) * (i / cols))
-
-    # overview_factor = float(w) / g._scene.sceneRect().width()
-    # g.scale(overview_factor, overview_factor)
-
     if not g.hadEventLoop:
         sys.exit(QtGui.qApp.exec_())

@@ -36,7 +36,7 @@ class SlideRenderer(object):
 		self._items = {}
 		self._currentFrame = None
 
-	def _slideItem(self):
+	def _backgroundItem(self):
 		result = self._items.get('bg', None)
 		
 		if result is None:
@@ -56,7 +56,7 @@ class SlideRenderer(object):
 			
 			for pos, patch in self._slide._frames[frameIndex]:
 				pixmap = QtGui.QPixmap.fromImage(patch)
-				pmItem = QtGui.QGraphicsPixmapItem(self._slideItem())
+				pmItem = QtGui.QGraphicsPixmapItem(self._backgroundItem())
 				pmItem.setPos(QtCore.QPointF(pos))
 				pmItem.setPixmap(pixmap)
 				pmItem.setTransformationMode(QtCore.Qt.SmoothTransformation)
@@ -66,8 +66,13 @@ class SlideRenderer(object):
 
 		return result
 
+	def slideItem(self):
+		if self._currentFrame is None:
+			return self.showFrame()
+		return self._backgroundItem()
+
 	def showFrame(self, frameIndex = 0):
-		result = self._slideItem()
+		result = self._backgroundItem()
 
 		for item in result.childItems():
 			item.setVisible(False)
@@ -75,6 +80,8 @@ class SlideRenderer(object):
 		for i in range(0, frameIndex + 1):
 			for item in self._frameItems(i):
 				item.setVisible(True)
+
+		self._currentFrame = frameIndex
 
 		return result
 
