@@ -31,6 +31,7 @@ class PDFPresenter(QtGui.QGraphicsView):
         self.setScene(self._scene)
 
         self._renderers = None
+        self._currentFrameIndex = 0
 
     # def resizeEvent(self, e):
     #     self.fitInView(0, 0, w, h, QtCore.Qt.KeepAspectRatio)
@@ -39,7 +40,7 @@ class PDFPresenter(QtGui.QGraphicsView):
     def setSlides(self, slides):
         self._slides = slides
         assert not self._renderers, "FIXME: delete old renderers / graphisc items"
-        self._renderers = [slide.SlideRenderer(s) for s in slides]
+        self._renderers = [slide.SlideRenderer(s, self._scene) for s in slides]
         self._setupGrid()
 
         self._frameSlide = []
@@ -57,7 +58,6 @@ class PDFPresenter(QtGui.QGraphicsView):
 
         for i, renderer in enumerate(self._renderers):
             pm = renderer.slideItem()
-            self._scene.addItem(pm)
             print pm
             pm.setPos((w + marginX) * (i % cols), (h + marginY) * (i / cols))
 
@@ -75,9 +75,17 @@ class PDFPresenter(QtGui.QGraphicsView):
         slide = self._slides[slideIndex]
         renderer = self._renderers[slideIndex]
         slidePos = renderer.slideItem().pos()
+        self.resetTransform()
         self.horizontalScrollBar().setValue(slidePos.x())
         self.verticalScrollBar().setValue(slidePos.y())
         renderer.showFrame(subFrame)
+        self._currentFrameIndex = frameIndex
+
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key_Space:
+            self.gotoFrame(self._currentFrameIndex + 1)
+        else:
+            QtGui.QGraphicsView.keyPressEvent(self, event)
 
 
 def start():

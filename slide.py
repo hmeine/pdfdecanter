@@ -31,10 +31,11 @@ class Slide(object):
 
 
 class SlideRenderer(object):
-	def __init__(self, slide):
+	def __init__(self, slide, scene):
 		self._slide = slide
 		self._items = {}
 		self._currentFrame = None
+		self._scene = scene
 
 	def _backgroundItem(self):
 		result = self._items.get('bg', None)
@@ -44,6 +45,7 @@ class SlideRenderer(object):
 			result = QtGui.QGraphicsRectItem(QtCore.QRectF(rect))
 			result.setBrush(QtCore.Qt.white)
 			result.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+			self._scene.addItem(result)
 			self._items['bg'] = result
 
 		return result
