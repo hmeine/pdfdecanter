@@ -30,17 +30,20 @@ class PDFPresenter(QtGui.QGraphicsView):
         self._scene.setBackgroundBrush(QtCore.Qt.black)
         self.setScene(self._scene)
 
+        self._group = QtGui.QGraphicsItemGroup()
+        self._scene.addItem(self._group)
+
         self._renderers = None
         self._currentFrameIndex = 0
 
-    # def resizeEvent(self, e):
-    #     self.fitInView(0, 0, w, h, QtCore.Qt.KeepAspectRatio)
-    #     return QtGui.QGraphicsView.resizeEvent(self, e)
+    def resizeEvent(self, e):
+        #self.fitInView(0, 0, w, h, QtCore.Qt.KeepAspectRatio)
+        return QtGui.QGraphicsView.resizeEvent(self, e)
 
     def setSlides(self, slides):
         self._slides = slides
         assert not self._renderers, "FIXME: delete old renderers / graphisc items"
-        self._renderers = [slide.SlideRenderer(s, self._scene) for s in slides]
+        self._renderers = [slide.SlideRenderer(s, self._group) for s in slides]
         self._setupGrid()
 
         self._frameSlide = []
@@ -52,13 +55,12 @@ class PDFPresenter(QtGui.QGraphicsView):
         rows = (len(slides) + cols - 1) / cols
         marginX = 20
         marginY = 20
-        self._scene.setSceneRect(0, 0,
-            cols * (w + marginX) - marginX,
-            rows * (h + marginY) - marginY)
+        # self._scene.setSceneRect(0, 0,
+        #     cols * (w + marginX) - marginX,
+        #     rows * (h + marginY) - marginY)
 
         for i, renderer in enumerate(self._renderers):
             pm = renderer.slideItem()
-            print pm
             pm.setPos((w + marginX) * (i % cols), (h + marginY) * (i / cols))
 
     def showOverview(self):
@@ -75,15 +77,20 @@ class PDFPresenter(QtGui.QGraphicsView):
         slide = self._slides[slideIndex]
         renderer = self._renderers[slideIndex]
         slidePos = renderer.slideItem().pos()
-        self.resetTransform()
-        self.horizontalScrollBar().setValue(slidePos.x())
-        self.verticalScrollBar().setValue(slidePos.y())
+        self._group.setPos(-slidePos)
+        # self.resetTransform()
+        # self.horizontalScrollBar().setValue(slidePos.x())
+        # self.verticalScrollBar().setValue(slidePos.y())
         renderer.showFrame(subFrame)
         self._currentFrameIndex = frameIndex
 
     def keyPressEvent(self, event):
-        if event.key() == QtCore.Qt.Key_Space:
-            self.gotoFrame(self._currentFrameIndex + 1)
+        if event.key() in (QtCore.Qt.Key_Space, QtCore.Qt.Key_Right, QtCore.Qt.Key_PageDown):
+            if self._currentFrameIndex < len(self._frameSlide) - 1:
+                self.gotoFrame(self._currentFrameIndex + 1)
+        elif event.key() in (QtCore.Qt.Key_Backspace, QtCore.Qt.Key_Left, QtCore.Qt.Key_PageUp):
+            if self._currentFrameIndex > 0:
+                self.gotoFrame(self._currentFrameIndex - 1)
         else:
             QtGui.QGraphicsView.keyPressEvent(self, event)
 
