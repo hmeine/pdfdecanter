@@ -30,8 +30,11 @@ class PDFPresenter(QtGui.QGraphicsView):
         self._scene.setBackgroundBrush(QtCore.Qt.black)
         self.setScene(self._scene)
 
-        self._group = QtGui.QGraphicsItemGroup()
-        self._scene.addItem(self._group)
+        self._slideViewport = QtGui.QGraphicsRectItem(QtCore.QRectF(0, 0, w, h))
+        self._scene.addItem(self._slideViewport)
+        self._slideViewport.setFlag(QtGui.QGraphicsItem.ItemClipsChildrenToShape)
+
+        self._group = QtGui.QGraphicsItemGroup(self._slideViewport)
 
         self._renderers = None
         self._currentFrameIndex = 0
