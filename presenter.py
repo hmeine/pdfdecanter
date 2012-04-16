@@ -97,6 +97,9 @@ class PDFPresenter(QtGui.QGraphicsView):
             self._cursorAnimation.setStartValue(self._cursorRect())
             self._cursorAnimation.setEndValue(r)
             self._cursorAnimation.start()
+            
+            if not self._scene.sceneRect().contains(r.center() * self._groupScale() + self._groupPos()):
+                self._animateOverviewGroup(self._overviewPosForCursor(r), self._groupScale())
 
     def _groupPos(self):
         return self._group.pos()
@@ -116,6 +119,13 @@ class PDFPresenter(QtGui.QGraphicsView):
     groupScale = QtCore.pyqtProperty(float, _groupScale, _setGroupScale)
 
     def _animateOverviewGroup(self, pos, scale):
+        if pos.y() > 0.0:
+            pos.setY(0.0)
+        else:
+            minY = self._scene.sceneRect().height() - self._group.boundingRect().height() * scale
+            if pos.y() < minY:
+                pos.setY(minY)
+
         self._overviewAnimation = QtCore.QParallelAnimationGroup(self)
 
         posAnim = QtCore.QPropertyAnimation(self, "groupPos", self._overviewAnimation)
@@ -132,16 +142,23 @@ class PDFPresenter(QtGui.QGraphicsView):
         self._overviewAnimation.addAnimation(scaleAnim)
         self._overviewAnimation.start()
 
+    def _overviewScale(self):
+        return float(self._scene.sceneRect().width()) / self._group.boundingRect().width()
+
+    def _overviewPosForCursor(self, r = None):
+        if r is None:
+            r = self._cursor.boundingRect()
+        s = self._overviewScale()
+        y = (0.5 * self._scene.sceneRect().height() - r.center().y() * s)
+
+        return QtCore.QPointF(0, y)
+
     def showOverview(self):
         # self._setupGrid()
 
         self._updateCursor(animated = False)
 
-        #cursorRow = self._frame2Slide[self._currentFrameIndex][0] / OVERVIEW_COLS
-
-        overview_factor = float(self._scene.sceneRect().width()) / self._group.boundingRect().width()
-
-        self._animateOverviewGroup(QtCore.QPointF(0, 0), overview_factor)
+        self._animateOverviewGroup(self._overviewPosForCursor(), self._overviewScale())
 
         self._inOverview = True
 
