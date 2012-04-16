@@ -12,8 +12,9 @@ __version__ = "0.1"
 #         self._ui = Ui_PDFPresenter()
 #         self._ui.setupUi(self)
 
-w, h = 640, 480
+w, h = 1024, 768
 
+OVERVIEW_COLS = 5
 
 class PDFPresenter(QtGui.QGraphicsView):
     def __init__(self):
@@ -36,8 +37,15 @@ class PDFPresenter(QtGui.QGraphicsView):
 
         self._group = QtGui.QGraphicsItemGroup(self._slideViewport)
 
+        self._cursor = self._scene.addRect(self._scene.sceneRect())
+        self._cursor.setPen(QtGui.QPen(QtCore.Qt.yellow, 25))
+        self._cursor.setBrush(QtGui.QBrush(QtGui.QColor(255, 255, 0, 100)))
+        self._cursor.setParentItem(self._group)
+
         self._renderers = None
         self._currentFrameIndex = 0
+
+        self._inOverview = False
 
     def resizeEvent(self, e):
         #self.fitInView(0, 0, w, h, QtCore.Qt.KeepAspectRatio)
@@ -53,51 +61,89 @@ class PDFPresenter(QtGui.QGraphicsView):
         self._renderers = [slide.SlideRenderer(s, self._group) for s in slides]
         self._setupGrid()
 
-        self._frameSlide = []
+        self._frame2Slide = []
+        self._slide2Frame = []
         for i, s in enumerate(slides):
-            self._frameSlide.extend([(i, j) for j in range(len(s))])
+            self._slide2Frame.append(len(self._frame2Slide))
+            self._frame2Slide.extend([(i, j) for j in range(len(s))])
 
     def _setupGrid(self):
-        cols = 5
-        rows = (len(slides) + cols - 1) / cols
+        rows = (len(slides) + OVERVIEW_COLS - 1) / OVERVIEW_COLS
         marginX = 20
         marginY = 20
-        # self._scene.setSceneRect(0, 0,
-        #     cols * (w + marginX) - marginX,
-        #     rows * (h + marginY) - marginY)
 
         for i, renderer in enumerate(self._renderers):
-            pm = renderer.slideItem()
-            pm.setPos((w + marginX) * (i % cols), (h + marginY) * (i / cols))
+            slideItem = renderer.slideItem()
+            slideItem.setPos((w + marginX) * (i % OVERVIEW_COLS), (h + marginY) * (i / OVERVIEW_COLS))
+            self._group.addToGroup(slideItem)
+
+    def _updateCursor(self):
+        r = QtCore.QRectF(self._currentSlideItem().boundingRect())
+        r.moveTo(self._currentSlideItem().pos())
+        self._cursor.setRect(r)
 
     def showOverview(self):
-        self._setupGrid()
-        overview_factor = float(self.width()) / self._scene.sceneRect().width()
-        self.scale(overview_factor, overview_factor)
+        # self._setupGrid()
 
-        # cursor = self._scene.addRect(renderers[11].slideItem().sceneBoundingRect())
-        # cursor.setPen(QtGui.QPen(QtCore.Qt.yellow, 25))
-        # cursor.setBrush(QtGui.QBrush(QtGui.QColor(255, 255, 0, 100)))
+        self._updateCursor()
+
+        overview_factor = float(self._scene.sceneRect().width()) / self._group.boundingRect().width()
+        self._group.scale(overview_factor, overview_factor)
+        self._group.setPos(0, 0)
+
+        self._inOverview = True
+
+    def _currentRenderer(self):
+        slideIndex, _ = self._frame2Slide[self._currentFrameIndex]
+        return self._renderers[slideIndex]
+
+    def _currentSlideItem(self):
+        return self._currentRenderer().slideItem()
 
     def gotoFrame(self, frameIndex):
-        slideIndex, subFrame = self._frameSlide[frameIndex]
+        self._currentFrameIndex = frameIndex
+
+        slideIndex, subFrame = self._frame2Slide[self._currentFrameIndex]
         slide = self._slides[slideIndex]
         renderer = self._renderers[slideIndex]
         slidePos = renderer.slideItem().pos()
         self._group.setPos(-slidePos)
-        # self.resetTransform()
-        # self.horizontalScrollBar().setValue(slidePos.x())
-        # self.verticalScrollBar().setValue(slidePos.y())
         renderer.showFrame(subFrame)
-        self._currentFrameIndex = frameIndex
 
     def keyPressEvent(self, event):
+        if self._inOverview:
+            if event.key() in (QtCore.Qt.Key_Right, QtCore.Qt.Key_Left,
+                               QtCore.Qt.Key_Down, QtCore.Qt.Key_Up):
+                currentSlideIndex, _ = self._frame2Slide[self._currentFrameIndex]
+                desiredSlideIndex = currentSlideIndex + {
+                    QtCore.Qt.Key_Right : +1,
+                    QtCore.Qt.Key_Left  : -1,
+                    QtCore.Qt.Key_Down  : +OVERVIEW_COLS,
+                    QtCore.Qt.Key_Up    : -OVERVIEW_COLS}[event.key()]
+
+                desiredSlideIndex = max(0, min(desiredSlideIndex, len(self._slides)))
+                self._currentFrameIndex = (
+                    self._slide2Frame[desiredSlideIndex] +
+                    self._renderers[desiredSlideIndex].currentFrame())
+
+                self._updateCursor()
+            elif event.key() in (QtCore.Qt.Key_Tab, QtCore.Qt.Key_Return):
+                self._group.resetTransform()
+                self._inOverview = False
+                self.gotoFrame(self._currentFrameIndex)
+            else:
+                QtGui.QGraphicsView.keyPressEvent(self, event)
+            return
+
+
         if event.key() in (QtCore.Qt.Key_Space, QtCore.Qt.Key_Right, QtCore.Qt.Key_PageDown):
-            if self._currentFrameIndex < len(self._frameSlide) - 1:
+            if self._currentFrameIndex < len(self._frame2Slide) - 1:
                 self.gotoFrame(self._currentFrameIndex + 1)
         elif event.key() in (QtCore.Qt.Key_Backspace, QtCore.Qt.Key_Left, QtCore.Qt.Key_PageUp):
             if self._currentFrameIndex > 0:
                 self.gotoFrame(self._currentFrameIndex - 1)
+        elif event.key() in (QtCore.Qt.Key_Tab, ):
+            self.showOverview()
         else:
             QtGui.QGraphicsView.keyPressEvent(self, event)
 

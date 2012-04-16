@@ -43,9 +43,9 @@ class SlideRenderer(object):
         if result is None:
             rect = QtCore.QRect(QtCore.QPoint(0, 0), self._slide.size())
             result = QtGui.QGraphicsRectItem(QtCore.QRectF(rect), self._groupItem)
-            self._groupItem.addToGroup(result)
             result.setBrush(QtCore.Qt.white)
             result.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+            result.setZValue(10)
             self._items['bg'] = result
 
         return result
@@ -62,6 +62,7 @@ class SlideRenderer(object):
                 pmItem.setPos(QtCore.QPointF(pos))
                 pmItem.setPixmap(pixmap)
                 pmItem.setTransformationMode(QtCore.Qt.SmoothTransformation)
+                pmItem.setZValue(100 + frameIndex)
                 result.append(pmItem)
 
             self._items[frameIndex] = result
@@ -86,6 +87,9 @@ class SlideRenderer(object):
         self._currentFrame = frameIndex
 
         return result
+
+    def currentFrame(self):
+        return self._currentFrame
 
 
 def changed_rects(a, b):
