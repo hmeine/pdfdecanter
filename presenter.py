@@ -251,9 +251,9 @@ if __name__ == "__main__":
     options, args = op.parse_args()
 
     if not 'raw_frames' in globals():
-        pdfFilename = '../testtalks/defense.pdf'
-        #        pdfFilename = '../testtalks/infiltrate12-thestackisback.pdf'
-        raw_frames = list(pdftoppm_renderer.renderAllPages(pdfFilename, (w, h)))
+        raw_frames = []
+        for pdfFilename in (args or ('../testtalks/defense.pdf', )):
+            raw_frames.extend(pdftoppm_renderer.renderAllPages(pdfFilename, (w, h)))
 
     if not 'slides' in globals():
         slides = slide.stack_frames(raw_frames)
