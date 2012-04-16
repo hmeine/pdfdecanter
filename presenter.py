@@ -197,7 +197,7 @@ class PDFPresenter(QtGui.QGraphicsView):
                     QtCore.Qt.Key_Down  : +OVERVIEW_COLS,
                     QtCore.Qt.Key_Up    : -OVERVIEW_COLS}[event.key()]
 
-                desiredSlideIndex = max(0, min(desiredSlideIndex, len(self._slides)))
+                desiredSlideIndex = max(0, min(desiredSlideIndex, len(self._slides)-1))
                 self._currentFrameIndex = (
                     self._slide2Frame[desiredSlideIndex] +
                     self._renderers[desiredSlideIndex].currentFrame())
