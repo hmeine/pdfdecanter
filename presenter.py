@@ -77,19 +77,71 @@ class PDFPresenter(QtGui.QGraphicsView):
             slideItem.setPos((w + marginX) * (i % OVERVIEW_COLS), (h + marginY) * (i / OVERVIEW_COLS))
             self._group.addToGroup(slideItem)
 
-    def _updateCursor(self):
+    def _cursorRect(self):
+        return self._cursor.rect()
+
+    def _setCursorRect(self, r):
+        self._cursor.setRect(r)
+
+    cursorRect = QtCore.pyqtProperty(QtCore.QRectF, _cursorRect, _setCursorRect)
+
+    def _updateCursor(self, animated):
         r = QtCore.QRectF(self._currentSlideItem().boundingRect())
         r.moveTo(self._currentSlideItem().pos())
-        self._cursor.setRect(r)
+
+        if not animated:
+            self._cursor.setRect(r)
+        else:
+            self._cursorAnimation = QtCore.QPropertyAnimation(self, "cursorRect")
+            self._cursorAnimation.setDuration(100)
+            self._cursorAnimation.setStartValue(self._cursorRect())
+            self._cursorAnimation.setEndValue(r)
+            self._cursorAnimation.start()
+
+    def _groupPos(self):
+        return self._group.pos()
+
+    def _setGroupPos(self, t):
+        self._group.setPos(t)
+
+    groupPos = QtCore.pyqtProperty(QtCore.QPointF, _groupPos, _setGroupPos)
+
+    def _groupScale(self):
+        return self._group.transform().m11()
+
+    def _setGroupScale(self, scale):
+        transform = QtGui.QTransform.fromScale(scale, scale)
+        self._group.setTransform(transform)
+
+    groupScale = QtCore.pyqtProperty(float, _groupScale, _setGroupScale)
+
+    def _animateOverviewGroup(self, pos, scale):
+        self._overviewAnimation = QtCore.QParallelAnimationGroup(self)
+
+        posAnim = QtCore.QPropertyAnimation(self, "groupPos", self._overviewAnimation)
+        posAnim.setDuration(200)
+        posAnim.setStartValue(self._groupPos())
+        posAnim.setEndValue(pos)
+
+        scaleAnim = QtCore.QPropertyAnimation(self, "groupScale", self._overviewAnimation)
+        scaleAnim.setDuration(200)
+        scaleAnim.setStartValue(self._groupScale())
+        scaleAnim.setEndValue(scale)
+
+        self._overviewAnimation.addAnimation(posAnim)
+        self._overviewAnimation.addAnimation(scaleAnim)
+        self._overviewAnimation.start()
 
     def showOverview(self):
         # self._setupGrid()
 
-        self._updateCursor()
+        self._updateCursor(animated = False)
+
+        #cursorRow = self._frame2Slide[self._currentFrameIndex][0] / OVERVIEW_COLS
 
         overview_factor = float(self._scene.sceneRect().width()) / self._group.boundingRect().width()
-        self._group.scale(overview_factor, overview_factor)
-        self._group.setPos(0, 0)
+
+        self._animateOverviewGroup(QtCore.QPointF(0, 0), overview_factor)
 
         self._inOverview = True
 
@@ -107,7 +159,14 @@ class PDFPresenter(QtGui.QGraphicsView):
         slide = self._slides[slideIndex]
         renderer = self._renderers[slideIndex]
         slidePos = renderer.slideItem().pos()
-        self._group.setPos(-slidePos)
+        transform = QtGui.QTransform(1, 0, 0, 1, -slidePos.x(), -slidePos.y())
+
+        if not self._inOverview:
+            self._group.setPos(-slidePos)
+        else:
+            self._inOverview = False
+            self._animateOverviewGroup(-slidePos, 1.0)
+
         renderer.showFrame(subFrame)
 
     def keyPressEvent(self, event):
@@ -126,15 +185,12 @@ class PDFPresenter(QtGui.QGraphicsView):
                     self._slide2Frame[desiredSlideIndex] +
                     self._renderers[desiredSlideIndex].currentFrame())
 
-                self._updateCursor()
+                self._updateCursor(animated = True)
             elif event.key() in (QtCore.Qt.Key_Tab, QtCore.Qt.Key_Return):
-                self._group.resetTransform()
-                self._inOverview = False
                 self.gotoFrame(self._currentFrameIndex)
             else:
                 QtGui.QGraphicsView.keyPressEvent(self, event)
             return
-
 
         if event.key() in (QtCore.Qt.Key_Space, QtCore.Qt.Key_Right, QtCore.Qt.Key_PageDown):
             if self._currentFrameIndex < len(self._frame2Slide) - 1:
