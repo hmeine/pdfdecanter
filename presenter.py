@@ -41,6 +41,10 @@ class PDFPresenter(QtGui.QGraphicsView):
 
     def resizeEvent(self, e):
         #self.fitInView(0, 0, w, h, QtCore.Qt.KeepAspectRatio)
+        factor = min(float(e.size().width()) / w,
+                     float(e.size().height()) / h)
+        self.resetMatrix()
+        self.scale(factor, factor)
         return QtGui.QGraphicsView.resizeEvent(self, e)
 
     def setSlides(self, slides):
