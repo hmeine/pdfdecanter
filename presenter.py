@@ -1,4 +1,4 @@
-from PyQt4 import QtCore, QtGui
+from PyQt4 import QtCore, QtGui, QtOpenGL
 import numpy, os
 import pdftoppm_renderer, slide, cache
 
@@ -15,8 +15,10 @@ __version__ = "0.1"
 w, h = 1024, 768
 
 OVERVIEW_COLS = 5
-MARGIN_X = 20
-MARGIN_Y = 20
+MARGIN_X = 30
+MARGIN_Y = 24
+BLEND_DURATION = 150
+USE_GL = True
 
 class PDFPresenter(QtGui.QGraphicsView):
     def __init__(self):
@@ -28,6 +30,11 @@ class PDFPresenter(QtGui.QGraphicsView):
         self.setFrameStyle(QtGui.QFrame.NoFrame)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+
+        if USE_GL:
+            from OpenGL import GL
+            self.setViewport(QtOpenGL.QGLWidget(QtOpenGL.QGLFormat(QtOpenGL.QGL.SampleBuffers)))
+            self.setViewportUpdateMode(QtGui.QGraphicsView.FullViewportUpdate)
 
         self._scene = QtGui.QGraphicsScene(0, 0, w, h)
         self._scene.setBackgroundBrush(QtCore.Qt.black)
@@ -60,7 +67,7 @@ class PDFPresenter(QtGui.QGraphicsView):
     def setSlides(self, slides):
         self._slides = slides
         assert not self._renderers, "FIXME: delete old renderers / graphisc items"
-        self._renderers = [slide.SlideRenderer(s, self._group) for s in slides]
+        self._renderers = [slide.SlideRenderer(s, self._group, self) for s in slides]
         self._setupGrid()
 
         self._frame2Slide = []
@@ -69,7 +76,7 @@ class PDFPresenter(QtGui.QGraphicsView):
             self._slide2Frame.append(len(self._frame2Slide))
             self._frame2Slide.extend([(i, j) for j in range(len(s))])
 
-        self.gotoFrame(0)
+        self.gotoFrame(0, animated = False)
 
     def _setupGrid(self):
         for i, renderer in enumerate(self._renderers):
@@ -127,6 +134,7 @@ class PDFPresenter(QtGui.QGraphicsView):
             if pos.y() < minY:
                 pos.setY(minY)
 
+        # FIXME: clear up / reuse QObject:
         self._overviewAnimation = QtCore.QParallelAnimationGroup(self)
 
         posAnim = QtCore.QPropertyAnimation(self, "groupPos", self._overviewAnimation)
@@ -170,13 +178,19 @@ class PDFPresenter(QtGui.QGraphicsView):
     def _currentSlideItem(self):
         return self._currentRenderer().slideItem()
 
-    def gotoFrame(self, frameIndex):
+    def gotoFrame(self, frameIndex, animated = False):
         self._currentFrameIndex = frameIndex
 
         slideIndex, subFrame = self._frame2Slide[self._currentFrameIndex]
         renderer = self._renderers[slideIndex]
         renderer.uncover()
         slideItem = renderer.showFrame(subFrame)
+        if animated and subFrame:
+            self._blendAnimation = QtCore.QPropertyAnimation(renderer, "frameOpacity")
+            self._blendAnimation.setDuration(BLEND_DURATION)
+            self._blendAnimation.setStartValue(0.0)
+            self._blendAnimation.setEndValue(1.0)
+            self._blendAnimation.start()
 
         if not self._inOverview:
             self._group.setPos(-slideItem.pos())
@@ -203,13 +217,16 @@ class PDFPresenter(QtGui.QGraphicsView):
                 self._updateCursor(animated = True)
             elif event.key() in (QtCore.Qt.Key_Tab, QtCore.Qt.Key_Return):
                 self.gotoFrame(self._currentFrameIndex)
+            elif event.key() in (QtCore.Qt.Key_F, QtCore.Qt.Key_L):
+                r = self._currentRenderer()
+                r.showFrame(0 if event.key() == QtCore.Qt.Key_F else len(r.slide()) - 1)
             else:
                 QtGui.QGraphicsView.keyPressEvent(self, event)
             return
 
         if event.key() in (QtCore.Qt.Key_Space, QtCore.Qt.Key_Right, QtCore.Qt.Key_PageDown):
             if self._currentFrameIndex < len(self._frame2Slide) - 1:
-                self.gotoFrame(self._currentFrameIndex + 1)
+                self.gotoFrame(self._currentFrameIndex + 1, animated = True)
         elif event.key() in (QtCore.Qt.Key_Backspace, QtCore.Qt.Key_Left, QtCore.Qt.Key_PageUp):
             if self._currentFrameIndex > 0:
                 self.gotoFrame(self._currentFrameIndex - 1)

@@ -32,15 +32,19 @@ class Slide(object):
         return result
 
 
-class SlideRenderer(object):
+class SlideRenderer(QtCore.QObject):
     DEBUG = False # True
         
-    def __init__(self, slide, groupItem):
+    def __init__(self, slide, groupItem, parent = None):
+        QtCore.QObject.__init__(self, parent)
         self._slide = slide
         self._items = {}
         self._currentFrame = None
         self._groupItem = groupItem
         self._coverItem().setOpacity(1.0 - UNSEEN_OPACITY)
+
+    def slide(self):
+        return self._slide
 
     def _rectItem(self, color, zValue, key):
         result = self._items.get(key, None)
@@ -90,20 +94,27 @@ class SlideRenderer(object):
 
     def uncover(self, seen = True):
         self._coverItem().setVisible(not seen)
-        
+
+    def _frameOpacity(self):
+        return self._items[self._currentFrame][0].opacity()
+
+    def _setFrameOpacity(self, o):
+        for i in self._items[self._currentFrame]:
+            i.setOpacity(o)
+
+    frameOpacity = QtCore.pyqtProperty(float, _frameOpacity, _setFrameOpacity)
+
     def showFrame(self, frameIndex = 0):
         result = self._backgroundItem()
-
-        coverItem = self._coverItem()
-        for item in result.childItems():
-            if item is not coverItem:
-                item.setVisible(False)
 
         for i in range(0, frameIndex + 1):
             for item in self._frameItems(i):
                 item.setVisible(True)
                 if self.DEBUG:
                     item.setOpacity(0.5 if i < frameIndex else 1.0)
+        for i in range(frameIndex + 1, len(self._slide)):
+            for item in self._items.get(i, ()):
+                item.setVisible(False)
 
         self._currentFrame = frameIndex
 
