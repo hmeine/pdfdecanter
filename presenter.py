@@ -1,6 +1,6 @@
 from PyQt4 import QtCore, QtGui
-import numpy
-import pdftoppm_renderer, slide
+import numpy, os
+import pdftoppm_renderer, slide, cache
 
 __version__ = "0.1"
 
@@ -15,6 +15,8 @@ __version__ = "0.1"
 w, h = 1024, 768
 
 OVERVIEW_COLS = 5
+MARGIN_X = 20
+MARGIN_Y = 20
 
 class PDFPresenter(QtGui.QGraphicsView):
     def __init__(self):
@@ -43,7 +45,7 @@ class PDFPresenter(QtGui.QGraphicsView):
         self._cursor.setParentItem(self._group)
 
         self._renderers = None
-        self._currentFrameIndex = 0
+        self._currentFrameIndex = None
 
         self._inOverview = False
 
@@ -67,14 +69,13 @@ class PDFPresenter(QtGui.QGraphicsView):
             self._slide2Frame.append(len(self._frame2Slide))
             self._frame2Slide.extend([(i, j) for j in range(len(s))])
 
-    def _setupGrid(self):
-        rows = (len(slides) + OVERVIEW_COLS - 1) / OVERVIEW_COLS
-        marginX = 20
-        marginY = 20
+        self.gotoFrame(0)
 
+    def _setupGrid(self):
         for i, renderer in enumerate(self._renderers):
             slideItem = renderer.slideItem()
-            slideItem.setPos((w + marginX) * (i % OVERVIEW_COLS), (h + marginY) * (i / OVERVIEW_COLS))
+            slideItem.setPos((w + MARGIN_X) * (i % OVERVIEW_COLS),
+                             (h + MARGIN_Y) * (i / OVERVIEW_COLS))
             self._group.addToGroup(slideItem)
 
     def _cursorRect(self):
@@ -173,18 +174,15 @@ class PDFPresenter(QtGui.QGraphicsView):
         self._currentFrameIndex = frameIndex
 
         slideIndex, subFrame = self._frame2Slide[self._currentFrameIndex]
-        slide = self._slides[slideIndex]
         renderer = self._renderers[slideIndex]
-        slidePos = renderer.slideItem().pos()
-        transform = QtGui.QTransform(1, 0, 0, 1, -slidePos.x(), -slidePos.y())
+        renderer.uncover()
+        slideItem = renderer.showFrame(subFrame)
 
         if not self._inOverview:
-            self._group.setPos(-slidePos)
+            self._group.setPos(-slideItem.pos())
         else:
             self._inOverview = False
-            self._animateOverviewGroup(-slidePos, 1.0)
-
-        renderer.showFrame(subFrame)
+            self._animateOverviewGroup(-slideItem.pos(), 1.0)
 
     def keyPressEvent(self, event):
         if self._inOverview:
@@ -250,16 +248,19 @@ if __name__ == "__main__":
     op = OptionParser(usage = "%prog [options] <filename1> <filename2>")
     options, args = op.parse_args()
 
-    if not 'raw_frames' in globals():
-        raw_frames = []
-        for pdfFilename in (args or ('../testtalks/defense.pdf', )):
-            raw_frames.extend(pdftoppm_renderer.renderAllPages(pdfFilename, (w, h)))
-
     if not 'slides' in globals():
-        slides = slide.stack_frames(raw_frames)
-        pixelCount = sum(s.pixelCount() for s in slides)
-        rawCount = len(raw_frames) * numpy.prod(raw_frames[0].shape[:2])
-        print "%d pixels out of %d retained. (%.1f%%)" % (pixelCount, rawCount, 100.0 * pixelCount / rawCount)
+        if os.path.exists('cache.h5'):
+            slides = cache.readSlides('cache.h5')
+        else:
+            if not 'raw_frames' in globals():
+                raw_frames = []
+                for pdfFilename in (args or ('../testtalks/defense.pdf', )):
+                    raw_frames.extend(pdftoppm_renderer.renderAllPages(pdfFilename, (w, h)))
+
+            slides = slide.stack_frames(raw_frames)
+            pixelCount = sum(s.pixelCount() for s in slides)
+            rawCount = len(raw_frames) * numpy.prod(raw_frames[0].shape[:2])
+            print "%d pixels out of %d retained. (%.1f%%)" % (pixelCount, rawCount, 100.0 * pixelCount / rawCount)
 
     g.setSlides(slides)
     

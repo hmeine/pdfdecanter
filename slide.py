@@ -2,6 +2,8 @@ import numpy
 import qimage2ndarray
 from PyQt4 import QtCore, QtGui
 
+UNSEEN_OPACITY = 0.5
+
 class Slide(object):
     def __init__(self, size):
         self._size = size
@@ -31,23 +33,35 @@ class Slide(object):
 
 
 class SlideRenderer(object):
+    DEBUG = False # True
+        
     def __init__(self, slide, groupItem):
         self._slide = slide
         self._items = {}
         self._currentFrame = None
         self._groupItem = groupItem
+        self._coverItem().setOpacity(1.0 - UNSEEN_OPACITY)
 
-    def _backgroundItem(self):
-        result = self._items.get('bg', None)
+    def _rectItem(self, color, zValue, key):
+        result = self._items.get(key, None)
         
         if result is None:
             rect = QtCore.QRect(QtCore.QPoint(0, 0), self._slide.size())
             result = QtGui.QGraphicsRectItem(QtCore.QRectF(rect), self._groupItem)
-            result.setBrush(QtCore.Qt.white)
+            result.setBrush(color)
             result.setPen(QtGui.QPen(QtCore.Qt.NoPen))
-            result.setZValue(10)
-            self._items['bg'] = result
+            result.setZValue(zValue)
+            self._items[key] = result
 
+        return result
+
+    def _backgroundItem(self):
+        return self._rectItem(QtCore.Qt.white if not self.DEBUG else QtCore.Qt.red,
+                              zValue = 10, key = 'bg')
+
+    def _coverItem(self):
+        result = self._rectItem(QtCore.Qt.black, zValue = 1000, key = 'cover')
+        result.setParentItem(self._backgroundItem())
         return result
 
     def _frameItems(self, frameIndex):
@@ -74,15 +88,22 @@ class SlideRenderer(object):
             return self.showFrame()
         return self._backgroundItem()
 
+    def uncover(self, seen = True):
+        self._coverItem().setVisible(not seen)
+        
     def showFrame(self, frameIndex = 0):
         result = self._backgroundItem()
 
+        coverItem = self._coverItem()
         for item in result.childItems():
-            item.setVisible(False)
+            if item is not coverItem:
+                item.setVisible(False)
 
         for i in range(0, frameIndex + 1):
             for item in self._frameItems(i):
                 item.setVisible(True)
+                if self.DEBUG:
+                    item.setOpacity(0.5 if i < frameIndex else 1.0)
 
         self._currentFrame = frameIndex
 
