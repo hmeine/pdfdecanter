@@ -143,6 +143,33 @@ def changed_rects(a, b):
     return result
 
 
+def decompose_slide(rects, frame_size):
+    # detect header
+    header_rows = frame_size.height() * 11 / 48
+
+    header = []
+    if rects[0].top() < header_rows:
+        header.append(rects[0])
+        del rects[0]
+
+    # detect footer
+    footer_rows = frame_size.height() / 5
+
+    footer = []
+
+    while len(rects):
+        if rects[-1].top() < frame_size.height() - footer_rows:
+            break
+        r = rects[-1]
+        footer.append(r)
+        del rects[-1]
+        if r.height() < 10 and r.width() > frame_size.width() * .8:
+            # separator line detected
+            break
+    
+    return header, rects, footer
+
+
 def stack_frames(raw_frames):
     frame_size = QtCore.QSize(raw_frames[0].shape[1], raw_frames[0].shape[0])
     header_rows = frame_size.height() * 11 / 48
@@ -154,16 +181,35 @@ def stack_frames(raw_frames):
 
     slides = []
 
-    for frame2 in it:
-        rects = changed_rects(frame1, frame2)
+    prev_header = None
 
-        isNewSlide = bool(rects) and rects[0].top() < header_rows
-        if isNewSlide or not slides:
+    for frame2 in it:
+        changed = changed_rects(frame1, frame2)
+        content = changed_rects(canvas, frame2)
+
+        header, content, footer = decompose_slide(content, frame_size)
+
+        isNewSlide = True
+        if header and header == prev_header:
+            header_rect = QtCore.QRect()
+            for r in header:
+                header_rect.unite(r)
+
+            isNewSlide = False
+            for r in changed:
+                if r.intersects(header_rect):
+                    isNewSlide = True
+                    break
+
+        if isNewSlide:
             slides.append(Slide(frame_size))
-            rects = changed_rects(canvas, frame2)
+            rects = header + content + footer
+        else:
+            rects = changed
 
         slides[-1].add_frame(frame2, rects)
 
         frame1 = frame2
+        prev_header = header
 
     return slides
