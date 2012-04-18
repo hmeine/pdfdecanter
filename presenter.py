@@ -183,10 +183,15 @@ class PDFPresenter(QtGui.QGraphicsView):
     def _resetOffsets(self):
         """clean up previously offset items"""
         if self._slideAnimation is not None:
+            self._slideAnimation.stop()
             self._slideAnimation = None
             r1, r2 = self._animatedRenderers
             r1.contentOffset = QtCore.QPointF(0, 0)
+            r2.contentOffset = QtCore.QPointF(0, 0)
+            r1.setTemporaryOffset(QtCore.QPointF(0, 0))
             r2.setTemporaryOffset(QtCore.QPointF(0, 0))
+            r1.navOpacity = 1.0
+            r2.navOpacity = 1.0
 
     def gotoFrame(self, frameIndex, animated = False):
         self._resetOffsets()
@@ -201,9 +206,16 @@ class PDFPresenter(QtGui.QGraphicsView):
             previousRenderer = self._currentRenderer()
 
             if previousRenderer is not renderer:
-                renderer.setTemporaryOffset(
-                    previousRenderer.slideItem().pos() - slideItem.pos())
-                slidePos = previousRenderer.slideItem().pos()
+                if frameIndex > self._currentFrameIndex:
+                    topRenderer = renderer
+                    bottomRenderer = previousRenderer
+                else:
+                    topRenderer = previousRenderer
+                    bottomRenderer = renderer
+
+                topRenderer.setTemporaryOffset(
+                    bottomRenderer.slideItem().pos() - topRenderer.slideItem().pos())
+                slidePos = bottomRenderer.slideItem().pos()
 
                 self._slideAnimation = QtCore.QParallelAnimationGroup()
                 self._animatedRenderers = (previousRenderer, renderer)
@@ -220,16 +232,22 @@ class PDFPresenter(QtGui.QGraphicsView):
                 slideInAnim.setStartValue(QtCore.QPoint(offset, 0))
                 slideInAnim.setEndValue(QtCore.QPoint(0, 0))
 
-                blendAnimation = QtCore.QPropertyAnimation(renderer, "navOpacity", self._slideAnimation)
-                blendAnimation.setDuration(BLEND_DURATION)
-                blendAnimation.setStartValue(0.0)
-                blendAnimation.setEndValue(1.0)
-                blendAnimation.start()
+                blendAnimation1 = QtCore.QPropertyAnimation(renderer, "navOpacity", self._slideAnimation)
+                blendAnimation1.setDuration(BLEND_DURATION)
+                blendAnimation1.setStartValue(0.0)
+                blendAnimation1.setEndValue(1.0)
+
+                blendAnimation2 = QtCore.QPropertyAnimation(previousRenderer, "navOpacity", self._slideAnimation)
+                blendAnimation2.setDuration(BLEND_DURATION)
+                blendAnimation2.setStartValue(1.0)
+                blendAnimation2.setEndValue(0.0)
 
                 self._slideAnimation.addAnimation(slideOutAnim)
                 self._slideAnimation.addAnimation(slideInAnim)
+                self._slideAnimation.addAnimation(blendAnimation1)
+                self._slideAnimation.addAnimation(blendAnimation2)
                 self._slideAnimation.start()
-            else:
+            elif animated != 'slide':
                 self._blendAnimation = QtCore.QPropertyAnimation(renderer, "frameOpacity")
                 self._blendAnimation.setDuration(BLEND_DURATION)
                 self._blendAnimation.setStartValue(0.0)
@@ -261,6 +279,9 @@ class PDFPresenter(QtGui.QGraphicsView):
                     self._renderers[desiredSlideIndex].currentFrame())
 
                 self._updateCursor(animated = True)
+            elif event.key() in (QtCore.Qt.Key_Home, ):
+                self._currentFrameIndex = 0
+                self._updateCursor(animated = True)
             elif event.key() in (QtCore.Qt.Key_Tab, QtCore.Qt.Key_Return):
                 self.gotoFrame(self._currentFrameIndex)
             elif event.key() in (QtCore.Qt.Key_F, QtCore.Qt.Key_L):
@@ -275,7 +296,7 @@ class PDFPresenter(QtGui.QGraphicsView):
                 self.gotoFrame(self._currentFrameIndex + 1, animated = True)
         elif event.key() in (QtCore.Qt.Key_Backspace, QtCore.Qt.Key_Left, QtCore.Qt.Key_PageUp):
             if self._currentFrameIndex > 0:
-                self.gotoFrame(self._currentFrameIndex - 1)
+                self.gotoFrame(self._currentFrameIndex - 1, animated = 'slide')
         elif event.key() in (QtCore.Qt.Key_Home, ):
             self.gotoFrame(0)
         elif event.key() in (QtCore.Qt.Key_Tab, ):

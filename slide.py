@@ -95,10 +95,10 @@ class SlideRenderer(QtCore.QObject):
             result = []
 
             if frameIndex == 'header':
-                patches = self._slide.header()
+                patches = self._slide.header() or ()
                 zValue = 50
             elif frameIndex == 'footer':
-                patches = self._slide.footer()
+                patches = self._slide.footer() or ()
                 zValue = 50
             else:
                 patches = self._slide.frame(frameIndex)
@@ -119,10 +119,8 @@ class SlideRenderer(QtCore.QObject):
 
     def _navItems(self):
         result = []
-        if self._slide.header():
-            result.extend(self._frameItems('header'))
-        if self._slide.footer():
-            result.extend(self._frameItems('footer'))
+        result.extend(self._frameItems('header'))
+        result.extend(self._frameItems('footer'))
         return result
 
     def toggleHeaderAndFooter(self):
@@ -187,10 +185,8 @@ class SlideRenderer(QtCore.QObject):
     def showFrame(self, frameIndex = 0):
         result = self._backgroundItem()
 
-        if self._slide.header():
-            self._frameItems('header')
-        if self._slide.footer():
-            self._frameItems('footer')
+        self._frameItems('header')
+        self._frameItems('footer')
 
         self._currentFrame = frameIndex
 
