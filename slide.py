@@ -7,6 +7,7 @@ UNSEEN_OPACITY = 0.5
 class Slide(object):
     def __init__(self, size):
         self._size = size
+        self._header = self._footer = None
         self._frames = []
 
     def size(self):
@@ -15,14 +16,31 @@ class Slide(object):
     def __len__(self):
         return len(self._frames)
 
-    def add_frame(self, frame, rects):
+    def _extractPatches(self, frame, rects):
         patches = []
         for r in rects:
             x1, y1 = r.x(), r.y()
             x2, y2 = r.right() + 1, r.bottom() + 1
             patches.append((r.topLeft(), qimage2ndarray.array2qimage(frame[y1:y2,x1:x2])))
+        return patches
 
-        self._frames.append(patches)
+    def setHeader(self, frame, rects):
+        self._header = self._extractPatches(frame, rects)
+
+    def header(self):
+        return self._header
+
+    def setFooter(self, frame, rects):
+        self._footer = self._extractPatches(frame, rects)
+
+    def footer(self):
+        return self._footer
+
+    def addFrame(self, frame, rects):
+        self._frames.append(self._extractPatches(frame, rects))
+
+    def frame(self, frameIndex):
+        return self._frames[frameIndex]
 
     def pixelCount(self):
         result = 0
@@ -73,19 +91,47 @@ class SlideRenderer(QtCore.QObject):
         
         if result is None:
             result = []
+
+            if frameIndex == 'header':
+                patches = self._slide.header()
+                zValue = 50
+            elif frameIndex == 'footer':
+                patches = self._slide.footer()
+                zValue = 50
+            else:
+                patches = self._slide.frame(frameIndex)
+                zValue = 100 + frameIndex
             
-            for pos, patch in self._slide._frames[frameIndex]:
+            for pos, patch in patches:
                 pixmap = QtGui.QPixmap.fromImage(patch)
                 pmItem = QtGui.QGraphicsPixmapItem(self._backgroundItem())
                 pmItem.setPos(QtCore.QPointF(pos))
                 pmItem.setPixmap(pixmap)
                 pmItem.setTransformationMode(QtCore.Qt.SmoothTransformation)
-                pmItem.setZValue(100 + frameIndex)
+                pmItem.setZValue(zValue)
                 result.append(pmItem)
 
             self._items[frameIndex] = result
 
         return result
+
+    def _navItems(self):
+        result = []
+        if self._slide.header():
+            result.extend(self._frameItems('header'))
+        if self._slide.footer():
+            result.extend(self._frameItems('footer'))
+        return result
+
+    def _contentItems(self):
+        result = []
+        for i in range(0, self._currentFrame + 1):
+            result.extend(self._frameItems(i))
+        return result
+
+    def toggleHeaderAndFooter(self):
+        for i in self._navItems():
+            i.setVisible(not i.isVisible())
 
     def slideItem(self):
         if self._currentFrame is None:
@@ -107,16 +153,21 @@ class SlideRenderer(QtCore.QObject):
     def showFrame(self, frameIndex = 0):
         result = self._backgroundItem()
 
-        for i in range(0, frameIndex + 1):
-            for item in self._frameItems(i):
-                item.setVisible(True)
-                if self.DEBUG:
-                    item.setOpacity(0.5 if i < frameIndex else 1.0)
+        if self._slide.header():
+            self._frameItems('header')
+        if self._slide.footer():
+            self._frameItems('footer')
+
+        self._currentFrame = frameIndex
+
+        for item in self._contentItems():
+            item.setVisible(True)
+            if self.DEBUG:
+                item.setOpacity(0.5 if i < frameIndex else 1.0)
+
         for i in range(frameIndex + 1, len(self._slide)):
             for item in self._items.get(i, ()):
                 item.setVisible(False)
-
-        self._currentFrame = frameIndex
 
         return result
 
@@ -205,12 +256,13 @@ def stack_frames(raw_frames):
                     break
 
         if isNewSlide:
-            slides.append(Slide(frame_size))
-            rects = header + content + footer
+            s = Slide(frame_size)
+            s.setHeader(frame2, header)
+            s.setFooter(frame2, footer)
+            s.addFrame(frame2, content)
+            slides.append(s)
         else:
-            rects = changed
-
-        slides[-1].add_frame(frame2, rects)
+            slides[-1].addFrame(frame2, changed)
 
         frame1 = frame2
         prev_header = header

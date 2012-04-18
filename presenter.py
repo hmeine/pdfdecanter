@@ -232,6 +232,8 @@ class PDFPresenter(QtGui.QGraphicsView):
                 self.gotoFrame(self._currentFrameIndex - 1)
         elif event.key() in (QtCore.Qt.Key_Tab, ):
             self.showOverview()
+        # elif event.key() in (QtCore.Qt.Key_P, ):
+        #     self._currentRenderer().toggleHeaderAndFooter()
         else:
             QtGui.QGraphicsView.keyPressEvent(self, event)
 
