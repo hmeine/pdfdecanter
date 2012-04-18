@@ -1,16 +1,11 @@
+import sip
+sip.setapi("QString", 2)
 from PyQt4 import QtCore, QtGui, QtOpenGL
+
 import numpy, os
 import pdftoppm_renderer, slide, cache
 
 __version__ = "0.1"
-
-# from ui_presenter import Ui_PDFPresenter
-
-# class PDFPresenter(QtGui.QMainWindow):
-#     def __init__(self):
-#         QtGui.QMainWindow.__init__(self)
-#         self._ui = Ui_PDFPresenter()
-#         self._ui.setupUi(self)
 
 w, h = 1024, 768
 
@@ -54,6 +49,12 @@ class PDFPresenter(QtGui.QGraphicsView):
         self._renderers = None
         self._currentFrameIndex = None
         self._slideAnimation = None
+
+        self._gotoSlideIndex = None
+        self._gotoSlideTimer = QtCore.QTimer(self)
+        self._gotoSlideTimer.setSingleShot(True)
+        self._gotoSlideTimer.setInterval(1000)
+        self._gotoSlideTimer.timeout.connect(self._clearGotoSlide)
 
         self._inOverview = False
 
@@ -165,7 +166,7 @@ class PDFPresenter(QtGui.QGraphicsView):
 
     def showOverview(self):
         # self._setupGrid()
-        self._resetOffsets()
+        self._resetSlideAnimation()
 
         self._updateCursor(animated = False)
 
@@ -180,7 +181,7 @@ class PDFPresenter(QtGui.QGraphicsView):
     def _currentSlideItem(self):
         return self._currentRenderer().slideItem()
 
-    def _resetOffsets(self):
+    def _resetSlideAnimation(self):
         """clean up previously offset items"""
         if self._slideAnimation is not None:
             self._slideAnimation.stop()
@@ -192,9 +193,11 @@ class PDFPresenter(QtGui.QGraphicsView):
             r2.setTemporaryOffset(QtCore.QPointF(0, 0))
             r1.navOpacity = 1.0
             r2.navOpacity = 1.0
+            if not self._inOverview:
+                self._group.setPos(-r2.slideItem().pos())
 
     def gotoFrame(self, frameIndex, animated = False):
-        self._resetOffsets()
+        self._resetSlideAnimation()
 
         slideIndex, subFrame = self._frame2Slide[frameIndex]
         renderer = self._renderers[slideIndex]
@@ -262,7 +265,33 @@ class PDFPresenter(QtGui.QGraphicsView):
             self._inOverview = False
             self._animateOverviewGroup(-slidePos, 1.0)
 
+    def _clearGotoSlide(self):
+        self._gotoSlideIndex = None
+
     def keyPressEvent(self, event):
+        event.ignore() # assume not handled for now
+
+        if event.key() in (QtCore.Qt.Key_F, QtCore.Qt.Key_L):
+            r = self._currentRenderer()
+            r.showFrame(0 if event.key() == QtCore.Qt.Key_F else len(r.slide()) - 1)
+            event.accept()
+        elif event.text() and event.text() in '0123456789':
+            if self._gotoSlideIndex is None:
+                self._gotoSlideIndex = 0
+            self._gotoSlideIndex = self._gotoSlideIndex * 10 + int(event.text())
+            self._gotoSlideTimer.start()
+            event.accept()
+        elif event.key() == QtCore.Qt.Key_Return:
+            if self._gotoSlideIndex is not None:
+                event.accept()
+                slideIndex = self._gotoSlideIndex - 1
+                self._gotoSlideIndex = None
+                self.gotoFrame(self._slide2Frame[slideIndex] +
+                               self._renderers[slideIndex].currentFrame(), animated = False)
+
+        if event.isAccepted():
+            return
+
         if self._inOverview:
             if event.key() in (QtCore.Qt.Key_Right, QtCore.Qt.Key_Left,
                                QtCore.Qt.Key_Down, QtCore.Qt.Key_Up):
@@ -279,31 +308,36 @@ class PDFPresenter(QtGui.QGraphicsView):
                     self._renderers[desiredSlideIndex].currentFrame())
 
                 self._updateCursor(animated = True)
+                event.accept()
             elif event.key() in (QtCore.Qt.Key_Home, ):
-                self._currentFrameIndex = 0
-                self._updateCursor(animated = True)
+                if self._currentFrameIndex:
+                    self._currentFrameIndex = 0
+                    self._updateCursor(animated = True)
+                    event.accept()
             elif event.key() in (QtCore.Qt.Key_Tab, QtCore.Qt.Key_Return):
                 self.gotoFrame(self._currentFrameIndex)
-            elif event.key() in (QtCore.Qt.Key_F, QtCore.Qt.Key_L):
-                r = self._currentRenderer()
-                r.showFrame(0 if event.key() == QtCore.Qt.Key_F else len(r.slide()) - 1)
-            else:
-                QtGui.QGraphicsView.keyPressEvent(self, event)
-            return
-
-        if event.key() in (QtCore.Qt.Key_Space, QtCore.Qt.Key_Right, QtCore.Qt.Key_PageDown):
-            if self._currentFrameIndex < len(self._frame2Slide) - 1:
-                self.gotoFrame(self._currentFrameIndex + 1, animated = True)
-        elif event.key() in (QtCore.Qt.Key_Backspace, QtCore.Qt.Key_Left, QtCore.Qt.Key_PageUp):
-            if self._currentFrameIndex > 0:
-                self.gotoFrame(self._currentFrameIndex - 1, animated = 'slide')
-        elif event.key() in (QtCore.Qt.Key_Home, ):
-            self.gotoFrame(0)
-        elif event.key() in (QtCore.Qt.Key_Tab, ):
-            self.showOverview()
-        # elif event.key() in (QtCore.Qt.Key_P, ):
-        #     self._currentRenderer().toggleHeaderAndFooter()
+                event.accept()
         else:
+            if event.key() in (QtCore.Qt.Key_Space, QtCore.Qt.Key_Right, QtCore.Qt.Key_PageDown):
+                if self._currentFrameIndex < len(self._frame2Slide) - 1:
+                    self.gotoFrame(self._currentFrameIndex + 1, animated = True)
+                    event.accept()
+            elif event.key() in (QtCore.Qt.Key_Backspace, QtCore.Qt.Key_Left, QtCore.Qt.Key_PageUp):
+                if self._currentFrameIndex > 0:
+                    self.gotoFrame(self._currentFrameIndex - 1, animated = 'slide')
+                    event.accept()
+            elif event.key() in (QtCore.Qt.Key_Home, ):
+                if self._currentFrameIndex:
+                    self.gotoFrame(0)
+                    event.accept()
+            elif event.key() in (QtCore.Qt.Key_Tab, ):
+                self.showOverview()
+                event.accept()
+            # elif event.key() in (QtCore.Qt.Key_P, ):
+            #     self._currentRenderer().toggleHeaderAndFooter()
+            #     event.accept()
+
+        if not event.isAccepted():
             QtGui.QGraphicsView.keyPressEvent(self, event)
 
 
