@@ -165,6 +165,7 @@ class PDFPresenter(QtGui.QGraphicsView):
 
     def showOverview(self):
         # self._setupGrid()
+        self._resetOffsets()
 
         self._updateCursor(animated = False)
 
@@ -179,13 +180,16 @@ class PDFPresenter(QtGui.QGraphicsView):
     def _currentSlideItem(self):
         return self._currentRenderer().slideItem()
 
-    def gotoFrame(self, frameIndex, animated = False):
-        # clean up previously offset items:
+    def _resetOffsets(self):
+        """clean up previously offset items"""
         if self._slideAnimation is not None:
             self._slideAnimation = None
             r1, r2 = self._animatedRenderers
             r1.contentOffset = QtCore.QPointF(0, 0)
             r2.setTemporaryOffset(QtCore.QPointF(0, 0))
+
+    def gotoFrame(self, frameIndex, animated = False):
+        self._resetOffsets()
 
         slideIndex, subFrame = self._frame2Slide[frameIndex]
         renderer = self._renderers[slideIndex]
@@ -207,12 +211,12 @@ class PDFPresenter(QtGui.QGraphicsView):
                 offset = w if frameIndex > self._currentFrameIndex else -w
 
                 slideOutAnim = QtCore.QPropertyAnimation(previousRenderer, "contentOffset", self._slideAnimation)
-                slideOutAnim.setDuration(750)
+                slideOutAnim.setDuration(250)
                 slideOutAnim.setStartValue(QtCore.QPoint(0, 0))
                 slideOutAnim.setEndValue(QtCore.QPoint(-offset, 0))
 
                 slideInAnim = QtCore.QPropertyAnimation(renderer, "contentOffset", self._slideAnimation)
-                slideInAnim.setDuration(750)
+                slideInAnim.setDuration(250)
                 slideInAnim.setStartValue(QtCore.QPoint(offset, 0))
                 slideInAnim.setEndValue(QtCore.QPoint(0, 0))
 
@@ -272,6 +276,8 @@ class PDFPresenter(QtGui.QGraphicsView):
         elif event.key() in (QtCore.Qt.Key_Backspace, QtCore.Qt.Key_Left, QtCore.Qt.Key_PageUp):
             if self._currentFrameIndex > 0:
                 self.gotoFrame(self._currentFrameIndex - 1)
+        elif event.key() in (QtCore.Qt.Key_Home, ):
+            self.gotoFrame(0)
         elif event.key() in (QtCore.Qt.Key_Tab, ):
             self.showOverview()
         # elif event.key() in (QtCore.Qt.Key_P, ):
