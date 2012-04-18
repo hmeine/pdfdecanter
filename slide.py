@@ -148,7 +148,7 @@ def decompose_slide(rects, frame_size):
     header_rows = frame_size.height() * 11 / 48
 
     header = []
-    if rects[0].top() < header_rows:
+    if rects[0].bottom() < header_rows:
         header.append(rects[0])
         del rects[0]
 
@@ -189,11 +189,14 @@ def stack_frames(raw_frames):
 
         header, content, footer = decompose_slide(content, frame_size)
 
+        # TODO: handle case of full-screen overlay (e.g. slide 10/11 of FATE_Motivation)?
+        # (currently, goes as new slide because the header is hit)
+
         isNewSlide = True
         if header and header == prev_header:
             header_rect = QtCore.QRect()
             for r in header:
-                header_rect.unite(r)
+                header_rect |= r
 
             isNewSlide = False
             for r in changed:
