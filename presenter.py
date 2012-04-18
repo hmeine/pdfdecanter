@@ -135,7 +135,7 @@ class PDFPresenter(QtGui.QGraphicsView):
                 pos.setY(minY)
 
         # FIXME: clear up / reuse QObject:
-        self._overviewAnimation = QtCore.QParallelAnimationGroup(self)
+        self._overviewAnimation = QtCore.QParallelAnimationGroup()
 
         posAnim = QtCore.QPropertyAnimation(self, "groupPos", self._overviewAnimation)
         posAnim.setDuration(200)
