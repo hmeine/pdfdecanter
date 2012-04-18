@@ -60,6 +60,8 @@ class SlideRenderer(QtCore.QObject):
         self._currentFrame = None
         self._groupItem = groupItem
         self._coverItem().setOpacity(1.0 - UNSEEN_OPACITY)
+        self._temporaryOffset = QtCore.QPointF(0, 0)
+        self.__contentOffset = QtCore.QPointF(0, 0)
 
     def slide(self):
         return self._slide
@@ -149,6 +151,39 @@ class SlideRenderer(QtCore.QObject):
             i.setOpacity(o)
 
     frameOpacity = QtCore.pyqtProperty(float, _frameOpacity, _setFrameOpacity)
+
+    def _navOpacity(self):
+        items = self._navItems()
+        if items:
+            return items[0].opacity()
+        return 1.0
+
+    def _setNavOpacity(self, o):
+        for i in self._navItems():
+            i.setOpacity(o)
+
+    navOpacity = QtCore.pyqtProperty(float, _navOpacity, _setNavOpacity)
+
+    def _contentOffset(self):
+        return self.__contentOffset
+
+    def _setContentOffset(self, offset):
+        """move content items by offset (used to animate slide content
+        independent from header and footer)"""
+        shift = offset - self.__contentOffset
+        for item in self._contentItems():
+            item.moveBy(shift.x(), shift.y())
+        self.__contentOffset = offset
+
+    contentOffset = QtCore.pyqtProperty(QtCore.QPointF, _contentOffset, _setContentOffset)
+
+    def setTemporaryOffset(self, offset):
+        """temporarily move all slide items by offset (used to overlay
+        one slide over another for animations)"""
+        shift = offset - self._temporaryOffset
+        for item in self.slideItem().childItems():
+            item.moveBy(shift.x(), shift.y())
+        self._temporaryOffset = offset
 
     def showFrame(self, frameIndex = 0):
         result = self._backgroundItem()

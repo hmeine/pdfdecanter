@@ -53,6 +53,7 @@ class PDFPresenter(QtGui.QGraphicsView):
 
         self._renderers = None
         self._currentFrameIndex = None
+        self._slideAnimation = None
 
         self._inOverview = False
 
@@ -179,24 +180,65 @@ class PDFPresenter(QtGui.QGraphicsView):
         return self._currentRenderer().slideItem()
 
     def gotoFrame(self, frameIndex, animated = False):
-        self._currentFrameIndex = frameIndex
+        # clean up previously offset items:
+        if self._slideAnimation is not None:
+            self._slideAnimation = None
+            r1, r2 = self._animatedRenderers
+            r1.contentOffset = QtCore.QPointF(0, 0)
+            r2.setTemporaryOffset(QtCore.QPointF(0, 0))
 
-        slideIndex, subFrame = self._frame2Slide[self._currentFrameIndex]
+        slideIndex, subFrame = self._frame2Slide[frameIndex]
         renderer = self._renderers[slideIndex]
         renderer.uncover()
         slideItem = renderer.showFrame(subFrame)
-        if animated and subFrame:
-            self._blendAnimation = QtCore.QPropertyAnimation(renderer, "frameOpacity")
-            self._blendAnimation.setDuration(BLEND_DURATION)
-            self._blendAnimation.setStartValue(0.0)
-            self._blendAnimation.setEndValue(1.0)
-            self._blendAnimation.start()
+        slidePos = slideItem.pos()
+
+        if animated:
+            previousRenderer = self._currentRenderer()
+
+            if previousRenderer is not renderer:
+                renderer.setTemporaryOffset(
+                    previousRenderer.slideItem().pos() - slideItem.pos())
+                slidePos = previousRenderer.slideItem().pos()
+
+                self._slideAnimation = QtCore.QParallelAnimationGroup()
+                self._animatedRenderers = (previousRenderer, renderer)
+
+                offset = w if frameIndex > self._currentFrameIndex else -w
+
+                slideOutAnim = QtCore.QPropertyAnimation(previousRenderer, "contentOffset", self._slideAnimation)
+                slideOutAnim.setDuration(750)
+                slideOutAnim.setStartValue(QtCore.QPoint(0, 0))
+                slideOutAnim.setEndValue(QtCore.QPoint(-offset, 0))
+
+                slideInAnim = QtCore.QPropertyAnimation(renderer, "contentOffset", self._slideAnimation)
+                slideInAnim.setDuration(750)
+                slideInAnim.setStartValue(QtCore.QPoint(offset, 0))
+                slideInAnim.setEndValue(QtCore.QPoint(0, 0))
+
+                blendAnimation = QtCore.QPropertyAnimation(renderer, "navOpacity", self._slideAnimation)
+                blendAnimation.setDuration(BLEND_DURATION)
+                blendAnimation.setStartValue(0.0)
+                blendAnimation.setEndValue(1.0)
+                blendAnimation.start()
+
+                self._slideAnimation.addAnimation(slideOutAnim)
+                self._slideAnimation.addAnimation(slideInAnim)
+                self._slideAnimation.start()
+            else:
+                self._blendAnimation = QtCore.QPropertyAnimation(renderer, "frameOpacity")
+                self._blendAnimation.setDuration(BLEND_DURATION)
+                self._blendAnimation.setStartValue(0.0)
+                self._blendAnimation.setEndValue(1.0)
+                self._blendAnimation.start()
+
+        self._currentFrameIndex = frameIndex
 
         if not self._inOverview:
-            self._group.setPos(-slideItem.pos())
+            self._group.setPos(-slidePos)
         else:
             self._inOverview = False
-            self._animateOverviewGroup(-slideItem.pos(), 1.0)
+            self._animateOverviewGroup(-slidePos, 1.0)
 
     def keyPressEvent(self, event):
         if self._inOverview:
