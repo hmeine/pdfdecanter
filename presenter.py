@@ -192,8 +192,8 @@ class PDFPresenter(QtGui.QGraphicsView):
             self._slideAnimation.stop()
             self._slideAnimation = None
             r1, r2, movedRenderer, oldPos = self._animatedRenderers
-            r1.contentOffset = QtCore.QPointF(0, 0)
-            r2.contentOffset = QtCore.QPointF(0, 0)
+            r1.contentItem().setPos(QtCore.QPointF(0, 0))
+            r2.contentItem().setPos(QtCore.QPointF(0, 0))
             movedRenderer.slideItem().setPos(oldPos)
             movedRenderer._backgroundItem().show()
             r1.navOpacity = 1.0
@@ -231,12 +231,12 @@ class PDFPresenter(QtGui.QGraphicsView):
 
                 offset = w if frameIndex > self._currentFrameIndex else -w
 
-                slideOutAnim = QtCore.QPropertyAnimation(previousRenderer, "contentOffset", self._slideAnimation)
+                slideOutAnim = QtCore.QPropertyAnimation(previousRenderer.contentItem(), "pos", self._slideAnimation)
                 slideOutAnim.setDuration(250)
                 slideOutAnim.setStartValue(QtCore.QPoint(0, 0))
                 slideOutAnim.setEndValue(QtCore.QPoint(-offset, 0))
 
-                slideInAnim = QtCore.QPropertyAnimation(renderer, "contentOffset", self._slideAnimation)
+                slideInAnim = QtCore.QPropertyAnimation(renderer.contentItem(), "pos", self._slideAnimation)
                 slideInAnim.setDuration(250)
                 slideInAnim.setStartValue(QtCore.QPoint(offset, 0))
                 slideInAnim.setEndValue(QtCore.QPoint(0, 0))

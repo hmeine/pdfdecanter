@@ -62,7 +62,6 @@ class SlideRenderer(QtCore.QObject):
         self._backgroundItem()
         self._contentItem = QtGui.QGraphicsWidget(self._slideItem)
         self._coverItem().setOpacity(1.0 - UNSEEN_OPACITY)
-        self.__contentOffset = QtCore.QPointF(0, 0)
 
     def slide(self):
         return self._slide
@@ -136,6 +135,9 @@ class SlideRenderer(QtCore.QObject):
             return self.showFrame()
         return self._slideItem
 
+    def contentItem(self):
+        return self._contentItem
+
     def uncover(self, seen = True):
         self._coverItem().setVisible(not seen)
 
@@ -158,19 +160,6 @@ class SlideRenderer(QtCore.QObject):
             i.setOpacity(o)
 
     navOpacity = QtCore.pyqtProperty(float, _navOpacity, _setNavOpacity)
-
-    def _contentOffset(self):
-        return self.__contentOffset
-
-    def _setContentOffset(self, offset):
-        """move content items by offset (used to animate slide content
-        independent from header and footer)"""
-        for i in range(0, self._currentFrame + 1):
-            self._frameItem(i).setPos(offset)
-
-        self.__contentOffset = offset
-
-    contentOffset = QtCore.pyqtProperty(QtCore.QPointF, _contentOffset, _setContentOffset)
 
     def showFrame(self, frameIndex = 0):
         result = self._slideItem
