@@ -88,11 +88,11 @@ class SlideRenderer(QtCore.QObject):
         result.setParentItem(self._backgroundItem())
         return result
 
-    def _frameItems(self, frameIndex):
+    def _frameItem(self, frameIndex):
         result = self._items.get(frameIndex, None)
         
         if result is None:
-            result = []
+            result = QtGui.QGraphicsItemGroup(self._backgroundItem())
 
             if frameIndex == 'header':
                 patches = self._slide.header() or ()
@@ -103,15 +103,15 @@ class SlideRenderer(QtCore.QObject):
             else:
                 patches = self._slide.frame(frameIndex)
                 zValue = 100 + frameIndex
-            
+
             for pos, patch in patches:
                 pixmap = QtGui.QPixmap.fromImage(patch)
-                pmItem = QtGui.QGraphicsPixmapItem(self._backgroundItem())
+                pmItem = QtGui.QGraphicsPixmapItem(result)
                 pmItem.setPos(QtCore.QPointF(pos))
                 pmItem.setPixmap(pixmap)
                 pmItem.setTransformationMode(QtCore.Qt.SmoothTransformation)
                 pmItem.setZValue(zValue)
-                result.append(pmItem)
+                result.addToGroup(pmItem)
 
             self._items[frameIndex] = result
 
@@ -119,8 +119,8 @@ class SlideRenderer(QtCore.QObject):
 
     def _navItems(self):
         result = []
-        result.extend(self._frameItems('header'))
-        result.extend(self._frameItems('footer'))
+        result.append(self._frameItem('header'))
+        result.append(self._frameItem('footer'))
         return result
 
     def toggleHeaderAndFooter(self):
@@ -136,11 +136,10 @@ class SlideRenderer(QtCore.QObject):
         self._coverItem().setVisible(not seen)
 
     def _frameOpacity(self):
-        return self._items[self._currentFrame][0].opacity()
+        return self._items[self._currentFrame].opacity()
 
     def _setFrameOpacity(self, o):
-        for i in self._items[self._currentFrame]:
-            i.setOpacity(o)
+        self._items[self._currentFrame].setOpacity(o)
 
     frameOpacity = QtCore.pyqtProperty(float, _frameOpacity, _setFrameOpacity)
 
@@ -163,12 +162,7 @@ class SlideRenderer(QtCore.QObject):
         """move content items by offset (used to animate slide content
         independent from header and footer)"""
         for i in range(0, self._currentFrame + 1):
-            patches = self._slide.frame(i)
-            items = self._frameItems(i)
-            
-            for (pos, patch), item in zip(patches, items):
-                item.setPos(QtCore.QPointF(pos) + offset
-                            + self._temporaryOffset)
+            self._frameItem(i).setPos(offset + self._temporaryOffset)
 
         self.__contentOffset = offset
 
@@ -185,20 +179,20 @@ class SlideRenderer(QtCore.QObject):
     def showFrame(self, frameIndex = 0):
         result = self._backgroundItem()
 
-        self._frameItems('header')
-        self._frameItems('footer')
+        self._frameItem('header')
+        self._frameItem('footer')
 
         self._currentFrame = frameIndex
 
         for i in range(0, self._currentFrame + 1):
-            for item in self._frameItems(i):
-                item.setVisible(True)
-                if self.DEBUG:
-                    item.setOpacity(0.5 if i < frameIndex else 1.0)
+            item = self._frameItem(i)
+            item.setVisible(True)
+            if self.DEBUG:
+                item.setOpacity(0.5 if i < frameIndex else 1.0)
 
         for i in range(frameIndex + 1, len(self._slide)):
-            for item in self._items.get(i, ()):
-                item.setVisible(False)
+            if i in self._items:
+                self._items[i].setVisible(False)
 
         return result
 
