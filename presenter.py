@@ -212,9 +212,11 @@ class PDFPresenter(QtGui.QGraphicsView):
                 if frameIndex > self._currentFrameIndex:
                     topRenderer = renderer
                     bottomRenderer = previousRenderer
+                    targetOpacity = 1.0
                 else:
                     topRenderer = previousRenderer
                     bottomRenderer = renderer
+                    targetOpacity = 0.0
 
                 topRenderer.setTemporaryOffset(
                     bottomRenderer.slideItem().pos() - topRenderer.slideItem().pos())
@@ -237,18 +239,21 @@ class PDFPresenter(QtGui.QGraphicsView):
 
                 blendAnimation1 = QtCore.QPropertyAnimation(renderer, "navOpacity", self._slideAnimation)
                 blendAnimation1.setDuration(BLEND_DURATION)
-                blendAnimation1.setStartValue(0.0)
-                blendAnimation1.setEndValue(1.0)
+                blendAnimation1.setStartValue(1.0 - targetOpacity)
+                blendAnimation1.setEndValue(targetOpacity)
 
                 blendAnimation2 = QtCore.QPropertyAnimation(previousRenderer, "navOpacity", self._slideAnimation)
                 blendAnimation2.setDuration(BLEND_DURATION)
-                blendAnimation2.setStartValue(1.0)
-                blendAnimation2.setEndValue(0.0)
+                blendAnimation2.setStartValue(targetOpacity)
+                blendAnimation2.setEndValue(1.0 - targetOpacity)
+
+                blendSequence = QtCore.QSequentialAnimationGroup(self._slideAnimation)
+                blendSequence.addAnimation(blendAnimation1)
+                blendSequence.addAnimation(blendAnimation2)
 
                 self._slideAnimation.addAnimation(slideOutAnim)
                 self._slideAnimation.addAnimation(slideInAnim)
-                self._slideAnimation.addAnimation(blendAnimation1)
-                self._slideAnimation.addAnimation(blendAnimation2)
+                self._slideAnimation.addAnimation(blendSequence)
                 self._slideAnimation.start()
             elif animated != 'slide':
                 self._blendAnimation = QtCore.QPropertyAnimation(renderer, "frameOpacity")
