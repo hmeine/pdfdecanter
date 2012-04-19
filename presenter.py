@@ -392,6 +392,8 @@ if __name__ == "__main__":
         print "%d pixels out of %d retained. (%.1f%%)" % (pixelCount, rawCount, 100.0 * pixelCount / rawCount)
 
         print "caching in '%s'..." % cacheFilename
+        if os.path.exists(cacheFilename):
+            os.unlink(cacheFilename)
         cache.writeSlides(cacheFilename, slides)
 
     g.setSlides(slides)
