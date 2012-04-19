@@ -61,6 +61,7 @@ class SlideRenderer(QtCore.QObject):
         self._slideItem = QtGui.QGraphicsWidget(parentItem)
         self._backgroundItem()
         self._contentItem = QtGui.QGraphicsWidget(self._slideItem)
+        self._navigationItem = QtGui.QGraphicsWidget(self._slideItem)
         self._coverItem().setOpacity(1.0 - UNSEEN_OPACITY)
 
     def slide(self):
@@ -94,11 +95,11 @@ class SlideRenderer(QtCore.QObject):
         if result is None:
             if frameIndex == 'header':
                 patches = self._slide.header() or ()
-                parentItem = self._slideItem
+                parentItem = self._navigationItem
                 zValue = 50
             elif frameIndex == 'footer':
                 patches = self._slide.footer() or ()
-                parentItem = self._slideItem
+                parentItem = self._navigationItem
                 zValue = 50
             else:
                 patches = self._slide.frame(frameIndex)
@@ -119,15 +120,8 @@ class SlideRenderer(QtCore.QObject):
 
         return result
 
-    def _navItems(self):
-        result = []
-        result.append(self.frameItem('header'))
-        result.append(self.frameItem('footer'))
-        return result
-
-    def toggleHeaderAndFooter(self):
-        for i in self._navItems():
-            i.setVisible(not i.isVisible())
+    def navigationItem(self):
+        return self._navigationItem
 
     def slideItem(self):
         if self._currentFrame is None:
@@ -139,18 +133,6 @@ class SlideRenderer(QtCore.QObject):
 
     def uncover(self, seen = True):
         self._coverItem().setVisible(not seen)
-
-    def _navOpacity(self):
-        items = self._navItems()
-        if items:
-            return items[0].opacity()
-        return 1.0
-
-    def _setNavOpacity(self, o):
-        for i in self._navItems():
-            i.setOpacity(o)
-
-    navOpacity = QtCore.pyqtProperty(float, _navOpacity, _setNavOpacity)
 
     def showFrame(self, frameIndex = 0):
         result = self._slideItem
