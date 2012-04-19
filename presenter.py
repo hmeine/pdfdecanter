@@ -44,7 +44,8 @@ class PDFPresenter(QtGui.QGraphicsView):
         self._scene.addItem(self._slideViewport)
         self._slideViewport.setFlag(QtGui.QGraphicsItem.ItemClipsChildrenToShape)
 
-        self._group = QtGui.QGraphicsItemGroup(self._slideViewport)
+        self._presentationItem = QtGui.QGraphicsWidget(self._slideViewport)
+        self._group = QtGui.QGraphicsItemGroup(self._presentationItem)
 
         self._cursor = self._scene.addRect(self._scene.sceneRect())
         self._cursor.setPen(QtGui.QPen(QtCore.Qt.yellow, 25))
@@ -112,26 +113,11 @@ class PDFPresenter(QtGui.QGraphicsView):
             self._cursorAnimation.setStartValue(self._cursorRect())
             self._cursorAnimation.setEndValue(r)
             self._cursorAnimation.start()
-            
-            if not self._scene.sceneRect().contains(r.center() * self._groupScale() + self._groupPos()):
-                self._animateOverviewGroup(self._overviewPosForCursor(r), self._groupScale())
 
-    def _groupPos(self):
-        return self._group.pos()
-
-    def _setGroupPos(self, t):
-        self._group.setPos(t)
-
-    groupPos = QtCore.pyqtProperty(QtCore.QPointF, _groupPos, _setGroupPos)
-
-    def _groupScale(self):
-        return self._group.transform().m11()
-
-    def _setGroupScale(self, scale):
-        transform = QtGui.QTransform.fromScale(scale, scale)
-        self._group.setTransform(transform)
-
-    groupScale = QtCore.pyqtProperty(float, _groupScale, _setGroupScale)
+            pres = self._presentationItem
+            if not self._scene.sceneRect().contains(
+                    r.center() * pres.scale() + pres.pos()):
+                self._animateOverviewGroup(self._overviewPosForCursor(r), pres.scale())
 
     def _animateOverviewGroup(self, pos, scale):
         if pos.y() > 0.0:
@@ -144,14 +130,14 @@ class PDFPresenter(QtGui.QGraphicsView):
         # FIXME: clear up / reuse QObject:
         self._overviewAnimation = QtCore.QParallelAnimationGroup()
 
-        posAnim = QtCore.QPropertyAnimation(self, "groupPos", self._overviewAnimation)
+        posAnim = QtCore.QPropertyAnimation(self._presentationItem, "pos", self._overviewAnimation)
         posAnim.setDuration(200)
-        posAnim.setStartValue(self._groupPos())
+        posAnim.setStartValue(self._presentationItem.pos())
         posAnim.setEndValue(pos)
 
-        scaleAnim = QtCore.QPropertyAnimation(self, "groupScale", self._overviewAnimation)
+        scaleAnim = QtCore.QPropertyAnimation(self._presentationItem, "scale", self._overviewAnimation)
         scaleAnim.setDuration(200)
-        scaleAnim.setStartValue(self._groupScale())
+        scaleAnim.setStartValue(self._presentationItem.scale())
         scaleAnim.setEndValue(scale)
 
         self._overviewAnimation.addAnimation(posAnim)
@@ -199,7 +185,7 @@ class PDFPresenter(QtGui.QGraphicsView):
             r1.navigationItem().setOpacity(1.0)
             r2.navigationItem().setOpacity(1.0)
             if not self._inOverview:
-                self._group.setPos(-r2.slideItem().pos())
+                self._presentationItem.setPos(-r2.slideItem().pos())
 
     def gotoFrame(self, frameIndex, animated = False):
         self._resetSlideAnimation()
@@ -274,7 +260,7 @@ class PDFPresenter(QtGui.QGraphicsView):
         self._currentFrameIndex = frameIndex
 
         if not self._inOverview:
-            self._group.setPos(-slideItem.pos())
+            self._presentationItem.setPos(-slideItem.pos())
         else:
             self._inOverview = False
             self._animateOverviewGroup(-slideItem.pos(), 1.0)
