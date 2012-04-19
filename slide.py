@@ -53,56 +53,60 @@ class Slide(object):
 class SlideRenderer(QtCore.QObject):
     DEBUG = False # True
         
-    def __init__(self, slide, groupItem, parent = None):
+    def __init__(self, slide, parentItem, parent = None):
         QtCore.QObject.__init__(self, parent)
         self._slide = slide
         self._items = {}
         self._currentFrame = None
-        self._groupItem = groupItem
+        self._slideItem = QtGui.QGraphicsWidget(parentItem)
+        self._backgroundItem()
+        self._contentItem = QtGui.QGraphicsWidget(self._slideItem)
         self._coverItem().setOpacity(1.0 - UNSEEN_OPACITY)
-        self._temporaryOffset = QtCore.QPointF(0, 0)
         self.__contentOffset = QtCore.QPointF(0, 0)
 
     def slide(self):
         return self._slide
 
-    def _rectItem(self, color, zValue, key):
+    def _slideRect(self):
+        return QtCore.QRectF(QtCore.QPointF(0, 0), self._slide.size())
+
+    def _rectItem(self, color, key):
         result = self._items.get(key, None)
         
         if result is None:
-            rect = QtCore.QRect(QtCore.QPoint(0, 0), self._slide.size())
-            result = QtGui.QGraphicsRectItem(QtCore.QRectF(rect), self._groupItem)
+            result = QtGui.QGraphicsRectItem(self._slideRect(), self._slideItem)
             result.setBrush(color)
             result.setPen(QtGui.QPen(QtCore.Qt.NoPen))
-            result.setZValue(zValue)
             self._items[key] = result
 
         return result
 
     def _backgroundItem(self):
-        return self._rectItem(QtCore.Qt.white if not self.DEBUG else QtCore.Qt.red,
-                              zValue = 10, key = 'bg')
+        return self._rectItem(QtCore.Qt.white if not self.DEBUG else QtCore.Qt.red, key = 'bg')
 
     def _coverItem(self):
-        result = self._rectItem(QtCore.Qt.black, zValue = 1000, key = 'cover')
-        result.setParentItem(self._backgroundItem())
+        result = self._rectItem(QtCore.Qt.black, key = 'cover')
+        result.setZValue(1000)
         return result
 
     def _frameItem(self, frameIndex):
         result = self._items.get(frameIndex, None)
         
         if result is None:
-            result = QtGui.QGraphicsItemGroup(self._backgroundItem())
-
             if frameIndex == 'header':
                 patches = self._slide.header() or ()
+                parentItem = self._slideItem
                 zValue = 50
             elif frameIndex == 'footer':
                 patches = self._slide.footer() or ()
+                parentItem = self._slideItem
                 zValue = 50
             else:
                 patches = self._slide.frame(frameIndex)
+                parentItem = self._contentItem
                 zValue = 100 + frameIndex
+
+            result = QtGui.QGraphicsItemGroup(parentItem)
 
             for pos, patch in patches:
                 pixmap = QtGui.QPixmap.fromImage(patch)
@@ -130,7 +134,7 @@ class SlideRenderer(QtCore.QObject):
     def slideItem(self):
         if self._currentFrame is None:
             return self.showFrame()
-        return self._backgroundItem()
+        return self._slideItem
 
     def uncover(self, seen = True):
         self._coverItem().setVisible(not seen)
@@ -162,22 +166,14 @@ class SlideRenderer(QtCore.QObject):
         """move content items by offset (used to animate slide content
         independent from header and footer)"""
         for i in range(0, self._currentFrame + 1):
-            self._frameItem(i).setPos(offset + self._temporaryOffset)
+            self._frameItem(i).setPos(offset)
 
         self.__contentOffset = offset
 
     contentOffset = QtCore.pyqtProperty(QtCore.QPointF, _contentOffset, _setContentOffset)
 
-    def setTemporaryOffset(self, offset):
-        """temporarily move all slide items by offset (used to overlay
-        one slide over another for animations)"""
-        shift = offset - self._temporaryOffset
-        for item in self.slideItem().childItems():
-            item.moveBy(shift.x(), shift.y())
-        self._temporaryOffset = offset
-
     def showFrame(self, frameIndex = 0):
-        result = self._backgroundItem()
+        result = self._slideItem
 
         self._frameItem('header')
         self._frameItem('footer')
@@ -247,7 +243,7 @@ def decompose_slide(rects, frame_size):
 
 
 def stack_frames(raw_frames):
-    frame_size = QtCore.QSize(raw_frames[0].shape[1], raw_frames[0].shape[0])
+    frame_size = QtCore.QSizeF(raw_frames[0].shape[1], raw_frames[0].shape[0])
     header_rows = frame_size.height() * 11 / 48
 
     canvas = numpy.ones_like(raw_frames[0]) * 255

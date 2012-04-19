@@ -44,7 +44,7 @@ def readSlides(filename):
     for i in range(len(f)):
         sg = f['slide%d' % i]
         w, h = sg.attrs['size']
-        s = slide.Slide(QtCore.QSize(w, h))
+        s = slide.Slide(QtCore.QSizeF(w, h))
         s._header = _readPatches(sg['header'])
         s._footer = _readPatches(sg['footer'])
         for j in range(len(sg)):

@@ -96,8 +96,8 @@ class PDFPresenter(QtGui.QGraphicsView):
     cursorRect = QtCore.pyqtProperty(QtCore.QRectF, _cursorRect, _setCursorRect)
 
     def _updateCursor(self, animated):
-        r = QtCore.QRectF(self._currentSlideItem().boundingRect())
-        r.moveTo(self._currentSlideItem().pos())
+        r = QtCore.QRectF(self._currentSlideItem().pos(),
+                          self._currentRenderer().slide().size())
 
         if not animated:
             self._cursor.setRect(r)
@@ -186,11 +186,11 @@ class PDFPresenter(QtGui.QGraphicsView):
         if self._slideAnimation is not None:
             self._slideAnimation.stop()
             self._slideAnimation = None
-            r1, r2 = self._animatedRenderers
+            r1, r2, movedRenderer, oldPos = self._animatedRenderers
             r1.contentOffset = QtCore.QPointF(0, 0)
             r2.contentOffset = QtCore.QPointF(0, 0)
-            r1.setTemporaryOffset(QtCore.QPointF(0, 0))
-            r2.setTemporaryOffset(QtCore.QPointF(0, 0))
+            movedRenderer.slideItem().setPos(oldPos)
+            movedRenderer._backgroundItem().show()
             r1.navOpacity = 1.0
             r2.navOpacity = 1.0
             if not self._inOverview:
@@ -203,7 +203,6 @@ class PDFPresenter(QtGui.QGraphicsView):
         renderer = self._renderers[slideIndex]
         renderer.uncover()
         slideItem = renderer.showFrame(subFrame)
-        slidePos = slideItem.pos()
 
         if animated:
             previousRenderer = self._currentRenderer()
@@ -216,12 +215,14 @@ class PDFPresenter(QtGui.QGraphicsView):
                     topRenderer = previousRenderer
                     bottomRenderer = renderer
 
-                topRenderer.setTemporaryOffset(
-                    bottomRenderer.slideItem().pos() - topRenderer.slideItem().pos())
-                slidePos = bottomRenderer.slideItem().pos()
+                oldPos = topRenderer.slideItem().pos()
+                topRenderer.slideItem().setPos(bottomRenderer.slideItem().pos())
+                topRenderer._backgroundItem().hide()
+
+                # store information for later reset:
+                self._animatedRenderers = (previousRenderer, renderer, topRenderer, oldPos)
 
                 self._slideAnimation = QtCore.QParallelAnimationGroup()
-                self._animatedRenderers = (previousRenderer, renderer)
 
                 offset = w if frameIndex > self._currentFrameIndex else -w
 
@@ -263,10 +264,10 @@ class PDFPresenter(QtGui.QGraphicsView):
         self._currentFrameIndex = frameIndex
 
         if not self._inOverview:
-            self._group.setPos(-slidePos)
+            self._group.setPos(-slideItem.pos())
         else:
             self._inOverview = False
-            self._animateOverviewGroup(-slidePos, 1.0)
+            self._animateOverviewGroup(-slideItem.pos(), 1.0)
 
     def _clearGotoSlide(self):
         self._gotoSlideIndex = None
