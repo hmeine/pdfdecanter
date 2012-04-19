@@ -47,10 +47,11 @@ class PDFPresenter(QtGui.QGraphicsView):
         self._presentationItem = QtGui.QGraphicsWidget(self._slideViewport)
         self._group = QtGui.QGraphicsItemGroup(self._presentationItem)
 
-        self._cursor = self._scene.addRect(self._scene.sceneRect())
-        self._cursor.setPen(QtGui.QPen(QtCore.Qt.yellow, 25))
-        self._cursor.setBrush(QtGui.QBrush(QtGui.QColor(255, 255, 0, 100)))
-        self._cursor.setParentItem(self._group)
+        self._cursor = QtGui.QGraphicsWidget(self._group)
+        cursorRect = self._scene.addRect(self._scene.sceneRect())
+        cursorRect.setPen(QtGui.QPen(QtCore.Qt.yellow, 25))
+        cursorRect.setBrush(QtGui.QBrush(QtGui.QColor(255, 255, 0, 100)))
+        cursorRect.setParentItem(self._cursor)
 
         self._renderers = None
         self._currentFrameIndex = None
@@ -93,25 +94,17 @@ class PDFPresenter(QtGui.QGraphicsView):
                              (h + MARGIN_Y) * (i / OVERVIEW_COLS))
             self._group.addToGroup(slideItem)
 
-    def _cursorRect(self):
-        return self._cursor.rect()
-
-    def _setCursorRect(self, r):
-        self._cursor.setRect(r)
-
-    cursorRect = QtCore.pyqtProperty(QtCore.QRectF, _cursorRect, _setCursorRect)
-
     def _updateCursor(self, animated):
         r = QtCore.QRectF(self._currentSlideItem().pos(),
                           self._currentRenderer().slide().size())
 
         if not animated:
-            self._cursor.setRect(r)
+            self._cursor.setPos(r.topLeft())
         else:
-            self._cursorAnimation = QtCore.QPropertyAnimation(self, "cursorRect")
+            self._cursorAnimation = QtCore.QPropertyAnimation(self._cursor, "pos")
             self._cursorAnimation.setDuration(100)
-            self._cursorAnimation.setStartValue(self._cursorRect())
-            self._cursorAnimation.setEndValue(r)
+            self._cursorAnimation.setStartValue(self._cursor.pos())
+            self._cursorAnimation.setEndValue(r.topLeft())
             self._cursorAnimation.start()
 
             pres = self._presentationItem
@@ -149,7 +142,8 @@ class PDFPresenter(QtGui.QGraphicsView):
 
     def _overviewPosForCursor(self, r = None):
         if r is None:
-            r = self._cursor.boundingRect()
+            r = self._cursor.childItems()[0].boundingRect()
+            r.moveTo(self._cursor.pos())
         s = self._overviewScale()
         y = (0.5 * self._scene.sceneRect().height() - r.center().y() * s)
 
