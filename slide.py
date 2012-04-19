@@ -1,6 +1,5 @@
 import numpy
-import qimage2ndarray
-from PyQt4 import QtCore, QtGui
+from dynqt import QtCore, QtGui, array2qimage
 
 UNSEEN_OPACITY = 0.5
 
@@ -21,7 +20,7 @@ class Slide(object):
         for r in rects:
             x1, y1 = r.x(), r.y()
             x2, y2 = r.right() + 1, r.bottom() + 1
-            patches.append((r.topLeft(), qimage2ndarray.array2qimage(frame[y1:y2,x1:x2])))
+            patches.append((r.topLeft(), array2qimage(frame[y1:y2,x1:x2])))
         return patches
 
     def setHeader(self, frame, rects):

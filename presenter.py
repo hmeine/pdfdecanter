@@ -1,9 +1,7 @@
-import sip
-sip.setapi("QString", 2)
-from PyQt4 import QtCore, QtGui, QtOpenGL
+from dynqt import QtCore, QtGui, QtOpenGL
 
 import numpy, os
-import pdftoppm_renderer, slide, cache
+import pdftoppm_renderer, slide
 
 __version__ = "0.1"
 
@@ -14,6 +12,7 @@ MARGIN_X = 30
 MARGIN_Y = 24
 BLEND_DURATION = 150
 USE_GL = True # False
+USE_CACHING = True # False
 
 if USE_GL:
     try:
@@ -72,6 +71,13 @@ class PDFPresenter(QtGui.QGraphicsView):
         self.resetMatrix()
         self.scale(factor, factor)
         return QtGui.QGraphicsView.resizeEvent(self, e)
+
+    def loadPDF(self, pdfFilename):
+        raw_frames = list(pdftoppm_renderer.renderAllPages(pdfFilename, (w, h)))
+
+        slides = slide.stack_frames(raw_frames)
+
+        self.setSlides(slides)
 
     def setSlides(self, slides):
         self._slides = slides
@@ -369,7 +375,8 @@ if __name__ == "__main__":
 
     cacheFilename = "/tmp/pdf_presenter_cache_%s.h5" % (pdfFilename.replace("/", "!"), )
 
-    if not 'slides' in globals():
+    if USE_CACHING and not 'slides' in globals():
+        import cache
         if os.path.exists(cacheFilename):
             if os.path.getmtime(cacheFilename) >= os.path.getmtime(pdfFilename):
                 slides = cache.readSlides(cacheFilename)
@@ -383,10 +390,11 @@ if __name__ == "__main__":
         rawCount = len(raw_frames) * numpy.prod(raw_frames[0].shape[:2])
         print "%d pixels out of %d retained. (%.1f%%)" % (pixelCount, rawCount, 100.0 * pixelCount / rawCount)
 
-        print "caching in '%s'..." % cacheFilename
-        if os.path.exists(cacheFilename):
-            os.unlink(cacheFilename)
-        cache.writeSlides(cacheFilename, slides)
+        if USE_CACHING:
+            print "caching in '%s'..." % cacheFilename
+            if os.path.exists(cacheFilename):
+                os.unlink(cacheFilename)
+            cache.writeSlides(cacheFilename, slides)
 
     g.setSlides(slides)
     

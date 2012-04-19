@@ -1,10 +1,10 @@
-import h5py, numpy, qimage2ndarray
-from PyQt4 import QtCore
+import h5py, numpy
+from dynqt import QtCore, array2qimage, rgb_view
 import slide
 
 def _writePatches(group, patches):
     for k, (pos, patch) in enumerate(patches):
-        ds = group.create_dataset('patch%d' % k, data = qimage2ndarray.rgb_view(patch))
+        ds = group.create_dataset('patch%d' % k, data = rgb_view(patch))
         ds.attrs['pos'] = (pos.x(), pos.y())
 
 def writeSlides(filename, slides):
@@ -30,7 +30,7 @@ def _readPatches(group):
     result = []
     for k in range(len(group)):
         patch = group['patch%d' % k]
-        qimg = qimage2ndarray.array2qimage(numpy.asarray(patch))
+        qimg = array2qimage(numpy.asarray(patch))
         x, y = patch.attrs['pos']
         pos = QtCore.QPointF(x, y)
         result.append((pos, qimg))
