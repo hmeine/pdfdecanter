@@ -13,7 +13,13 @@ OVERVIEW_COLS = 5
 MARGIN_X = 30
 MARGIN_Y = 24
 BLEND_DURATION = 150
-USE_GL = True
+USE_GL = True # False
+
+if USE_GL:
+    try:
+        from OpenGL import GL
+    except ImportError:
+        USE_GL = False
 
 class PDFPresenter(QtGui.QGraphicsView):
     def __init__(self):
@@ -27,7 +33,6 @@ class PDFPresenter(QtGui.QGraphicsView):
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
 
         if USE_GL:
-            from OpenGL import GL
             self.setViewport(QtOpenGL.QGLWidget(QtOpenGL.QGLFormat(QtOpenGL.QGL.SampleBuffers)))
             self.setViewportUpdateMode(QtGui.QGraphicsView.FullViewportUpdate)
 
@@ -337,9 +342,9 @@ class PDFPresenter(QtGui.QGraphicsView):
             elif event.key() in (QtCore.Qt.Key_Tab, ):
                 self.showOverview()
                 event.accept()
-            # elif event.key() in (QtCore.Qt.Key_P, ):
-            #     self._currentRenderer().toggleHeaderAndFooter()
-            #     event.accept()
+            elif event.key() in (QtCore.Qt.Key_P, ):
+                self._currentRenderer().toggleHeaderAndFooter()
+                event.accept()
 
         if not event.isAccepted():
             QtGui.QGraphicsView.keyPressEvent(self, event)
