@@ -212,11 +212,9 @@ class PDFPresenter(QtGui.QGraphicsView):
                 if frameIndex > self._currentFrameIndex:
                     topRenderer = renderer
                     bottomRenderer = previousRenderer
-                    targetOpacity = 1.0
                 else:
                     topRenderer = previousRenderer
                     bottomRenderer = renderer
-                    targetOpacity = 0.0
 
                 topRenderer.setTemporaryOffset(
                     bottomRenderer.slideItem().pos() - topRenderer.slideItem().pos())
@@ -239,13 +237,13 @@ class PDFPresenter(QtGui.QGraphicsView):
 
                 blendAnimation1 = QtCore.QPropertyAnimation(renderer, "navOpacity", self._slideAnimation)
                 blendAnimation1.setDuration(BLEND_DURATION)
-                blendAnimation1.setStartValue(1.0 - targetOpacity)
-                blendAnimation1.setEndValue(targetOpacity)
+                blendAnimation1.setStartValue(0.0)
+                blendAnimation1.setEndValue(1.0)
 
                 blendAnimation2 = QtCore.QPropertyAnimation(previousRenderer, "navOpacity", self._slideAnimation)
                 blendAnimation2.setDuration(BLEND_DURATION)
-                blendAnimation2.setStartValue(targetOpacity)
-                blendAnimation2.setEndValue(1.0 - targetOpacity)
+                blendAnimation2.setStartValue(1.0)
+                blendAnimation2.setEndValue(0.0)
 
                 blendSequence = QtCore.QSequentialAnimationGroup(self._slideAnimation)
                 blendSequence.addAnimation(blendAnimation1)
