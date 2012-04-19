@@ -225,7 +225,7 @@ def decompose_slide(rects, frame_size):
         del rects[0]
 
     # detect footer
-    footer_rows = frame_size.height() / 5
+    footer_rows = frame_size.height() / 7
 
     footer = []
 
