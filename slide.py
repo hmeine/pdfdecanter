@@ -88,7 +88,7 @@ class SlideRenderer(QtCore.QObject):
         result.setZValue(1000)
         return result
 
-    def _frameItem(self, frameIndex):
+    def frameItem(self, frameIndex):
         result = self._items.get(frameIndex, None)
         
         if result is None:
@@ -105,7 +105,7 @@ class SlideRenderer(QtCore.QObject):
                 parentItem = self._contentItem
                 zValue = 100 + frameIndex
 
-            result = QtGui.QGraphicsItemGroup(parentItem)
+            result = QtGui.QGraphicsWidget(parentItem)
 
             for pos, patch in patches:
                 pixmap = QtGui.QPixmap.fromImage(patch)
@@ -114,7 +114,6 @@ class SlideRenderer(QtCore.QObject):
                 pmItem.setPixmap(pixmap)
                 pmItem.setTransformationMode(QtCore.Qt.SmoothTransformation)
                 pmItem.setZValue(zValue)
-                result.addToGroup(pmItem)
 
             self._items[frameIndex] = result
 
@@ -122,8 +121,8 @@ class SlideRenderer(QtCore.QObject):
 
     def _navItems(self):
         result = []
-        result.append(self._frameItem('header'))
-        result.append(self._frameItem('footer'))
+        result.append(self.frameItem('header'))
+        result.append(self.frameItem('footer'))
         return result
 
     def toggleHeaderAndFooter(self):
@@ -141,14 +140,6 @@ class SlideRenderer(QtCore.QObject):
     def uncover(self, seen = True):
         self._coverItem().setVisible(not seen)
 
-    def _frameOpacity(self):
-        return self._items[self._currentFrame].opacity()
-
-    def _setFrameOpacity(self, o):
-        self._items[self._currentFrame].setOpacity(o)
-
-    frameOpacity = QtCore.pyqtProperty(float, _frameOpacity, _setFrameOpacity)
-
     def _navOpacity(self):
         items = self._navItems()
         if items:
@@ -164,13 +155,13 @@ class SlideRenderer(QtCore.QObject):
     def showFrame(self, frameIndex = 0):
         result = self._slideItem
 
-        self._frameItem('header')
-        self._frameItem('footer')
+        self.frameItem('header')
+        self.frameItem('footer')
 
         self._currentFrame = frameIndex
 
         for i in range(0, self._currentFrame + 1):
-            item = self._frameItem(i)
+            item = self.frameItem(i)
             item.setVisible(True)
             if self.DEBUG:
                 item.setOpacity(0.5 if i < frameIndex else 1.0)

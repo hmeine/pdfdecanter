@@ -260,7 +260,8 @@ class PDFPresenter(QtGui.QGraphicsView):
                 self._slideAnimation.addAnimation(blendSequence)
                 self._slideAnimation.start()
             elif animated != 'slide':
-                self._blendAnimation = QtCore.QPropertyAnimation(renderer, "frameOpacity")
+                self._blendAnimation = QtCore.QPropertyAnimation(
+                    renderer.frameItem(renderer.currentFrame()), "opacity")
                 self._blendAnimation.setDuration(BLEND_DURATION)
                 self._blendAnimation.setStartValue(0.0)
                 self._blendAnimation.setEndValue(1.0)
