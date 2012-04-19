@@ -373,19 +373,26 @@ if __name__ == "__main__":
     op = OptionParser(usage = "%prog [options] <filename1> <filename2>")
     options, args = op.parse_args()
 
-    if not 'slides' in globals():
-        if os.path.exists('cache.h5'):
-            slides = cache.readSlides('cache.h5')
-        else:
-            if not 'raw_frames' in globals():
-                raw_frames = []
-                for pdfFilename in (args or ('../testtalks/defense.pdf', )):
-                    raw_frames.extend(pdftoppm_renderer.renderAllPages(pdfFilename, (w, h)))
+    pdfFilename, = args
 
-            slides = slide.stack_frames(raw_frames)
-            pixelCount = sum(s.pixelCount() for s in slides)
-            rawCount = len(raw_frames) * numpy.prod(raw_frames[0].shape[:2])
-            print "%d pixels out of %d retained. (%.1f%%)" % (pixelCount, rawCount, 100.0 * pixelCount / rawCount)
+    cacheFilename = "/tmp/pdf_presenter_cache_%s.h5" % (pdfFilename.replace("/", "!"), )
+
+    if not 'slides' in globals():
+        if os.path.exists(cacheFilename):
+            if os.path.getmtime(cacheFilename) >= os.path.getmtime(pdfFilename):
+                slides = cache.readSlides(cacheFilename)
+
+    if not 'slides' in globals():
+        if not 'raw_frames' in globals():
+            raw_frames = list(pdftoppm_renderer.renderAllPages(pdfFilename, (w, h)))
+
+        slides = slide.stack_frames(raw_frames)
+        pixelCount = sum(s.pixelCount() for s in slides)
+        rawCount = len(raw_frames) * numpy.prod(raw_frames[0].shape[:2])
+        print "%d pixels out of %d retained. (%.1f%%)" % (pixelCount, rawCount, 100.0 * pixelCount / rawCount)
+
+        print "caching in '%s'..." % cacheFilename
+        cache.writeSlides(cacheFilename, slides)
 
     g.setSlides(slides)
     
