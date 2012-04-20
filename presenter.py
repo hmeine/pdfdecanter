@@ -104,18 +104,19 @@ class PDFPresenter(QtCore.QObject):
 
         self.setSlides(slides)
 
-    def setSlides(self, slides):
-        self._slides = slides
-        assert not self._renderers, "FIXME: delete old renderers / graphisc items"
-        self._renderers = [slide.SlideRenderer(s, self._group, self) for s in slides]
-        self._setupGrid()
-
+    def _slidesChanged(self):
         self._frame2Slide = []
         self._slide2Frame = []
-        for i, s in enumerate(slides):
+        for i, s in enumerate(self._slides):
             self._slide2Frame.append(len(self._frame2Slide))
             self._frame2Slide.extend([(i, j) for j in range(len(s))])
 
+    def setSlides(self, slides):
+        self._slides = slides
+        self._slidesChanged()
+        assert not self._renderers, "FIXME: delete old renderers / graphisc items"
+        self._renderers = [slide.SlideRenderer(s, self._group, self) for s in slides]
+        self._setupGrid()
         self.gotoFrame(0, animated = False)
 
     def _setupGrid(self):
