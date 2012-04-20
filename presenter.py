@@ -1,6 +1,6 @@
 from dynqt import QtCore, QtGui, QtOpenGL
 
-import numpy, os
+import numpy, os, sys
 import pdftoppm_renderer, slide
 
 __version__ = "0.1"
