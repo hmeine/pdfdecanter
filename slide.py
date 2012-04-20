@@ -122,6 +122,18 @@ class SlideRenderer(QtCore.QObject):
     def contentItem(self):
         return self._contentItem
 
+    def addCustomContent(self, item, frameIndex = 0):
+        self._items['custom'] = self._items.get('custom', []) + [item]
+
+        if frameIndex is None:
+            frameIndex = len(self._slide)
+        while frameIndex >= len(self._slide):
+            self._slide.addFrame([])
+
+        parent = self.frameItem(frameIndex)
+        parent.setVisible(frameIndex <= self._currentFrame)
+        item.setParentItem(parent)
+
     def uncover(self, seen = True):
         self._coverItem().setVisible(not seen)
 
