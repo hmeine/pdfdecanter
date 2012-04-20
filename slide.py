@@ -15,28 +15,20 @@ class Slide(object):
     def __len__(self):
         return len(self._frames)
 
-    def _extractPatches(self, frame, rects):
-        patches = []
-        for r in rects:
-            x1, y1 = r.x(), r.y()
-            x2, y2 = r.right() + 1, r.bottom() + 1
-            patches.append((r.topLeft(), array2qimage(frame[y1:y2,x1:x2])))
-        return patches
-
-    def setHeader(self, frame, rects):
-        self._header = self._extractPatches(frame, rects)
+    def setHeader(self, patches):
+        self._header = patches
 
     def header(self):
         return self._header
 
-    def setFooter(self, frame, rects):
-        self._footer = self._extractPatches(frame, rects)
+    def setFooter(self, patches):
+        self._footer = patches
 
     def footer(self):
         return self._footer
 
-    def addFrame(self, frame, rects):
-        self._frames.append(self._extractPatches(frame, rects))
+    def addFrame(self, patches):
+        self._frames.append(patches)
 
     def frame(self, frameIndex):
         return self._frames[frameIndex]
@@ -203,6 +195,15 @@ def decompose_slide(rects, frame_size):
     return header, rects, footer
 
 
+def extractPatches(frame, rects):
+    patches = []
+    for r in rects:
+        x1, y1 = r.x(), r.y()
+        x2, y2 = r.right() + 1, r.bottom() + 1
+        patches.append((r.topLeft(), array2qimage(frame[y1:y2,x1:x2])))
+    return patches
+
+
 def stack_frames(raw_frames):
     frame_size = QtCore.QSizeF(raw_frames[0].shape[1], raw_frames[0].shape[0])
     header_rows = frame_size.height() * 11 / 48
@@ -239,12 +240,12 @@ def stack_frames(raw_frames):
 
         if isNewSlide:
             s = Slide(frame_size)
-            s.setHeader(frame2, header)
-            s.setFooter(frame2, footer)
-            s.addFrame(frame2, content)
+            s.setHeader(extractPatches(frame2, header))
+            s.setFooter(extractPatches(frame2, footer))
+            s.addFrame(extractPatches(frame2, content))
             slides.append(s)
         else:
-            slides[-1].addFrame(frame2, changed)
+            slides[-1].addFrame(extractPatches(frame2, changed))
 
         frame1 = frame2
         prev_header = header
