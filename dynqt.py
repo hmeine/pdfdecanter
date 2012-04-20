@@ -14,10 +14,12 @@ if True:
 	from PyQt4 import QtCore, QtGui, QtOpenGL
 
 	from qimage2ndarray import array2qimage, rgb_view
-else:
-	#	from PySide import QtCore, QtGui, QtOpenGL
-	from PythonQt import QtCore, QtGui, QtOpenGL
+elif False:
+	from PySide import QtCore, QtGui, QtOpenGL
 
 	array2qimage = array2qimage_pure_python
 
 	rgb_view = NotImplemented
+else:
+	from PythonQt import QtCore, QtGui, QtOpenGL
+	from qimage2ndarray import array2qimage, rgb_view
