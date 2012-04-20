@@ -98,7 +98,7 @@ class PDFPresenter(QtCore.QObject):
     #     return QtGui.QGraphicsView.resizeEvent(self, e)
 
     def loadPDF(self, pdfFilename):
-        raw_frames = list(pdftoppm_renderer.renderAllPages(pdfFilename, (w, h)))
+        raw_frames = list(pdftoppm_renderer.renderAllPages(pdfFilename, self.slideSize()))
 
         slides = slide.stack_frames(raw_frames)
 
