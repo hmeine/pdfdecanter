@@ -19,6 +19,7 @@ if USE_GL:
         from OpenGL import GL
     except ImportError:
         USE_GL = False
+        sys.stderr.write("WARNING: OpenGL could not be loaded, running without GL...\n")
 
 class PDFPresenter(QtGui.QGraphicsView):
     def __init__(self):
