@@ -21,24 +21,34 @@ if USE_GL:
         USE_GL = False
         sys.stderr.write("WARNING: OpenGL could not be loaded, running without GL...\n")
 
-class PDFPresenter(QtGui.QGraphicsView):
-    def __init__(self):
-        QtGui.QGraphicsView.__init__(self)
-        self.resize(w, h)
+class PDFPresenter(QtCore.QObject):
+    def __init__(self, view = None):
+        QtCore.QObject.__init__(self)
 
-        self.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.SmoothPixmapTransform)
+        if view is None:
+            view = QtGui.QGraphicsView()
+            view.resize(w, h)
+        self._view = view
 
-        self.setFrameStyle(QtGui.QFrame.NoFrame)
-        self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        view.installEventFilter(self)
+
+        self._view.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.SmoothPixmapTransform)
+
+        self._view.setFrameStyle(QtGui.QFrame.NoFrame)
+        self._view.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self._view.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
 
         if USE_GL:
-            self.setViewport(QtOpenGL.QGLWidget(QtOpenGL.QGLFormat(QtOpenGL.QGL.SampleBuffers)))
-            self.setViewportUpdateMode(QtGui.QGraphicsView.FullViewportUpdate)
+            self._view.setViewport(QtOpenGL.QGLWidget(QtOpenGL.QGLFormat(QtOpenGL.QGL.SampleBuffers)))
+            self._view.setViewportUpdateMode(QtGui.QGraphicsView.FullViewportUpdate)
 
-        self._scene = QtGui.QGraphicsScene(0, 0, w, h)
+        if view.scene() is not None:
+            self._scene = view.scene()
+            self._scene.setSceneRect(0, 0, w, h)
+        else:
+            self._scene = QtGui.QGraphicsScene(0, 0, w, h)
+            self._view.setScene(self._scene)
         self._scene.setBackgroundBrush(QtCore.Qt.black)
-        self.setScene(self._scene)
 
         self._slideViewport = QtGui.QGraphicsRectItem(QtCore.QRectF(0, 0, w, h))
         self._scene.addItem(self._slideViewport)
@@ -65,13 +75,27 @@ class PDFPresenter(QtGui.QGraphicsView):
 
         self._inOverview = False
 
-    def resizeEvent(self, e):
-        #self.fitInView(0, 0, w, h, QtCore.Qt.KeepAspectRatio)
-        factor = min(float(e.size().width()) / w,
-                     float(e.size().height()) / h)
-        self.resetMatrix()
-        self.scale(factor, factor)
-        return QtGui.QGraphicsView.resizeEvent(self, e)
+    def view(self):
+        return self._view
+
+    def slideSize(self):
+        return w, h
+
+    def eventFilter(self, obj, event):
+        if event.type() == QtCore.QEvent.KeyPress:
+            self.keyPressEvent(event)
+            if event.isAccepted():
+                return True
+        return QtCore.QObject.eventFilter(self, obj, event)
+
+    # def resizeEvent(self, e):
+    #     #self.fitInView(0, 0, w, h, QtCore.Qt.KeepAspectRatio)
+    #     w, h = self.slideSize()
+    #     factor = min(float(e.size().width()) / w,
+    #                  float(e.size().height()) / h)
+    #     self.resetMatrix()
+    #     self.scale(factor, factor)
+    #     return QtGui.QGraphicsView.resizeEvent(self, e)
 
     def loadPDF(self, pdfFilename):
         raw_frames = list(pdftoppm_renderer.renderAllPages(pdfFilename, (w, h)))
@@ -339,11 +363,8 @@ class PDFPresenter(QtGui.QGraphicsView):
                 nav.setVisible(not nav.isVisible())
                 event.accept()
 
-        if not event.isAccepted():
-            QtGui.QGraphicsView.keyPressEvent(self, event)
 
-
-def start():
+def start(view = None):
     global app
     hasApp = QtGui.QApplication.instance()
     if not hasApp:
@@ -354,7 +375,7 @@ def start():
     app.setApplicationName("PDF Presenter")
     app.setApplicationVersion(__version__)
 
-    result = PDFPresenter()
+    result = PDFPresenter(view)
     result.hadEventLoop = hasattr(app, '_in_event_loop') and app._in_event_loop # IPython support
     return result
 
@@ -364,9 +385,9 @@ if __name__ == "__main__":
 
     g = start()
     
-    g.show()
+    g.view().show()
     if sys.platform == "darwin":
-        g.raise_()
+        g.view().raise_()
 
     from optparse import OptionParser
     op = OptionParser(usage = "%prog [options] <filename1> <filename2>")
