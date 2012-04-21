@@ -66,18 +66,18 @@ class Patches(list):
         return result
 
 
-class SlideRenderer(QtCore.QObject):
+class SlideRenderer(QtGui.QGraphicsWidget):
     DEBUG = False # True
         
-    def __init__(self, slide, parentItem, parent = None):
-        QtCore.QObject.__init__(self, parent)
+    def __init__(self, slide, parentItem):
+        QtGui.QGraphicsWidget.__init__(self, parentItem)
         self._slide = slide
         self._items = {}
         self._currentFrame = None
-        self._slideItem = QtGui.QGraphicsWidget(parentItem)
         self._backgroundItem()
-        self._contentItem = QtGui.QGraphicsWidget(self._slideItem)
-        self._navigationItem = QtGui.QGraphicsWidget(self._slideItem)
+        self._contentItem = QtGui.QGraphicsWidget(self)
+        self._navigationItem = QtGui.QGraphicsWidget(self)
+        self.showFrame()
         self._coverItem().setOpacity(1.0 - UNSEEN_OPACITY)
 
     def slide(self):
@@ -90,7 +90,7 @@ class SlideRenderer(QtCore.QObject):
         result = self._items.get(key, None)
         
         if result is None:
-            result = QtGui.QGraphicsRectItem(self._slideRect(), self._slideItem)
+            result = QtGui.QGraphicsRectItem(self._slideRect(), self)
             result.setBrush(color)
             result.setPen(QtGui.QPen(QtCore.Qt.NoPen))
             self._items[key] = result
@@ -139,11 +139,6 @@ class SlideRenderer(QtCore.QObject):
     def navigationItem(self):
         return self._navigationItem
 
-    def slideItem(self):
-        if self._currentFrame is None:
-            return self.showFrame()
-        return self._slideItem
-
     def contentItem(self):
         return self._contentItem
 
@@ -163,8 +158,6 @@ class SlideRenderer(QtCore.QObject):
         self._coverItem().setVisible(not seen)
 
     def showFrame(self, frameIndex = 0):
-        result = self._slideItem
-
         self.frameItem('header')
         self.frameItem('footer')
 
@@ -180,7 +173,7 @@ class SlideRenderer(QtCore.QObject):
             if i in self._items:
                 self._items[i].setVisible(False)
 
-        return result
+        return self
 
     def currentFrame(self):
         return self._currentFrame

@@ -115,19 +115,18 @@ class PDFPresenter(QtCore.QObject):
         self._slides = slides
         self._slidesChanged()
         assert not self._renderers, "FIXME: delete old renderers / graphisc items"
-        self._renderers = [slide.SlideRenderer(s, self._group, self) for s in slides]
+        self._renderers = [slide.SlideRenderer(s, self._group) for s in slides]
         self._setupGrid()
         self.gotoFrame(0, animated = False)
 
     def _setupGrid(self):
         for i, renderer in enumerate(self._renderers):
-            slideItem = renderer.slideItem()
-            slideItem.setPos((w + MARGIN_X) * (i % OVERVIEW_COLS),
-                             (h + MARGIN_Y) * (i / OVERVIEW_COLS))
-            self._group.addToGroup(slideItem)
+            renderer.setPos((w + MARGIN_X) * (i % OVERVIEW_COLS),
+                            (h + MARGIN_Y) * (i / OVERVIEW_COLS))
+            self._group.addToGroup(renderer)
 
     def _updateCursor(self, animated):
-        r = QtCore.QRectF(self._currentSlideItem().pos(),
+        r = QtCore.QRectF(self._currentRenderer().pos(),
                           self._currentRenderer().slide().size())
 
         if not animated:
@@ -195,9 +194,6 @@ class PDFPresenter(QtCore.QObject):
         slideIndex, _ = self._frame2Slide[self._currentFrameIndex]
         return self._renderers[slideIndex]
 
-    def _currentSlideItem(self):
-        return self._currentRenderer().slideItem()
-
     def _resetSlideAnimation(self):
         """clean up previously offset items"""
         if self._slideAnimation is not None:
@@ -206,12 +202,12 @@ class PDFPresenter(QtCore.QObject):
             r1, r2, movedRenderer, oldPos = self._animatedRenderers
             r1.contentItem().setPos(QtCore.QPointF(0, 0))
             r2.contentItem().setPos(QtCore.QPointF(0, 0))
-            movedRenderer.slideItem().setPos(oldPos)
+            movedRenderer.setPos(oldPos)
             movedRenderer._backgroundItem().show()
             r1.navigationItem().setOpacity(1.0)
             r2.navigationItem().setOpacity(1.0)
             if not self._inOverview:
-                self._presentationItem.setPos(-r2.slideItem().pos())
+                self._presentationItem.setPos(-r2.pos())
 
     def gotoFrame(self, frameIndex, animated = False):
         self._resetSlideAnimation()
@@ -219,7 +215,7 @@ class PDFPresenter(QtCore.QObject):
         slideIndex, subFrame = self._frame2Slide[frameIndex]
         renderer = self._renderers[slideIndex]
         renderer.uncover()
-        slideItem = renderer.showFrame(subFrame)
+        renderer.showFrame(subFrame)
 
         if animated:
             previousRenderer = self._currentRenderer()
@@ -232,8 +228,8 @@ class PDFPresenter(QtCore.QObject):
                     topRenderer = previousRenderer
                     bottomRenderer = renderer
 
-                oldPos = topRenderer.slideItem().pos()
-                topRenderer.slideItem().setPos(bottomRenderer.slideItem().pos())
+                oldPos = topRenderer.pos()
+                topRenderer.setPos(bottomRenderer.pos())
                 topRenderer._backgroundItem().hide()
 
                 # store information for later reset:
@@ -286,10 +282,10 @@ class PDFPresenter(QtCore.QObject):
         self._currentFrameIndex = frameIndex
 
         if not self._inOverview:
-            self._presentationItem.setPos(-slideItem.pos())
+            self._presentationItem.setPos(-renderer.pos())
         else:
             self._inOverview = False
-            self._animateOverviewGroup(-slideItem.pos(), 1.0)
+            self._animateOverviewGroup(-renderer.pos(), 1.0)
 
     def _clearGotoSlide(self):
         self._gotoSlideIndex = None
