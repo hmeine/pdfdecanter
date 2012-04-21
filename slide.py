@@ -4,6 +4,8 @@ from dynqt import QtCore, QtGui, array2qimage
 UNSEEN_OPACITY = 0.5
 
 class Slide(object):
+    __slots__ = ('_size', '_header', '_footer', '_frames')
+    
     def __init__(self, size):
         self._size = size
         self._header = self._footer = None
@@ -38,6 +40,20 @@ class Slide(object):
         for frame in self._frames:
             for pos, patch in frame:
                 result += patch.width() * patch.height()
+        return result
+
+
+class Presentation(list):
+    FORMAT_VERSION = 2
+
+
+class Patches(list):
+    __slots__ = ()
+    
+    def boundingRect(self):
+        result = QtCore.QRect()
+        for r in self:
+            result |= r
         return result
 
 
@@ -162,7 +178,7 @@ class SlideRenderer(QtCore.QObject):
 
 
 def changed_rects(a, b):
-    changed = (b - a).any(-1)
+    changed = (b != a).any(-1)
     changed_row = changed.any(-1)
     toggle_rows = list(numpy.nonzero(numpy.diff(changed_row))[0] + 1)
     if changed_row[0]:
@@ -180,40 +196,67 @@ def changed_rects(a, b):
     return result
 
 
-def decompose_slide(rects, frame_size):
-    # detect header
-    header_rows = frame_size.height() * 11 / 48
-
-    header = []
-    if rects[0].bottom() < header_rows:
+def decompose_slide(rects, header_bottom, footer_top):
+    header = Patches()
+    if rects[0].bottom() < header_bottom:
         header.append(rects[0])
         del rects[0]
 
-    # detect footer
-    footer_rows = frame_size.height() / 7
-
-    footer = []
-
+    footer = Patches()
     while len(rects):
-        if rects[-1].top() < frame_size.height() - footer_rows:
+        if rects[-1].top() < footer_top:
             break
         r = rects[-1]
         footer.append(r)
         del rects[-1]
-        if r.height() < 10 and r.width() > frame_size.width() * .8:
-            # separator line detected
-            break
+        # if r.height() < 10 and r.width() > frame_size.width() * .8:
+        #     # separator line detected
+        #     break
     
     return header, rects, footer
 
 
 def extractPatches(frame, rects):
-    patches = []
+    patches = Patches()
     for r in rects:
         x1, y1 = r.x(), r.y()
         x2, y2 = r.right() + 1, r.bottom() + 1
         patches.append((r.topLeft(), array2qimage(frame[y1:y2,x1:x2])))
     return patches
+
+
+def detectBackground(raw_frames, useFrames = 15):
+    if len(raw_frames) <= useFrames:
+        sample_frames = raw_frames
+    else:
+        sample_frames = raw_frames[1::len(raw_frames)/useFrames]
+
+    h, w = raw_frames[0].shape[:2]
+    candidates = []
+    candidates.append(sample_frames[0])
+    weights = [numpy.ones((h, w), numpy.uint8)]
+    
+    for i in range(1, len(sample_frames)):
+        print "analyzing background sample frame %d / %d..." % (i + 1, len(sample_frames))
+        todo = numpy.ones((h, w), bool)
+        for j in range(len(candidates)):
+            # find pixels that are still 'todo' among the candidates:
+            same = (sample_frames[i] == candidates[j]).all(-1) * todo
+            # increase weight of candidate:
+            weights[j] += same
+            # stop search for those pixels:
+            todo -= same
+            if not numpy.any(todo):
+                break
+        if numpy.any(todo) and len(candidates) < 12:
+            candidates.append(sample_frames[i] * todo[...,None])
+            weights.append(todo.astype(numpy.uint8))
+    
+    weights = numpy.asarray(weights)
+    candidates = numpy.asarray(candidates)
+    maxpos = numpy.argmax(weights, 0)
+    canvas = numpy.choose(maxpos[...,None], candidates)
+    return canvas
 
 
 def stack_frames(raw_frames):
@@ -222,10 +265,29 @@ def stack_frames(raw_frames):
 
     canvas = numpy.ones_like(raw_frames[0]) * 255
 
+    background = detectBackground(raw_frames)
+    rects = changed_rects(canvas, background)
+    header, content, footer = decompose_slide(
+        rects, frame_size.height() / 3, frame_size.height() * 0.75)
+    #assert not content, "could not find header/footer ranges"
+
+    header_rect = header.boundingRect()
+    header_rect.setTop(0)
+    header_rect.setLeft(0)
+    header_rect.setRight(frame_size.width() - 1)
+
+    footer_rect = footer.boundingRect()
+    footer_rect.setLeft(0)
+    footer_rect.setRight(frame_size.width() - 1)
+    footer_rect.setBottom(frame_size.height() - 1)
+
     it = iter(raw_frames)
     frame1 = canvas
 
-    slides = []
+    slides = Presentation()
+    slides.background = background
+    slides.header_rect = header_rect
+    slides.footer_rect = footer_rect
 
     prev_header = None
 
@@ -233,17 +295,14 @@ def stack_frames(raw_frames):
         changed = changed_rects(frame1, frame2)
         content = changed_rects(canvas, frame2)
 
-        header, content, footer = decompose_slide(content, frame_size)
+        header, content, footer = decompose_slide(
+            content, header_rect.bottom() * 1.3, footer_rect.top())
 
         # TODO: handle case of full-screen overlay (e.g. slide 10/11 of FATE_Motivation)?
         # (currently, goes as new slide because the header is hit)
 
         isNewSlide = True
         if header and header == prev_header:
-            header_rect = QtCore.QRect()
-            for r in header:
-                header_rect |= r
-
             isNewSlide = False
             for r in changed:
                 if r.intersects(header_rect):
