@@ -29,6 +29,15 @@ class Slide(object):
     def footer(self):
         return self._footer
 
+    def contentRect(self, margin = 0):
+        header_rect = self._header.boundingRect()
+        header_rect = self._header.boundingRect()
+        result = QtCore.QRectF(0, header_rect.bottom() + 1,
+                               self._size.width(), self._footer.top() - (header_rect.bottom() + 1))
+        if margin:
+            result.adjust(margin, margin, -margin, -margin)
+        return result
+
     def addFrame(self, patches):
         self._frames.append(patches)
 
