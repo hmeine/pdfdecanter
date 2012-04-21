@@ -271,23 +271,13 @@ def stack_frames(raw_frames):
         rects, frame_size.height() / 3, frame_size.height() * 0.75)
     #assert not content, "could not find header/footer ranges"
 
-    header_rect = header.boundingRect()
-    header_rect.setTop(0)
-    header_rect.setLeft(0)
-    header_rect.setRight(frame_size.width() - 1)
-
-    footer_rect = footer.boundingRect()
-    footer_rect.setLeft(0)
-    footer_rect.setRight(frame_size.width() - 1)
-    footer_rect.setBottom(frame_size.height() - 1)
-
     it = iter(raw_frames)
     frame1 = canvas
 
     slides = Presentation()
     slides.background = background
-    slides.header_rect = header_rect
-    slides.footer_rect = footer_rect
+    slides.header_rect = header.boundingRect()
+    slides.footer_rect = footer.boundingRect()
 
     prev_header = None
 
@@ -296,7 +286,7 @@ def stack_frames(raw_frames):
         content = changed_rects(canvas, frame2)
 
         header, content, footer = decompose_slide(
-            content, header_rect.bottom() * 1.3, footer_rect.top())
+            content, slides.header_rect.bottom() * 1.3, slides.footer_rect.top())
 
         # TODO: handle case of full-screen overlay (e.g. slide 10/11 of FATE_Motivation)?
         # (currently, goes as new slide because the header is hit)
@@ -305,7 +295,7 @@ def stack_frames(raw_frames):
         if header and header == prev_header:
             isNewSlide = False
             for r in changed:
-                if r.intersects(header_rect):
+                if r.intersects(slides.header_rect):
                     isNewSlide = True
                     break
 
