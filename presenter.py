@@ -405,7 +405,7 @@ if __name__ == "__main__":
             if os.path.getmtime(cacheFilename) >= os.path.getmtime(pdfFilename):
                 slides = cache.readSlides(cacheFilename)
 
-    if not 'slides' in globals():
+    if not 'slides' in globals() or slides is None:
         if not 'raw_frames' in globals():
             raw_frames = list(pdftoppm_renderer.renderAllPages(pdfFilename, (w, h)))
 
