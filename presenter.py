@@ -49,6 +49,7 @@ class PDFPresenter(QtCore.QObject):
             self._scene = QtGui.QGraphicsScene(0, 0, w, h)
             self._view.setScene(self._scene)
         self._scene.setBackgroundBrush(QtCore.Qt.black)
+        self._scene.selectionChanged.connect(self._selectionChanged)
 
         self._slideViewport = QtGui.QGraphicsRectItem(QtCore.QRectF(0, 0, w, h))
         self._scene.addItem(self._slideViewport)
@@ -80,6 +81,9 @@ class PDFPresenter(QtCore.QObject):
 
     def slideSize(self):
         return w, h
+
+    def _selectionChanged(self):
+        print "_selectionChanged"
 
     def eventFilter(self, obj, event):
         if event.type() == QtCore.QEvent.KeyPress:
