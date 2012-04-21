@@ -314,6 +314,11 @@ class PDFPresenter(QtCore.QObject):
                 self._gotoSlideIndex = None
                 self.gotoFrame(self._slide2Frame[slideIndex] +
                                self._renderers[slideIndex].currentFrame(), animated = False)
+        elif event.text() == 'P':
+            onoff = not self._currentRenderer().navigationItem().isVisible()
+            for r in self._renderers:
+                r.navigationItem().setVisible(onoff)
+            event.accept()
 
         if event.isAccepted():
             return
@@ -358,10 +363,6 @@ class PDFPresenter(QtCore.QObject):
                     event.accept()
             elif event.key() in (QtCore.Qt.Key_Tab, ):
                 self.showOverview()
-                event.accept()
-            elif event.key() in (QtCore.Qt.Key_P, ):
-                nav = self._currentRenderer().navigationItem()
-                nav.setVisible(not nav.isVisible())
                 event.accept()
 
 
