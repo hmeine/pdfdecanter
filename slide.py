@@ -56,14 +56,19 @@ class Presentation(list):
     FORMAT_VERSION = 2
 
 
+def boundingRect(rects):
+    result = QtCore.QRect()
+    for r in rects:
+        result |= r
+    return result
+
+
 class Patches(list):
     __slots__ = ()
     
     def boundingRect(self):
-        result = QtCore.QRect()
-        for r in self:
-            result |= r
-        return result
+        return boundingRect(QtCore.QRect(pos, patch.size())
+                            for pos, patch in self)
 
 
 class SlideRenderer(QtGui.QGraphicsWidget):
@@ -199,12 +204,12 @@ def changed_rects(a, b):
 
 
 def decompose_slide(rects, header_bottom, footer_top):
-    header = Patches()
+    header = []
     if rects[0].bottom() < header_bottom:
         header.append(rects[0])
         del rects[0]
 
-    footer = Patches()
+    footer = []
     while len(rects):
         if rects[-1].top() < footer_top:
             break
@@ -278,8 +283,8 @@ def stack_frames(raw_frames):
 
     slides = Presentation()
     slides.background = background
-    slides.header_rect = header.boundingRect()
-    slides.footer_rect = footer.boundingRect()
+    slides.header_rect = boundingRect(header)
+    slides.footer_rect = boundingRect(footer)
 
     prev_header = None
 
