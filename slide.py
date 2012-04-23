@@ -128,6 +128,7 @@ class SlideRenderer(QtGui.QGraphicsWidget):
                 zValue = 100 + frameIndex
 
             result = QtGui.QGraphicsWidget(parentItem)
+            result.setZValue(zValue)
 
             for pos, patch in patches:
                 pixmap = QtGui.QPixmap.fromImage(patch)
@@ -135,7 +136,6 @@ class SlideRenderer(QtGui.QGraphicsWidget):
                 pmItem.setPos(QtCore.QPointF(pos))
                 pmItem.setPixmap(pixmap)
                 pmItem.setTransformationMode(QtCore.Qt.SmoothTransformation)
-                pmItem.setZValue(zValue)
 
             self._items[frameIndex] = result
 
