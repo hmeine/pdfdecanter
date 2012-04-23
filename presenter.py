@@ -86,16 +86,16 @@ class PDFPresenter(QtCore.QObject):
             self.keyPressEvent(event)
             if event.isAccepted():
                 return True
+        elif event.type() == QtCore.QEvent.Resize:
+            self.resizeEvent(event)
         return QtCore.QObject.eventFilter(self, obj, event)
 
-    # def resizeEvent(self, e):
-    #     #self.fitInView(0, 0, w, h, QtCore.Qt.KeepAspectRatio)
-    #     w, h = self.slideSize()
-    #     factor = min(float(e.size().width()) / w,
-    #                  float(e.size().height()) / h)
-    #     self.resetMatrix()
-    #     self.scale(factor, factor)
-    #     return QtGui.QGraphicsView.resizeEvent(self, e)
+    def resizeEvent(self, e):
+        w, h = self.slideSize()
+        factor = min(float(e.size().width()) / w,
+                     float(e.size().height()) / h)
+        self._view.resetMatrix()
+        self._view.scale(factor, factor)
 
     def loadPDF(self, pdfFilename):
         raw_frames = list(pdftoppm_renderer.renderAllPages(pdfFilename, self.slideSize()))
@@ -293,7 +293,13 @@ class PDFPresenter(QtCore.QObject):
     def keyPressEvent(self, event):
         event.ignore() # assume not handled for now
 
-        if event.key() in (QtCore.Qt.Key_F, QtCore.Qt.Key_L):
+        if event.text() == 'F':
+            if self._view.isFullScreen():
+                self._view.showNormal()
+            else:
+                self._view.showFullScreen()
+            event.accept()
+        elif event.key() in (QtCore.Qt.Key_F, QtCore.Qt.Key_L):
             r = self._currentRenderer()
             r.showFrame(0 if event.key() == QtCore.Qt.Key_F else len(r.slide()) - 1)
             event.accept()
