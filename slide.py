@@ -272,7 +272,9 @@ def detectBackground(raw_frames, useFrames = 15):
     if len(raw_frames) <= useFrames:
         sample_frames = raw_frames
     else:
-        sample_frames = raw_frames[1::len(raw_frames)/useFrames]
+        inc = len(raw_frames)/useFrames
+        end = 1 + inc * useFrames
+        sample_frames = raw_frames[1:end:inc]
 
     h, w = raw_frames[0].shape[:2]
     candidates = []
