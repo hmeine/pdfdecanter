@@ -1,7 +1,7 @@
 from dynqt import QtCore, QtGui, QtOpenGL
 
-import numpy, os, sys
-import pdftoppm_renderer, slide
+import numpy, os, sys, tempfile
+import pdftoppm_renderer, slide, bz2_pickle
 
 __version__ = "0.1"
 
@@ -120,10 +120,29 @@ class PDFPresenter(QtCore.QObject):
         self._view.resetMatrix()
         self._view.scale(factor, factor)
 
-    def loadPDF(self, pdfFilename):
-        raw_frames = list(pdftoppm_renderer.renderAllPages(pdfFilename, self.slideSize()))
+    def loadPDF(self, pdfFilename, cacheFilename = None):
+        slides = None
 
-        slides = slide.stack_frames(raw_frames)
+        if cacheFilename:
+            if cacheFilename is True:
+                cacheFilename = os.path.join(
+                    tempfile.gettempdir(),
+                    "pdf_presenter_cache_%s.bz2" % (os.path.abspath(pdfFilename).replace("/", "!"), ))
+                sys.stderr.write('ATTENTION! unpickling from system-wide tempdir is a security risk!\n')
+
+            if os.path.exists(cacheFilename):
+                if os.path.getmtime(cacheFilename) >= os.path.getmtime(pdfFilename):
+                    sys.stdout.write("reading cache '%s'...\n" % cacheFilename)
+                    slides = bz2_pickle.unpickle(cacheFilename)
+                
+        if slides is None:
+            raw_frames = list(pdftoppm_renderer.renderAllPages(pdfFilename, self.slideSize()))
+
+            slides = slide.stack_frames(raw_frames)
+
+            if cacheFilename:
+                sys.stdout.write("caching in '%s'...\n" % cacheFilename)
+                bz2_pickle.pickle(cacheFilename, slides)
 
         self.setSlides(slides)
 
@@ -421,28 +440,13 @@ if __name__ == "__main__":
 
     pdfFilename, = args
 
-    cacheFilename = "/tmp/pdf_presenter_cache_%s.bz2" % (pdfFilename.replace("/", "!"), )
+    if not 'slides' in globals():
+        g.loadPDF(pdfFilename, cacheFilename = USE_CACHING)
 
-    if USE_CACHING and not 'slides' in globals():
-        import bz2_pickle
-        if os.path.exists(cacheFilename):
-            if os.path.getmtime(cacheFilename) >= os.path.getmtime(pdfFilename):
-                slides = bz2_pickle.unpickle(cacheFilename)
-
-    if not 'slides' in globals() or slides is None:
-        if not 'raw_frames' in globals():
-            raw_frames = list(pdftoppm_renderer.renderAllPages(pdfFilename, (w, h)))
-
-        slides = slide.stack_frames(raw_frames)
-        pixelCount = sum(s.pixelCount() for s in slides)
-        rawCount = len(raw_frames) * numpy.prod(raw_frames[0].shape[:2])
+        pixelCount = sum(s.pixelCount() for s in g._slides)
+        ss = g._slides[0].size()
+        rawCount = len(g._frame2Slide) * ss.width() * ss.height()
         print "%d pixels out of %d retained. (%.1f%%)" % (pixelCount, rawCount, 100.0 * pixelCount / rawCount)
-
-        if USE_CACHING:
-            print "caching in '%s'..." % cacheFilename
-            bz2_pickle.pickle(cacheFilename, slides)
-
-    g.setSlides(slides)
 
     if not g.hadEventLoop:
         sys.exit(QtGui.qApp.exec_())
