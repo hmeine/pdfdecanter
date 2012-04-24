@@ -56,9 +56,8 @@ class PDFPresenter(QtCore.QObject):
         self._slideViewport.setFlag(QtGui.QGraphicsItem.ItemClipsChildrenToShape)
 
         self._presentationItem = QtGui.QGraphicsWidget(self._slideViewport)
-        self._group = QtGui.QGraphicsItemGroup(self._presentationItem)
 
-        self._cursor = QtGui.QGraphicsWidget(self._group)
+        self._cursor = QtGui.QGraphicsWidget(self._presentationItem)
         cursorRect = self._scene.addRect(self._scene.sceneRect())
         cursorRect.setPen(QtGui.QPen(QtCore.Qt.yellow, 25))
         cursorRect.setBrush(QtGui.QBrush(QtGui.QColor(255, 255, 0, 100)))
@@ -82,8 +81,28 @@ class PDFPresenter(QtCore.QObject):
     def slideSize(self):
         return w, h
 
+    def presentationBounds(self):
+        result = QtCore.QRectF()
+        for r in self._renderers:
+            br = r.boundingRect()
+            br.translate(r.pos())
+            result |= br
+        return result
+
     def _selectionChanged(self):
-        print "_selectionChanged"
+        selectedItems = self._scene.selectedItems()
+        if not selectedItems:
+            return
+
+        if not self._inOverview:
+            if self._currentFrameIndex < len(self._frame2Slide) - 1:
+                self.gotoFrame(self._currentFrameIndex + 1, animated = True)
+            return
+        else:
+            selectedItem, = selectedItems
+            slideIndex = self._renderers.index(selectedItem)
+            self.gotoFrame(self._slide2Frame[slideIndex] +
+                           self._renderers[slideIndex].currentFrame(), animated = False)
 
     def eventFilter(self, obj, event):
         if event.type() == QtCore.QEvent.KeyPress:
@@ -119,7 +138,7 @@ class PDFPresenter(QtCore.QObject):
         self._slides = slides
         self._slidesChanged()
         assert not self._renderers, "FIXME: delete old renderers / graphisc items"
-        self._renderers = [slide.SlideRenderer(s, self._group) for s in slides]
+        self._renderers = [slide.SlideRenderer(s, self._presentationItem) for s in slides]
         self._setupGrid()
         self.gotoFrame(0, animated = False)
 
@@ -127,7 +146,6 @@ class PDFPresenter(QtCore.QObject):
         for i, renderer in enumerate(self._renderers):
             renderer.setPos((w + MARGIN_X) * (i % OVERVIEW_COLS),
                             (h + MARGIN_Y) * (i / OVERVIEW_COLS))
-            self._group.addToGroup(renderer)
 
     def _updateCursor(self, animated):
         r = QtCore.QRectF(self._currentRenderer().pos(),
@@ -151,7 +169,7 @@ class PDFPresenter(QtCore.QObject):
         if pos.y() > 0.0:
             pos.setY(0.0)
         else:
-            minY = self._scene.sceneRect().height() - self._group.boundingRect().height() * scale
+            minY = self._scene.sceneRect().height() - self.presentationBounds().height() * scale
             if pos.y() < minY:
                 pos.setY(minY)
 
@@ -173,12 +191,12 @@ class PDFPresenter(QtCore.QObject):
         self._overviewAnimation.start()
 
     def _overviewScale(self):
-        return float(self._scene.sceneRect().width()) / self._group.boundingRect().width()
+        return float(self._scene.sceneRect().width()) / self.presentationBounds().width()
 
     def _overviewPosForCursor(self, r = None):
         if r is None:
             r = self._cursor.childItems()[0].boundingRect()
-            r.moveTo(self._cursor.pos())
+            r.translate(self._cursor.pos())
         s = self._overviewScale()
         y = (0.5 * self._scene.sceneRect().height() - r.center().y() * s)
 
@@ -421,6 +439,6 @@ if __name__ == "__main__":
             cache.writeSlides(cacheFilename, slides)
 
     g.setSlides(slides)
-    
+
     if not g.hadEventLoop:
         sys.exit(QtGui.qApp.exec_())
