@@ -96,13 +96,21 @@ class SlideRenderer(QtGui.QGraphicsWidget):
     def __init__(self, slide, parentItem):
         QtGui.QGraphicsWidget.__init__(self, parentItem)
         self._slide = slide
-        self._items = {}
+        self.setGeometry(QtCore.QRectF(QtCore.QPointF(0, 0), slide.size()))
+        #self.setFlag(QtGui.QGraphicsItem.ItemIsMovable)
+        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable)
+
         self._currentFrame = None
+
+        self._items = {}
         self._backgroundItem()
         self._contentItem = QtGui.QGraphicsWidget(self)
+        self._contentItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
         self._navigationItem = QtGui.QGraphicsWidget(self)
-        self.showFrame()
+        self._navigationItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
         self._coverItem().setOpacity(1.0 - UNSEEN_OPACITY)
+
+        self.showFrame()
 
     def slide(self):
         return self._slide
@@ -115,6 +123,7 @@ class SlideRenderer(QtGui.QGraphicsWidget):
         
         if result is None:
             result = QtGui.QGraphicsRectItem(self._slideRect(), self)
+            result.setAcceptedMouseButtons(QtCore.Qt.NoButton)
             result.setBrush(color)
             result.setPen(QtGui.QPen(QtCore.Qt.NoPen))
             self._items[key] = result
@@ -148,10 +157,12 @@ class SlideRenderer(QtGui.QGraphicsWidget):
 
             result = QtGui.QGraphicsWidget(parentItem)
             result.setZValue(zValue)
+            result.setAcceptedMouseButtons(QtCore.Qt.NoButton)
 
             for pos, patch in patches:
                 pixmap = QtGui.QPixmap.fromImage(patch)
                 pmItem = QtGui.QGraphicsPixmapItem(result)
+                pmItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
                 pmItem.setPos(QtCore.QPointF(pos))
                 pmItem.setPixmap(pixmap)
                 pmItem.setTransformationMode(QtCore.Qt.SmoothTransformation)
