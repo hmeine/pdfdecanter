@@ -74,6 +74,12 @@ class Slide(object):
 class Presentation(list):
     FORMAT_VERSION = 2
 
+    def __getnewargs__(self):
+        return (list(self), )
+
+    def __getstate__(self):
+        return False
+
 
 def boundingRect(rects):
     result = QtCore.QRect()

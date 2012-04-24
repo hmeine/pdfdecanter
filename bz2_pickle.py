@@ -1,9 +1,9 @@
-import bz2, cPickle
+import bz2, cPickle as pkl
 
 def pickle(filename, slides):
     with bz2.BZ2File(filename, "w") as f:
-        cPickle.dump(slides, f, cPickle.HIGHEST_PROTOCOL)
+        pkl.dump(slides, f, pkl.HIGHEST_PROTOCOL)
         
 def unpickle(filename):
     with bz2.BZ2File(filename) as f:
-        return cPickle.Unpickler(f).load()
+        return pkl.Unpickler(f).load()
