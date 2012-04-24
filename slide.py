@@ -53,7 +53,7 @@ class Slide(object):
 
     def __getstate__(self):
         def serializePatches(patches):
-            return [((pos.x(), pos.y()), rgb_view(patch))
+            return [((pos.x(), pos.y()), rgb_view(patch).copy())
                     for pos, patch in patches]
         return ((self._size.width(), self._size.height()),
                 serializePatches(self._header) if self._header else None,
@@ -78,7 +78,11 @@ class Presentation(list):
         return (list(self), )
 
     def __getstate__(self):
-        return False
+        return False # don't call __setstate__
+
+    def __setstate__(self, state):
+        assert not state # should not be called anyhow
+        return
 
 
 def boundingRect(rects):
