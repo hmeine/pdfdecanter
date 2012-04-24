@@ -1,5 +1,5 @@
 import numpy
-from dynqt import QtCore, QtGui, array2qimage
+from dynqt import QtCore, QtGui, array2qimage, rgb_view
 
 UNSEEN_OPACITY = 0.5
 
@@ -50,6 +50,25 @@ class Slide(object):
             for pos, patch in frame:
                 result += patch.width() * patch.height()
         return result
+
+    def __getstate__(self):
+        def serializePatches(patches):
+            return [((pos.x(), pos.y()), rgb_view(patch))
+                    for pos, patch in patches]
+        return ((self._size.width(), self._size.height()),
+                serializePatches(self._header) if self._header else None,
+                serializePatches(self._footer) if self._footer else None,
+                map(serializePatches, self._frames))
+
+    def __setstate__(self, state):
+        def deserializePatches(patches):
+            return [(QtCore.QPointF(x, y), array2qimage(patch))
+                    for (x, y), patch in patches]
+        (w, h), header, footer, frames = state
+        self._size = QtCore.QSizeF(w, h)
+        self._header = header and deserializePatches(header)
+        self._footer = footer and deserializePatches(footer)
+        self._frames = map(deserializePatches, frames)
 
 
 class Presentation(list):

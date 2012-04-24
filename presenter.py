@@ -399,13 +399,13 @@ if __name__ == "__main__":
 
     pdfFilename, = args
 
-    cacheFilename = "/tmp/pdf_presenter_cache_%s.h5" % (pdfFilename.replace("/", "!"), )
+    cacheFilename = "/tmp/pdf_presenter_cache_%s.bz2" % (pdfFilename.replace("/", "!"), )
 
     if USE_CACHING and not 'slides' in globals():
-        import cache
+        import bz2_pickle
         if os.path.exists(cacheFilename):
             if os.path.getmtime(cacheFilename) >= os.path.getmtime(pdfFilename):
-                slides = cache.readSlides(cacheFilename)
+                slides = bz2_pickle.unpickle(cacheFilename)
 
     if not 'slides' in globals() or slides is None:
         if not 'raw_frames' in globals():
@@ -418,9 +418,7 @@ if __name__ == "__main__":
 
         if USE_CACHING:
             print "caching in '%s'..." % cacheFilename
-            if os.path.exists(cacheFilename):
-                os.unlink(cacheFilename)
-            cache.writeSlides(cacheFilename, slides)
+            bz2_pickle.pickle(cacheFilename, slides)
 
     g.setSlides(slides)
     
