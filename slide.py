@@ -62,8 +62,8 @@ class Slide(object):
 
     def __setstate__(self, state):
         def deserializePatches(patches):
-            return [(QtCore.QPointF(x, y), array2qimage(patch))
-                    for (x, y), patch in patches]
+            return Patches((QtCore.QPoint(x, y), array2qimage(patch))
+                           for (x, y), patch in patches)
         (w, h), header, footer, frames = state
         self._size = QtCore.QSizeF(w, h)
         self._header = header and deserializePatches(header)
