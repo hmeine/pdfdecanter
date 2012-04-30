@@ -111,6 +111,7 @@ class SlideRenderer(QtGui.QGraphicsWidget):
         self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable)
 
         self._currentFrame = None
+        self._frameCallbacks = []
 
         self._items = {}
         self._backgroundItem()
@@ -187,17 +188,43 @@ class SlideRenderer(QtGui.QGraphicsWidget):
     def contentItem(self):
         return self._contentItem
 
-    def addCustomContent(self, item, frameIndex = 0):
-        self._items['custom'] = self._items.get('custom', []) + [item]
+    def addCustomContent(self, items, frameIndex = 0):
+        """Add given custom items to the SlideRenderer, for the given
+        frameIndex.  If frameIndex is larger than the currently
+        largest valid index, new frames will be added accordingly.  If
+        frameIndex is None, it defaults to len(slide()),
+        i.e. appending one new frame."""
 
+        # add items:
+        customItems = self.customItems()
+        customItems.extend(items)
+        self._items['custom'] = customItems
+
+        # add (empty) frames to corresponding Slide class if necessary:
         if frameIndex is None:
             frameIndex = len(self._slide)
         while frameIndex >= len(self._slide):
             self._slide.addFrame([])
 
+        # set parent of custom items:
         parent = self.frameItem(frameIndex)
         parent.setVisible(frameIndex <= self._currentFrame)
-        item.setParentItem(parent)
+        for item in items:
+            item.setParentItem(parent)
+
+    def customItems(self):
+        return self._items.get('custom', [])
+
+    def addCustomCallback(self, cb):
+        """Register callback for frame changes.  Expects callable that
+        will be called with two arguments: the SlideRenderer (which
+        can be queried for the currentFrame()) and the new frameIndex
+        that is about to become the currentFrame().
+
+        TODO: Call with None if slide becomes invisible/inactive."""
+        self._frameCallbacks.append(cb)
+        if self._currentFrame is not None:
+            cb(self, self._currentFrame)
 
     def uncover(self, seen = True):
         self._coverItem().setVisible(not seen)
@@ -205,6 +232,9 @@ class SlideRenderer(QtGui.QGraphicsWidget):
     def showFrame(self, frameIndex = 0):
         self.frameItem('header')
         self.frameItem('footer')
+
+        for cb in self._frameCallbacks:
+            cb(self, frameIndex)
 
         self._currentFrame = frameIndex
 
