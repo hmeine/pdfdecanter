@@ -1,13 +1,12 @@
 from dynqt import QtCore, QtGui, QtOpenGL
 
-import numpy, os, sys, tempfile
+import numpy, os, sys, tempfile, math
 import pdftoppm_renderer, slide, bz2_pickle
 
 __version__ = "0.1"
 
 w, h = 1024, 768
 
-OVERVIEW_COLS = 5
 MARGIN_X = 30
 MARGIN_Y = 24
 BLEND_DURATION = 150
@@ -163,9 +162,11 @@ class PDFPresenter(QtCore.QObject):
         self.gotoFrame(0, animated = False)
 
     def _setupGrid(self):
+        self._overviewColumnCount = int(math.ceil(math.sqrt(len(self._slides))))
+
         for i, renderer in enumerate(self._renderers):
-            renderer.setPos((w + MARGIN_X) * (i % OVERVIEW_COLS),
-                            (h + MARGIN_Y) * (i / OVERVIEW_COLS))
+            renderer.setPos((w + MARGIN_X) * (i % self._overviewColumnCount),
+                            (h + MARGIN_Y) * (i / self._overviewColumnCount))
 
     def _updateCursor(self, animated):
         r = QtCore.QRectF(self._currentRenderer().pos(),
@@ -371,11 +372,12 @@ class PDFPresenter(QtCore.QObject):
             if event.key() in (QtCore.Qt.Key_Right, QtCore.Qt.Key_Left,
                                QtCore.Qt.Key_Down, QtCore.Qt.Key_Up):
                 currentSlideIndex, _ = self._frame2Slide[self._currentFrameIndex]
+                # TODO: instead of _overviewColumnCount, go geometrically up/down
                 desiredSlideIndex = currentSlideIndex + {
                     QtCore.Qt.Key_Right : +1,
                     QtCore.Qt.Key_Left  : -1,
-                    QtCore.Qt.Key_Down  : +OVERVIEW_COLS,
-                    QtCore.Qt.Key_Up    : -OVERVIEW_COLS}[event.key()]
+                    QtCore.Qt.Key_Down  : +self._overviewColumnCount,
+                    QtCore.Qt.Key_Up    : -self._overviewColumnCount}[event.key()]
 
                 desiredSlideIndex = max(0, min(desiredSlideIndex, len(self._slides)-1))
                 self._currentFrameIndex = (
