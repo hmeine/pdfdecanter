@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from dynqt import QtCore, QtGui, QtOpenGL
 
 import numpy, os, sys, tempfile, math
