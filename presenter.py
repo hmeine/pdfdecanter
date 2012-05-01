@@ -354,10 +354,11 @@ class PDFPresenter(QtCore.QObject):
 
     def keyPressEvent(self, event):
         if event.text() == 'F':
-            if self._view.isFullScreen():
-                self._view.showNormal()
+            win = self._view.window()
+            if win.isFullScreen():
+                win.showNormal()
             else:
-                self._view.showFullScreen()
+                win.showFullScreen()
             event.accept()
         elif event.key() in (QtCore.Qt.Key_F, QtCore.Qt.Key_L):
             r = self._currentRenderer()
@@ -377,7 +378,7 @@ class PDFPresenter(QtCore.QObject):
                 self.gotoFrame(self._slide2Frame[slideIndex] +
                                self._renderers[slideIndex].currentFrame(), animated = False)
         elif event.text() == 'Q':
-            self._view.close()
+            self._view.window().close()
             event.accept()
         elif event.text() == 'P':
             onoff = not self._currentRenderer().navigationItem().isVisible()
