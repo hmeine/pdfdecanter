@@ -49,6 +49,8 @@ class PDFPresenter(QtCore.QObject):
             self._view.setScene(self._scene)
         self._scene.setBackgroundBrush(QtCore.Qt.black)
         self._scene.selectionChanged.connect(self._selectionChanged)
+        self._selectionChangeComesFromButtonRelease = False
+        self._scene.installEventFilter(self) # for MouseButtonRelease events
 
         self._slideViewport = QtGui.QGraphicsRectItem(QtCore.QRectF(0, 0, w, h))
         self._scene.addItem(self._slideViewport)
@@ -93,6 +95,14 @@ class PDFPresenter(QtCore.QObject):
         if not selectedItems:
             return
 
+        # we need to get selectionChanged events also for multiple
+        # clicks on the same slide, so unselect here:
+        self._scene.setSelectionArea(QtGui.QPainterPath())
+
+        if self._selectionChangeComesFromButtonRelease:
+            self._selectionChangeComesFromButtonRelease = False
+            return
+
         if not self._inOverview:
             if self._currentFrameIndex < len(self._frame2Slide) - 1:
                 self.gotoFrame(self._currentFrameIndex + 1, animated = True)
@@ -104,13 +114,18 @@ class PDFPresenter(QtCore.QObject):
                            self._renderers[slideIndex].currentFrame(), animated = False)
 
     def eventFilter(self, obj, event):
-        if event.type() == QtCore.QEvent.KeyPress:
-            self.keyPressEvent(event)
-            if event.isAccepted():
-                return True
-        elif event.type() == QtCore.QEvent.Resize:
-            self.resizeEvent(event)
-        return QtCore.QObject.eventFilter(self, obj, event)
+        event.ignore()
+        if obj is self._view:
+            if event.type() == QtCore.QEvent.KeyPress:
+                self.keyPressEvent(event)
+            elif event.type() == QtCore.QEvent.Resize:
+                self.resizeEvent(event)
+        elif obj is self._scene:
+            if event.type() in (QtCore.QEvent.MouseButtonRelease, QtCore.QEvent.GraphicsSceneMouseRelease):
+                self.mouseReleaseEvent(event)
+        if event.isAccepted():
+            return True
+        return False
 
     def resizeEvent(self, e):
         w, h = self.slideSize()
@@ -118,6 +133,9 @@ class PDFPresenter(QtCore.QObject):
                      float(e.size().height()) / h)
         self._view.resetMatrix()
         self._view.scale(factor, factor)
+
+    def mouseReleaseEvent(self, e):
+        self._selectionChangeComesFromButtonRelease = True
 
     def loadPDF(self, pdfFilename, cacheFilename = None):
         slides = None
@@ -334,8 +352,6 @@ class PDFPresenter(QtCore.QObject):
         self._gotoSlideIndex = None
 
     def keyPressEvent(self, event):
-        event.ignore() # assume not handled for now
-
         if event.text() == 'F':
             if self._view.isFullScreen():
                 self._view.showNormal()
