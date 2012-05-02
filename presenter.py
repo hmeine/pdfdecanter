@@ -416,6 +416,14 @@ class PDFPresenter(QtCore.QObject):
                 for renderer in self._renderers:
                     renderer.uncover()
                 event.accept()
+            elif event.text() == 'R':
+                for renderer in self._renderers:
+                    renderer.showFrame(0)
+                    renderer.uncover(False)
+                if self._currentFrameIndex:
+                    self._currentFrameIndex = 0
+                    self._updateCursor(animated = True)
+                event.accept()
             elif event.key() in (QtCore.Qt.Key_Tab, QtCore.Qt.Key_Return):
                 self.gotoFrame(self._currentFrameIndex)
                 event.accept()
