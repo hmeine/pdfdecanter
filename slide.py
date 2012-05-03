@@ -111,20 +111,31 @@ class SlideRenderer(QtGui.QGraphicsWidget):
         self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable)
 
         self._currentFrame = None
+        self._seen = False
         self._frameCallbacks = []
 
         self._items = {}
-        self._backgroundItem()
-        self._contentItem = QtGui.QGraphicsWidget(self)
-        self._contentItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-        self._navigationItem = QtGui.QGraphicsWidget(self)
-        self._navigationItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-        self._coverItem().setOpacity(1.0 - UNSEEN_OPACITY)
 
         self.showFrame()
 
     def slide(self):
         return self._slide
+
+    def _setupItems(self):
+        self._backgroundItem()
+
+        contentItem = QtGui.QGraphicsWidget(self)
+        contentItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
+        self._items['content'] = contentItem
+
+        navigationItem = QtGui.QGraphicsWidget(self)
+        navigationItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
+        self._items['navigation'] = navigationItem
+
+        self.frameItem('header')
+        self.frameItem('footer')
+
+        self._coverItem()
 
     def _slideRect(self):
         return QtCore.QRectF(QtCore.QPointF(0, 0), self._slide.size())
@@ -147,6 +158,8 @@ class SlideRenderer(QtGui.QGraphicsWidget):
     def _coverItem(self):
         result = self._rectItem(QtCore.Qt.black, key = 'cover')
         result.setZValue(1000)
+        result.setOpacity(1.0 - UNSEEN_OPACITY)
+        result.setVisible(not self._seen)
         return result
 
     def frameItem(self, frameIndex):
@@ -155,15 +168,15 @@ class SlideRenderer(QtGui.QGraphicsWidget):
         if result is None:
             if frameIndex == 'header':
                 patches = self._slide.header() or ()
-                parentItem = self._navigationItem
+                parentItem = self._items['navigation']
                 zValue = 50
             elif frameIndex == 'footer':
                 patches = self._slide.footer() or ()
-                parentItem = self._navigationItem
+                parentItem = self._items['navigation']
                 zValue = 50
             else:
                 patches = self._slide.frame(frameIndex)
-                parentItem = self._contentItem
+                parentItem = self._items['content']
                 zValue = 100 + frameIndex
 
             result = QtGui.QGraphicsWidget(parentItem)
@@ -183,10 +196,10 @@ class SlideRenderer(QtGui.QGraphicsWidget):
         return result
 
     def navigationItem(self):
-        return self._navigationItem
+        return self._items['navigation']
 
     def contentItem(self):
-        return self._contentItem
+        return self._items['content']
 
     def addCustomContent(self, items, frameIndex = 0):
         """Add given custom items to the SlideRenderer, for the given
@@ -227,11 +240,12 @@ class SlideRenderer(QtGui.QGraphicsWidget):
             cb(self, self._currentFrame)
 
     def uncover(self, seen = True):
+        self._seen = seen
         self._coverItem().setVisible(not seen)
 
     def showFrame(self, frameIndex = 0):
-        self.frameItem('header')
-        self.frameItem('footer')
+        if not self._items:
+            self._setupItems()
 
         for cb in self._frameCallbacks:
             cb(self, frameIndex)
