@@ -217,14 +217,16 @@ class PDFPresenter(QtCore.QObject):
         self._overviewAnimation = QtCore.QParallelAnimationGroup()
 
         posAnim = QtCore.QPropertyAnimation(self._presentationItem, "pos", self._overviewAnimation)
-        posAnim.setDuration(200)
         posAnim.setStartValue(self._presentationItem.pos())
         posAnim.setEndValue(pos)
+        posAnim.setDuration(300)
+        posAnim.setEasingCurve(QtCore.QEasingCurve.InOutCubic)
 
         scaleAnim = QtCore.QPropertyAnimation(self._presentationItem, "scale", self._overviewAnimation)
-        scaleAnim.setDuration(200)
         scaleAnim.setStartValue(self._presentationItem.scale())
         scaleAnim.setEndValue(scale)
+        scaleAnim.setDuration(300)
+        scaleAnim.setEasingCurve(QtCore.QEasingCurve.InOutQuad)
 
         self._overviewAnimation.addAnimation(posAnim)
         self._overviewAnimation.addAnimation(scaleAnim)
