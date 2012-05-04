@@ -11,7 +11,9 @@ def array2qimage_pure_python(arr):
 if True:
 	import sip
 	sip.setapi("QString", 2)
+	sip.setapi("QVariant", 2)
 	from PyQt4 import QtCore, QtGui, QtOpenGL
+	qtSignal = QtCore.pyqtSignal
 
 	from qimage2ndarray import array2qimage, rgb_view
 elif False:

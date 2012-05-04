@@ -1,5 +1,5 @@
 import numpy
-from dynqt import QtCore, QtGui, array2qimage, rgb_view
+from dynqt import QtCore, QtGui, qtSignal, array2qimage, rgb_view
 
 UNSEEN_OPACITY = 0.5
 
@@ -125,6 +125,8 @@ class Patches(list):
 
 class SlideRenderer(QtGui.QGraphicsWidget):
     DEBUG = False # True
+
+    linkClicked = qtSignal(QtCore.QVariant)
         
     def __init__(self, slide, parentItem):
         QtGui.QGraphicsWidget.__init__(self, parentItem)
@@ -221,7 +223,7 @@ class SlideRenderer(QtGui.QGraphicsWidget):
     def mousePressEvent(self, event):
         link = self._slide.linkAt(self._currentFrame, event.pos())
         if link is not None:
-            print "link pressed: %s" % (link, )
+            self.linkClicked.emit(link)
             event.accept()
         else:
             QtGui.QGraphicsWidget.mousePressEvent(self, event)

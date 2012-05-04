@@ -181,8 +181,10 @@ class PDFPresenter(QtCore.QObject):
     def setSlides(self, slides):
         self._slides = slides
         self._slidesChanged()
-        assert not self._renderers, "FIXME: delete old renderers / graphisc items"
+        assert not self._renderers, "FIXME: delete old renderers / graphics items"
         self._renderers = [slide.SlideRenderer(s, self._presentationItem) for s in slides]
+        for r in self._renderers:
+            r.linkClicked.connect(self.followLink)
         self._setupGrid()
         self.gotoFrame(0, animated = False)
 
@@ -360,6 +362,10 @@ class PDFPresenter(QtCore.QObject):
     def _clearGotoSlide(self):
         self._gotoSlideIndex = None
 
+    def followLink(self, link):
+        frameIndex = link
+        self.gotoFrame(frameIndex, animated = True)
+
     def keyPressEvent(self, event):
         if event.text() == 'F':
             win = self._view.window()
@@ -384,7 +390,7 @@ class PDFPresenter(QtCore.QObject):
                 slideIndex = self._gotoSlideIndex - 1
                 self._gotoSlideIndex = None
                 self.gotoFrame(self._slide2Frame[slideIndex] +
-                               self._renderers[slideIndex].currentFrame(), animated = False)
+                               self._renderers[slideIndex].currentFrame(), animated = True)
         elif event.text() == 'Q':
             self._view.window().close()
             event.accept()
