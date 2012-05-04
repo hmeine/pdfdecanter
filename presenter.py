@@ -2,7 +2,7 @@
 from dynqt import QtCore, QtGui, QtOpenGL
 
 import numpy, os, sys, tempfile, math
-import pdftoppm_renderer, slide, bz2_pickle
+import pdftoppm_renderer, pdf_infos, bz2_pickle, slide
 
 __version__ = "0.1"
 
@@ -157,6 +157,12 @@ class PDFPresenter(QtCore.QObject):
             raw_frames = list(pdftoppm_renderer.renderAllPages(pdfFilename, self.slideSize()))
 
             slides = slide.stack_frames(raw_frames)
+
+            infos = pdf_infos.PDFInfos.create(pdfFilename)
+            if infos:
+                links = iter(infos.links())
+                for sl in slides:
+                    sl.setLinks([links.next() for frame in sl])
 
             if cacheFilename:
                 sys.stdout.write("caching in '%s'...\n" % cacheFilename)

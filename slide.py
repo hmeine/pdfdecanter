@@ -4,18 +4,22 @@ from dynqt import QtCore, QtGui, array2qimage, rgb_view
 UNSEEN_OPACITY = 0.5
 
 class Slide(object):
-    __slots__ = ('_size', '_header', '_footer', '_frames')
+    __slots__ = ('_size', '_header', '_footer', '_frames', '_links')
     
     def __init__(self, size):
         self._size = size
         self._header = self._footer = None
         self._frames = []
+        self._links = None
 
     def size(self):
         return self._size
 
     def __len__(self):
         return len(self._frames)
+
+    def __getitem__(self, frameIndex):
+        return self.frame(frameIndex)
 
     def setHeader(self, patches):
         self._header = patches
@@ -44,6 +48,9 @@ class Slide(object):
     def frame(self, frameIndex):
         return self._frames[frameIndex]
 
+    def setLinks(self, links):
+        self._links = links
+
     def pixelCount(self):
         result = 0
         for frame in self._frames:
@@ -58,17 +65,19 @@ class Slide(object):
         return ((self._size.width(), self._size.height()),
                 serializePatches(self._header) if self._header else None,
                 serializePatches(self._footer) if self._footer else None,
-                map(serializePatches, self._frames))
+                map(serializePatches, self._frames),
+                self._links)
 
     def __setstate__(self, state):
         def deserializePatches(patches):
             return Patches((QtCore.QPoint(x, y), array2qimage(patch))
                            for (x, y), patch in patches)
-        (w, h), header, footer, frames = state
+        (w, h), header, footer, frames, links = state
         self._size = QtCore.QSizeF(w, h)
         self._header = header and deserializePatches(header)
         self._footer = footer and deserializePatches(footer)
         self._frames = map(deserializePatches, frames)
+        self._links = links
 
 
 class Presentation(list):
