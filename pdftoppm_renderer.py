@@ -1,11 +1,14 @@
-import subprocess, numpy, string
+import subprocess, numpy, string, sys
 
-def startRenderer(pdfFilename, pageIndex, sizePX):
-    widthPX, heightPX = sizePX
-    command = ('pdftoppm '
-               '-scale-to-x %(widthPX)d '
-               '-scale-to-y %(heightPX)d' % locals()).split()
-    if pageIndex:
+def startRenderer(pdfFilename, pageIndex, sizePX = None, dpi = None):
+    command = ['pdftoppm']
+    if sizePX is not None:
+        widthPX, heightPX = sizePX
+        command.extend(['-scale-to-x', str(widthPX),
+                        '-scale-to-y', str(heightPX)])
+    elif dpi is not None:
+        command.extend(['-r', str(dpi)])
+    if pageIndex is not None:
         command.extend(('-f %(pageIndex)d -l %(pageIndex)d' % locals()).split())
     command.append(pdfFilename)
 
@@ -13,10 +16,10 @@ def startRenderer(pdfFilename, pageIndex, sizePX):
 
     return result
 
-def renderPDFPage(pdfFilename, pageIndex, sizePX):
-    print "rendering page %d..." % pageIndex
+def renderPDFPage(pdfFilename, pageIndex, **kwargs):
+    #print "rendering page %d..." % pageIndex
 
-    pdftoppm = startRenderer(pdfFilename, pageIndex, sizePX)
+    pdftoppm = startRenderer(pdfFilename, pageIndex, **kwargs)
 
     result = readPPM(pdftoppm.stdout)
 
@@ -26,12 +29,19 @@ def renderPDFPage(pdfFilename, pageIndex, sizePX):
 
     return result
 
-def renderAllPages(pdfFilename, sizePX):
-    pdftoppm = startRenderer(pdfFilename, None, sizePX)
+def renderAllPages(pdfFilename, **kwargs):
+    pageCount = None
+    if 'pageCount' in kwargs:
+        pageCount = kwargs['pageCount']
+        kwargs = dict(kwargs)
+        del kwargs['pageCount']
+    
+    pdftoppm = startRenderer(pdfFilename, None, **kwargs)
 
     pageIndex = 1
-    while True:
-        print "rendering page %d..." % pageIndex
+    while pageCount is None or pageIndex <= pageCount:
+        sys.stdout.write("\rrendering page %d%s..." % (pageIndex, " / %d" % pageCount if pageCount is not None else ""))
+        sys.stdout.flush()
 
         try:
             page = readPPM(pdftoppm.stdout)
@@ -44,6 +54,7 @@ def renderAllPages(pdfFilename, sizePX):
         yield page
         pageIndex += 1
 
+    print
     rest, _ = pdftoppm.communicate()
     assert not rest, "pdftoppm returned more than the expected PPM data (%d extra bytes)" % len(rest)
     assert pdftoppm.returncode == 0

@@ -154,11 +154,17 @@ class PDFPresenter(QtCore.QObject):
                     slides = bz2_pickle.unpickle(cacheFilename)
                 
         if slides is None:
-            raw_frames = list(pdftoppm_renderer.renderAllPages(pdfFilename, self.slideSize()))
+            infos = pdf_infos.PDFInfos.create(pdfFilename)
+
+            # if infos:
+            #     pageWidthInches = numpy.diff(infos.pageBoxes()[0], axis = 0)[0,0] / 72
+            #     dpi = self.slideSize()[0] / pageWidthInches
+
+            raw_frames = list(pdftoppm_renderer.renderAllPages(pdfFilename, sizePX = self.slideSize(),
+                                                               pageCount = infos and infos.pageCount()))
 
             slides = slide.stack_frames(raw_frames)
 
-            infos = pdf_infos.PDFInfos.create(pdfFilename)
             if infos:
                 pageIndex = 0
                 for sl in slides:
