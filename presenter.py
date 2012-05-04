@@ -60,10 +60,9 @@ class PDFPresenter(QtCore.QObject):
         self._presentationItem = QtGui.QGraphicsWidget(self._slideViewport)
 
         self._cursor = QtGui.QGraphicsWidget(self._presentationItem)
-        cursorRect = self._scene.addRect(self._scene.sceneRect())
+        cursorRect = QtGui.QGraphicsRectItem(self._scene.sceneRect(), self._cursor)
         cursorRect.setPen(QtGui.QPen(QtCore.Qt.yellow, 25))
         cursorRect.setBrush(QtGui.QBrush(QtGui.QColor(255, 255, 0, 100)))
-        cursorRect.setParentItem(self._cursor)
 
         self._renderers = None
         self._currentFrameIndex = None
