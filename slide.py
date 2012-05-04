@@ -1,4 +1,4 @@
-import numpy
+import numpy, sys
 from dynqt import QtCore, QtGui, qtSignal, array2qimage, rgb_view
 
 UNSEEN_OPACITY = 0.5
@@ -363,7 +363,8 @@ def detectBackground(raw_frames, useFrames = 15):
     weights = [numpy.ones((h, w), numpy.uint8)]
     
     for i in range(1, len(sample_frames)):
-        print "analyzing background sample frame %d / %d..." % (i + 1, len(sample_frames))
+        sys.stdout.write("\ranalyzing background sample frame %d / %d..." % (i + 1, len(sample_frames)))
+        sys.stdout.flush()
         todo = numpy.ones((h, w), bool)
         for j in range(len(candidates)):
             # find pixels that are still 'todo' among the candidates:
@@ -378,10 +379,13 @@ def detectBackground(raw_frames, useFrames = 15):
             candidates.append(sample_frames[i] * todo[...,None])
             weights.append(todo.astype(numpy.uint8))
     
+    sys.stdout.write("\restimating background from samples...         ")
+    sys.stdout.flush()
     weights = numpy.asarray(weights)
     candidates = numpy.asarray(candidates)
     maxpos = numpy.argmax(weights, 0)
     canvas = numpy.choose(maxpos[...,None], candidates)
+    sys.stdout.write("\restimating background from samples... done.\n")
     return canvas
 
 
