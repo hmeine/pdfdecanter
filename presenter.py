@@ -8,11 +8,14 @@ __version__ = "0.1"
 
 w, h = 1024, 768
 
-MARGIN_X = 30
-MARGIN_Y = 24
 BLEND_DURATION = 150
 USE_GL = True # False
 USE_CACHING = True # False
+
+PADDING_X = 30
+PADDING_Y = 24
+LINEBREAK_PADDING = 2 * PADDING_Y
+INDENT_X = w / 8
 
 if USE_GL:
     try:
@@ -195,9 +198,32 @@ class PDFPresenter(QtCore.QObject):
     def _setupGrid(self):
         self._overviewColumnCount = min(5, int(math.ceil(math.sqrt(len(self._slides)))))
 
+        slideLevel = numpy.zeros((len(self._slides), ), dtype = int)
+
+        infos = self._slides.pdfInfos()
+        if infos and infos.outline():
+            for level, title, frameIndex in infos.outline():
+                slideLevel[self._frame2Slide[frameIndex][0]] = level
+
+            if numpy.all(slideLevel > 0):
+                slideLevel = slideLevel.clip(0, slideLevel.max() - 1)
+
+        x = y = col = 0
+        lastLineBreak = 0
         for i, renderer in enumerate(self._renderers):
-            renderer.setPos((w + MARGIN_X) * (i % self._overviewColumnCount),
-                            (h + MARGIN_Y) * (i / self._overviewColumnCount))
+            if slideLevel[i] and lastLineBreak < i - 1:
+                y += (h + LINEBREAK_PADDING)
+                x = col = 0
+                lastLineBreak = i
+            elif col >= self._overviewColumnCount:
+                y += (h + PADDING_Y)
+                x = INDENT_X if lastLineBreak else 0
+                col = 0
+
+            renderer.setPos(x, y)
+
+            x += (w + PADDING_X)
+            col += 1
 
     def _updateCursor(self, animated):
         r = QtCore.QRectF(self._currentRenderer().pos(),
