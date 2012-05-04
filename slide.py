@@ -4,13 +4,14 @@ from dynqt import QtCore, QtGui, array2qimage, rgb_view
 UNSEEN_OPACITY = 0.5
 
 class Slide(object):
-    __slots__ = ('_size', '_header', '_footer', '_frames', '_links')
+    __slots__ = ('_size', '_header', '_footer', '_frames', '_pdfInfos')
     
     def __init__(self, size):
         self._size = size
         self._header = self._footer = None
         self._frames = []
-        self._links = None
+
+        self._pdfInfos = None
 
     def size(self):
         return self._size
@@ -48,8 +49,21 @@ class Slide(object):
     def frame(self, frameIndex):
         return self._frames[frameIndex]
 
-    def setLinks(self, links):
-        self._links = links
+    def setPDFInfos(self, infos):
+        if infos:
+            assert len(infos) == len(self)
+        self._pdfInfos = infos
+
+    def linkAt(self, frameIndex, pos):
+        if not self._pdfInfos or frameIndex >= len(self._pdfInfos):
+            return None
+        
+        relPos = (pos.x() / self._size.width(),
+                  (self._size.height() - pos.y()) / self._size.height())
+        for rect, link in self._pdfInfos.relativeLinks(frameIndex):
+            if numpy.all((relPos >= rect[0]) * (relPos <= rect[1])):
+                return link
+        return None
 
     def pixelCount(self):
         result = 0
@@ -66,18 +80,18 @@ class Slide(object):
                 serializePatches(self._header) if self._header else None,
                 serializePatches(self._footer) if self._footer else None,
                 map(serializePatches, self._frames),
-                self._links)
+                self._pdfInfos)
 
     def __setstate__(self, state):
         def deserializePatches(patches):
             return Patches((QtCore.QPoint(x, y), array2qimage(patch))
                            for (x, y), patch in patches)
-        (w, h), header, footer, frames, links = state
+        (w, h), header, footer, frames, infos = state
         self._size = QtCore.QSizeF(w, h)
         self._header = header and deserializePatches(header)
         self._footer = footer and deserializePatches(footer)
         self._frames = map(deserializePatches, frames)
-        self._links = links
+        self._pdfInfos = infos
 
 
 class Presentation(list):
@@ -203,6 +217,14 @@ class SlideRenderer(QtGui.QGraphicsWidget):
             self._items[frameIndex] = result
 
         return result
+
+    def mousePressEvent(self, event):
+        link = self._slide.linkAt(self._currentFrame, event.pos())
+        if link is not None:
+            print "link pressed: %s" % (link, )
+            event.accept()
+        else:
+            QtGui.QGraphicsWidget.mousePressEvent(self, event)
 
     def navigationItem(self):
         return self._items['navigation']

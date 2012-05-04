@@ -7,6 +7,7 @@ class PDFInfos(object):
         self._pageCount = None
         self._outline = None
         self._links = None
+        self._pageBoxes = None
 
     def pageCount(self):
         return self._pageCount
@@ -15,9 +16,41 @@ class PDFInfos(object):
         """Return list of (level, title, pageIndex) tuples"""
         return self._outline
 
-    def links(self):
-        """Return list of (rect, pageIndex) tuples for every page, where rect is a 2x2 ndarray"""
+    def links(self, pageIndex = None):
+        """Return list of (rect, pageIndex) tuples for every (or given) page, where rect is a 2x2 ndarray"""
+        if pageIndex is not None:
+            return self._links[pageIndex]
         return self._links
+
+    def relativeLinks(self, pageIndex = None):
+        """Same as links, but with rects scaled relative to pageBoxes"""
+        if pageIndex is None:
+            return [self.relativeLinks(i) for i in range(len(self))]
+        pageBox = self._pageBoxes[pageIndex]
+        pageSize = numpy.diff(pageBox, axis = 0)[0]
+        return [((rect - pageBox[0]) / pageSize, pageIndex)
+                for rect, pageIndex in self.links(pageIndex)]
+
+    def pageBoxes(self):
+        return self._pageBoxes
+
+    def __len__(self):
+        return self._pageCount
+
+    def __getslice__(self, b, e):
+        if b is None:
+            b = 0
+        if e is None:
+            e = len(self)
+        elif e < 0:
+            e += len(self)
+        result = type(self)()
+        result._pageCount = e - b
+        result._outline = [(l, t, pi) for l, t, pi in self._outline
+                           if b <= pi < e]
+        result._links = self._links[b:e]
+        result._pageBoxes = self._pageBoxes[b:e]
+        return result
 
     @classmethod
     def create(cls, filename):

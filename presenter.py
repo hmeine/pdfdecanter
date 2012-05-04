@@ -160,9 +160,10 @@ class PDFPresenter(QtCore.QObject):
 
             infos = pdf_infos.PDFInfos.create(pdfFilename)
             if infos:
-                links = iter(infos.links())
+                pageIndex = 0
                 for sl in slides:
-                    sl.setLinks([links.next() for frame in sl])
+                    sl.setPDFInfos(infos[pageIndex:pageIndex+len(sl)])
+                    pageIndex += len(sl)
 
             if cacheFilename:
                 sys.stdout.write("caching in '%s'...\n" % cacheFilename)
