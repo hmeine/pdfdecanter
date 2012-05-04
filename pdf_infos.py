@@ -1,13 +1,18 @@
 import numpy
 
 class PDFInfos(object):
-    __slots__ = ('_pageCount', '_outline', '_links', '_pageBoxes')
+    __slots__ = ('_metaInfo', '_pageCount', '_outline', '_links', '_pageBoxes')
     
     def __init__(self):
+        self._metaInfo = None
         self._pageCount = None
         self._outline = None
         self._links = None
         self._pageBoxes = None
+
+    def metaInfo(self):
+        """Return dict with meta information about PDF document, e.g. keys like Title, Author, Creator, ..."""
+        return self._metaInfo
 
     def pageCount(self):
         return self._pageCount
@@ -45,10 +50,11 @@ class PDFInfos(object):
         elif e < 0:
             e += len(self)
         result = type(self)()
+        result._metaInfo = self._metaInfo # (probably unused, but anyhow)
         result._pageCount = e - b
-        result._outline = [(l, t, pi) for l, t, pi in self._outline
-                           if b <= pi < e]
-        result._links = self._links[b:e]
+        result._outline = self._outline and [(l, t, pi) for l, t, pi in self._outline
+                                             if b <= pi < e]
+        result._links = self._links and self._links[b:e]
         result._pageBoxes = self._pageBoxes[b:e]
         return result
 
@@ -62,7 +68,7 @@ class PDFInfos(object):
 
     @staticmethod
     def createFromPdfminer(filename):
-        import pdfminer.pdfparser
+        import pdfminer.pdfparser, pdfminer.pdftypes
 
         fp = open(filename, 'rb')
         parser = pdfminer.pdfparser.PDFParser(fp)
@@ -73,22 +79,39 @@ class PDFInfos(object):
         assert doc.is_extractable
 
         result = PDFInfos()
+        result._metaInfo = dict((key, str.decode(value, 'utf-16') if value.startswith('\xfe\xff') else value)
+                                for key, value in doc.info[0].items()
+                                if isinstance(value, basestring))
 
         pageids = [page.pageid for page in doc.get_pages()]
         result._pageCount = len(pageids)
 
-        def anchorToPageIndex(name):
-            props = doc.get_dest(name).resolve()
-            if isinstance(props, dict):
-                if props.keys() != ['D']:
-                    print props
-                props = props['D']
-            return pageids.index(props[0].objid)
+        def get(obj, attr = None):
+            """Resolve PDFObjRefs, otherwise a no-op. May also perform
+            dict lookup, i.e. get(obj, 'A') is roughly the same as
+            get(obj)['A']."""
+            while isinstance(obj, pdfminer.pdftypes.PDFObjRef):
+                obj = obj.resolve()
+            if attr is not None:
+                return get(obj[attr])
+            return obj
+
+        def actionToPageIndex(action):
+            assert get(action, 'S').name == 'GoTo'
+            name = get(action, 'D')
+            dest = get(doc.get_dest(name))
+            return destToPageIndex(dest)
+
+        def destToPageIndex(dest):
+            if isinstance(dest, dict):
+                assert dest.keys() == ['D'], repr(dest)
+                dest = get(dest, 'D')
+            return pageids.index(dest[0].objid)
 
         try:
-            result._outline = [(level, title, anchorToPageIndex(a.resolve()['D']))
+            result._outline = [(level, title, actionToPageIndex(a) if a else destToPageIndex(dest))
                                for level, title, dest, a, se in doc.get_outlines()]
-        except pdfminer.PDFNoOutlines:
+        except pdfminer.pdfparser.PDFNoOutlines:
             result._outline = None
 
         result._links = []
@@ -97,14 +120,12 @@ class PDFInfos(object):
         for page in doc.get_pages():
             pageLinks = []
 
-            for anno in page.annots:
-                props = anno.resolve()
-                #print props['Subtype'], props['Rect'], props['A']
-
-                if props['A']['S'].name == 'GoTo':
-                    assert sorted(props['A'].keys()) == ['D', 'S']
-                    pageLinks.append((numpy.array(props['Rect'], float).reshape((2, 2)),
-                                      anchorToPageIndex(props['A']['D'])))
+            for anno in get(page.annots) or []:
+                action = get(anno, 'A')
+                if get(action, 'S').name == 'GoTo':
+                    assert sorted(action.keys()) == ['D', 'S']
+                    pageLinks.append((numpy.array(get(anno, 'Rect'), float).reshape((2, 2)),
+                                      actionToPageIndex(action)))
                     #print props['Subtype'],
 
             result._links.append(pageLinks)
