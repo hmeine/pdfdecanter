@@ -95,17 +95,31 @@ class Slide(object):
 
 
 class Presentation(list):
-    FORMAT_VERSION = 2
+    FORMAT_VERSION = 3
+
+    def __init__(self, infos = None):
+        self._pdfInfos = infos
+
+    def pdfInfos(self):
+        return self._pdfInfos
+
+    def setPDFInfos(self, infos):
+        self._pdfInfos = infos
+        if infos:
+            pageIndex = 0
+            for sl in self:
+                sl.setPDFInfos(infos[pageIndex:pageIndex+len(sl)])
+                pageIndex += len(sl)
+            assert pageIndex == infos.pageCount()
 
     def __getnewargs__(self):
         return (list(self), )
 
     def __getstate__(self):
-        return False # don't call __setstate__
+        return (self._pdfInfos, )
 
     def __setstate__(self, state):
-        assert not state # should not be called anyhow
-        return
+        self._pdfInfos, = state
 
 
 def boundingRect(rects):
@@ -404,10 +418,10 @@ def stack_frames(raw_frames):
     it = iter(raw_frames)
     frame1 = canvas
 
-    slides = Presentation()
-    slides.background = background
-    slides.header_rect = boundingRect(header)
-    slides.footer_rect = boundingRect(footer)
+    result = Presentation()
+    result.background = background
+    result.header_rect = boundingRect(header)
+    result.footer_rect = boundingRect(footer)
 
     prev_header = None
 
@@ -416,7 +430,7 @@ def stack_frames(raw_frames):
         content = changed_rects(canvas, frame2)
 
         header, content, footer = decompose_slide(
-            content, slides.header_rect.bottom() * 1.3, slides.footer_rect.top())
+            content, result.header_rect.bottom() * 1.3, result.footer_rect.top())
 
         # TODO: handle case of full-screen overlay (e.g. slide 10/11 of FATE_Motivation)?
         # (currently, goes as new slide because the header is hit)
@@ -425,7 +439,7 @@ def stack_frames(raw_frames):
         if header and header == prev_header:
             isNewSlide = False
             for r in changed:
-                if r.intersects(slides.header_rect):
+                if r.intersects(result.header_rect):
                     isNewSlide = True
                     break
 
@@ -434,11 +448,11 @@ def stack_frames(raw_frames):
             s.setHeader(extractPatches(frame2, header))
             s.setFooter(extractPatches(frame2, footer))
             s.addFrame(extractPatches(frame2, content))
-            slides.append(s)
+            result.append(s)
         else:
-            slides[-1].addFrame(extractPatches(frame2, changed))
+            result[-1].addFrame(extractPatches(frame2, changed))
 
         frame1 = frame2
         prev_header = header
 
-    return slides
+    return result

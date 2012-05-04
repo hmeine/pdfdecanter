@@ -167,12 +167,7 @@ class PDFPresenter(QtCore.QObject):
                                                                pageCount = infos and infos.pageCount()))
 
             slides = slide.stack_frames(raw_frames)
-
-            if infos:
-                pageIndex = 0
-                for sl in slides:
-                    sl.setPDFInfos(infos[pageIndex:pageIndex+len(sl)])
-                    pageIndex += len(sl)
+            slides.setPDFInfos(infos)
 
             if cacheFilename:
                 sys.stdout.write("caching in '%s'...\n" % cacheFilename)
