@@ -151,8 +151,11 @@ class PDFPresenter(QtCore.QObject):
                 # FIXME: handle Presentation.FORMAT_VERSION
                 if os.path.getmtime(cacheFilename) >= os.path.getmtime(pdfFilename):
                     sys.stdout.write("reading cache '%s'...\n" % cacheFilename)
-                    slides = bz2_pickle.unpickle(cacheFilename)
-                
+                    try:
+                        slides = bz2_pickle.unpickle(cacheFilename)
+                    except Exception, e:
+                        sys.stderr.write("FAILED to load cache (%s), re-rendering...\n" % (e, ))
+        
         if slides is None:
             infos = pdf_infos.PDFInfos.create(pdfFilename)
 
