@@ -195,7 +195,7 @@ class PDFPresenter(QtCore.QObject):
         self.gotoFrame(0, animated = False)
 
     def _setupGrid(self):
-        self._overviewColumnCount = int(math.ceil(math.sqrt(len(self._slides))))
+        self._overviewColumnCount = min(5, int(math.ceil(math.sqrt(len(self._slides)))))
 
         for i, renderer in enumerate(self._renderers):
             renderer.setPos((w + MARGIN_X) * (i % self._overviewColumnCount),
