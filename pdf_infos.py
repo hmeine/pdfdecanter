@@ -85,8 +85,11 @@ class PDFInfos(object):
                 props = props['D']
             return pageids.index(props[0].objid)
 
-        result._outline = [(level, title, anchorToPageIndex(a.resolve()['D']))
-                           for level, title, dest, a, se in doc.get_outlines()]
+        try:
+            result._outline = [(level, title, anchorToPageIndex(a.resolve()['D']))
+                               for level, title, dest, a, se in doc.get_outlines()]
+        except pdfminer.PDFNoOutlines:
+            result._outline = None
 
         result._links = []
 
@@ -102,7 +105,7 @@ class PDFInfos(object):
                     assert sorted(props['A'].keys()) == ['D', 'S']
                     pageLinks.append((numpy.array(props['Rect'], float).reshape((2, 2)),
                                       anchorToPageIndex(props['A']['D'])))
-                    #print props['Subtype'], 
+                    #print props['Subtype'],
 
             result._links.append(pageLinks)
 
