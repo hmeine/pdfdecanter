@@ -1,5 +1,5 @@
 import numpy, sys
-from dynqt import QtCore, QtGui, qtSignal, array2qimage, rgb_view
+from dynqt import QtCore, QtGui, array2qimage, rgb_view
 
 UNSEEN_OPACITY = 0.5
 
@@ -140,8 +140,6 @@ class Patches(list):
 class SlideRenderer(QtGui.QGraphicsWidget):
     DEBUG = False # True
 
-    linkClicked = qtSignal(QtCore.QVariant)
-        
     def __init__(self, slide, parentItem):
         QtGui.QGraphicsWidget.__init__(self, parentItem)
         self._slide = slide
@@ -152,6 +150,7 @@ class SlideRenderer(QtGui.QGraphicsWidget):
         self._currentFrame = None
         self._seen = False
         self._frameCallbacks = []
+        self._linkHandler = None
 
         self._items = {}
 
@@ -159,6 +158,9 @@ class SlideRenderer(QtGui.QGraphicsWidget):
 
     def slide(self):
         return self._slide
+
+    def setLinkHandler(self, linkHandler):
+        self._linkHandler = linkHandler
 
     def _setupItems(self):
         self._backgroundItem()
@@ -235,12 +237,13 @@ class SlideRenderer(QtGui.QGraphicsWidget):
         return result
 
     def mousePressEvent(self, event):
-        link = self._slide.linkAt(self._currentFrame, event.pos())
-        if link is not None:
-            self.linkClicked.emit(link)
-            event.accept()
-        else:
-            QtGui.QGraphicsWidget.mousePressEvent(self, event)
+        if self._linkHandler:
+            link = self._slide.linkAt(self._currentFrame, event.pos())
+            if link is not None:
+                self._linkHandler(link)
+                event.accept()
+                return
+        QtGui.QGraphicsWidget.mousePressEvent(self, event)
 
     def navigationItem(self):
         return self._items['navigation']

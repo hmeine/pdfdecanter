@@ -191,7 +191,7 @@ class PDFPresenter(QtCore.QObject):
         assert not self._renderers, "FIXME: delete old renderers / graphics items"
         self._renderers = [slide.SlideRenderer(s, self._presentationItem) for s in slides]
         for r in self._renderers:
-            r.linkClicked.connect(self.followLink)
+            r.setLinkHandler(self.followLink)
         self._setupGrid()
         self.gotoFrame(0, animated = False)
 
