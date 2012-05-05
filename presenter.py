@@ -205,8 +205,8 @@ class PDFPresenter(QtCore.QObject):
             for level, title, frameIndex in infos.outline():
                 slideLevel[self._frame2Slide[frameIndex][0]] = level
 
-            if numpy.all(slideLevel > 0):
-                slideLevel = slideLevel.clip(0, slideLevel.max() - 1)
+            while numpy.diff(numpy.nonzero(slideLevel)[0]).mean() < self._overviewColumnCount:
+                slideLevel[slideLevel == slideLevel.max()] = 0
 
         x = y = col = 0
         lastLineBreak = 0
