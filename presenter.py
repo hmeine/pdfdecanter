@@ -24,6 +24,17 @@ if USE_GL:
         USE_GL = False
         sys.stderr.write("WARNING: OpenGL could not be loaded, running without GL...\n")
 
+
+class GeometryAnimation(QtCore.QVariantAnimation):
+    def __init__(self, item, parent = None):
+        QtCore.QVariantAnimation.__init__(self, parent)
+        self._item = item
+
+    def updateCurrentValue(self, value):
+        self._item.setPos(value.topLeft())
+        self._item.setScale(value.width())
+
+
 class PDFPresenter(QtCore.QObject):
     def __init__(self, view = None):
         QtCore.QObject.__init__(self)
@@ -251,23 +262,18 @@ class PDFPresenter(QtCore.QObject):
             if pos.y() < minY:
                 pos.setY(minY)
 
+        currentGeometry = QtCore.QRectF(self._presentationItem.pos(),
+                                        QtCore.QSizeF(self._presentationItem.scale(),
+                                                      self._presentationItem.scale()))
+        targetGeometry = QtCore.QRectF(pos, QtCore.QSizeF(scale, scale))
+
         # FIXME: clear up / reuse QObject:
-        self._overviewAnimation = QtCore.QParallelAnimationGroup()
+        self._overviewAnimation = GeometryAnimation(self._presentationItem)
+        self._overviewAnimation.setStartValue(currentGeometry)
+        self._overviewAnimation.setEndValue(targetGeometry)
+        self._overviewAnimation.setDuration(300)
+        self._overviewAnimation.setEasingCurve(QtCore.QEasingCurve.InOutCubic)
 
-        posAnim = QtCore.QPropertyAnimation(self._presentationItem, "pos", self._overviewAnimation)
-        posAnim.setStartValue(self._presentationItem.pos())
-        posAnim.setEndValue(pos)
-        posAnim.setDuration(300)
-        #posAnim.setEasingCurve(QtCore.QEasingCurve.InOutCubic)
-
-        scaleAnim = QtCore.QPropertyAnimation(self._presentationItem, "scale", self._overviewAnimation)
-        scaleAnim.setStartValue(self._presentationItem.scale())
-        scaleAnim.setEndValue(scale)
-        scaleAnim.setDuration(300)
-        #scaleAnim.setEasingCurve(QtCore.QEasingCurve.InOutQuad)
-
-        self._overviewAnimation.addAnimation(posAnim)
-        self._overviewAnimation.addAnimation(scaleAnim)
         self._overviewAnimation.start()
 
     def _overviewScale(self):
