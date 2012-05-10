@@ -1,4 +1,4 @@
-import numpy
+import numpy, os.path
 
 class PDFInfos(object):
     __slots__ = ('_metaInfo', '_pageCount', '_outline', '_links', '_pageBoxes')
@@ -33,8 +33,8 @@ class PDFInfos(object):
             return [self.relativeLinks(i) for i in range(len(self))]
         pageBox = self._pageBoxes[pageIndex]
         pageSize = numpy.diff(pageBox, axis = 0)[0]
-        return [((rect - pageBox[0]) / pageSize, pageIndex)
-                for rect, pageIndex in self.links(pageIndex)]
+        return [((rect - pageBox[0]) / pageSize, link)
+                for rect, link in self.links(pageIndex)]
 
     def pageBoxes(self):
         return self._pageBoxes
@@ -122,11 +122,19 @@ class PDFInfos(object):
 
             for anno in get(page.annots) or []:
                 action = get(anno, 'A')
-                if get(action, 'S').name == 'GoTo':
+                subType = get(action, 'S').name
+                rect = numpy.array(get(anno, 'Rect'), float).reshape((2, 2))
+                if subType == 'GoTo':
                     assert sorted(action.keys()) == ['D', 'S']
-                    pageLinks.append((numpy.array(get(anno, 'Rect'), float).reshape((2, 2)),
-                                      actionToPageIndex(action)))
-                    #print props['Subtype'],
+                    pageLinks.append((rect, actionToPageIndex(action)))
+                elif subType == 'URI':
+                    #assert sorted(action.keys()) == ['S', 'Type', 'URI']
+                    link = get(action, 'URI')
+                    if link.startswith('file:'):
+                        # resolve relative pathname w.r.t. PDF filename:
+                        link = 'file:' + os.path.join(os.path.dirname(filename),
+                                                      link[5:])
+                    pageLinks.append((rect, link))
 
             result._links.append(pageLinks)
 

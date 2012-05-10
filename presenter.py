@@ -399,8 +399,9 @@ class PDFPresenter(QtCore.QObject):
         self._gotoSlideIndex = None
 
     def followLink(self, link):
-        frameIndex = link
-        self.gotoFrame(frameIndex, animated = True)
+        if isinstance(link, int):
+            frameIndex = link
+            self.gotoFrame(frameIndex, animated = True)
 
     def keyPressEvent(self, event):
         if event.text() == 'F':
