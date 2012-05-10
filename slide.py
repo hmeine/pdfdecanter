@@ -1,4 +1,4 @@
-import numpy, sys
+import numpy, sys, os
 from dynqt import QtCore, QtGui, array2qimage, rgb_view
 
 UNSEEN_OPACITY = 0.5
@@ -53,6 +53,22 @@ class Slide(object):
         if infos:
             assert len(infos) == len(self)
         self._pdfInfos = infos
+
+    def linkRects(self, frameIndex, onlyExternal = True):
+        if not self._pdfInfos or frameIndex >= len(self._pdfInfos):
+            return
+
+        for rect, link in self._pdfInfos.relativeLinks(frameIndex):
+            if onlyExternal and isinstance(link, int):
+                continue
+            x1, y1 = rect[0]
+            w, h = rect[1] - rect[0]
+            print w, h, w * self._size.width(), h * self._size.height()
+            yield (QtCore.QRectF(x1 * self._size.width(),
+                                 y1 * self._size.height(),
+                                 w * self._size.width(),
+                                 h * self._size.height()),
+                   link)
 
     def linkAt(self, frameIndex, pos):
         if not self._pdfInfos or frameIndex >= len(self._pdfInfos):
@@ -231,6 +247,20 @@ class SlideRenderer(QtGui.QGraphicsWidget):
                 pmItem.setPos(QtCore.QPointF(pos))
                 pmItem.setPixmap(pixmap)
                 pmItem.setTransformationMode(QtCore.Qt.SmoothTransformation)
+
+            if parentItem is self._items['content']:
+                for rect, link in self._slide.linkRects(frameIndex):
+                    if link.startswith('file:') and link.endswith('.mng'):
+                        movie = QtGui.QMovie(link[5:])
+                        player = QtGui.QLabel()
+                        player.setMovie(movie)
+                        movie.setScaledSize(rect.size().toSize())
+                        player.resize(round(rect.width()), round(rect.height()))
+                        item = QtGui.QGraphicsProxyWidget(result)
+                        item.setWidget(player)
+                        item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
+                        item.setPos(rect.topLeft())
+                        movie.start()
 
             self._items[frameIndex] = result
 
