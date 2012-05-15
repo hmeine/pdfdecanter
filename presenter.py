@@ -88,6 +88,11 @@ class PDFPresenter(QtCore.QObject):
         self._gotoSlideTimer.setInterval(1000)
         self._gotoSlideTimer.timeout.connect(self._clearGotoSlide)
 
+        self._clearMouseReleaseFlagTimer = QtCore.QTimer(self)
+        self._clearMouseReleaseFlagTimer.setSingleShot(True)
+        self._clearMouseReleaseFlagTimer.setInterval(100)
+        self._clearMouseReleaseFlagTimer.timeout.connect(self._clearMouseReleaseFlag)
+
         self._inOverview = False
 
     def view(self):
@@ -120,7 +125,6 @@ class PDFPresenter(QtCore.QObject):
         if not self._inOverview:
             if self._currentFrameIndex < len(self._frame2Slide) - 1:
                 self.gotoFrame(self._currentFrameIndex + 1, animated = True)
-            return
         else:
             selectedItem, = selectedItems
             slideIndex = self._renderers.index(selectedItem)
@@ -150,6 +154,12 @@ class PDFPresenter(QtCore.QObject):
 
     def mouseReleaseEvent(self, e):
         self._selectionChangeComesFromButtonRelease = True
+        self._clearMouseReleaseFlagTimer.start()
+
+    def _clearMouseReleaseFlag(self):
+        if self._selectionChangeComesFromButtonRelease:
+            #print "DEBUG: mouse button release flag still active, clearing..."
+            self._selectionChangeComesFromButtonRelease = False
 
     def loadPDF(self, pdfFilename, cacheFilename = None):
         slides = None
