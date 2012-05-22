@@ -13,7 +13,7 @@ I wrote this mainly for the following reasons:
    stuff appear one-by-one.  This works by generating multiple PDF pages
    per slide, i.e. each content frame is sub-divided into multiple
    animation frames.  Common PDF readers will display ridiculous page
-   numbers like "35/245" for a 20 minute presentation; I wanted
+   numbers like "35 of 245" for a 20 minute presentation; I wanted
    PDFPresenter to recognize multiple PDF pages that belong together and
    be able to **present an overview of the logical slides**, with
    animation frames batched together.
@@ -42,21 +42,6 @@ Other interesting features:
   LaTeX-beamer), the overview will separate sections visually.
 
 * Hyperlinks within the presentation are supported.
-
-Unfinished features:
-
-* Opacity animations should be recognized (leading to smaller file
-  sizes and potentially better transition animations).
-
-* Elements overlapping header/footer should be supported and not lead
-  to new slides.
-
-* Such elements could get a different transition than fade-in
-  (e.g. zoom-in or the like).
-
-* Frame repeations after many pages (e.g. repeated outline slides)
-  should also be recognized.  (Again, this could lead to smaller files
-  and better transitions between these slides.)
 
 Usage
 =====
@@ -124,7 +109,28 @@ right now:
 
   * base each transition on computed differences between frames.
 
-* Also see "unfinished features" above.
+* The cache location is system-wide; it should be per-user for
+  security reasons! (unpickling is dangerous.)  I added a warning to
+  make this more obvious; don't use the current code on a shared,
+  untrusted computer!
+
+Unfinished / planned features:
+
+* Opacity animations should be recognized (leading to smaller file
+  sizes and potentially better transition animations).
+
+* Elements overlapping header/footer should be supported and not lead
+  to new slides.
+
+* Such elements could get a different transition than fade-in
+  (e.g. zoom-in or the like).
+
+* Frame repeations after many pages (e.g. repeated outline slides)
+  should also be recognized.  (Again, this could lead to smaller files
+  and better transitions between these slides.)
+
+* Zooming (e.g. to the original / increased resolution of embedded
+  figures)
 
 .. _LaTeX-beamer: https://bitbucket.org/rivanvx/beamer/overview
 .. _pdftoppm: http://poppler.freedesktop.org/
