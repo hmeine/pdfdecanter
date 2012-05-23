@@ -35,12 +35,32 @@ class Slide(object):
         return self._footer
 
     def contentRect(self, margin = 0):
-        header_rect = self._header.boundingRect()
-        footer_rect = self._footer.boundingRect()
-        result = QtCore.QRectF(0, header_rect.bottom() + 1,
-                               self._size.width(), footer_rect.top() - (header_rect.bottom() + 1))
+        header_rect = self._header and self._header.boundingRect()
+        footer_rect = self._footer and self._footer.boundingRect()
+        header_height = header_rect.bottom() + 1 if self._header else 0
+        result = QtCore.QRectF(0, header_height,
+                               self._size.width(),
+                               footer_rect.top() - header_height
+                               if self._footer else self._size.height())
         if margin:
             result.adjust(margin, margin, -margin, -margin)
+        return result
+
+    def maxRectAround(self, x, y):
+        result = self.contentRect()
+        for patches in self._frames:
+            for pos, patch in patches:
+                print result
+                if pos.x() < x:
+                    result.setRight(min(result.right(), pos.x() - 1))
+                else:
+                    result.setLeft(max(result.left(), pos.x() + patch.size().width()))
+
+                if pos.y() < y:
+                    result.setBottom(min(result.bottom(), pos.y() - 1))
+                else:
+                    result.setTop(max(result.top(), pos.y() + patch.size().height()))
+        print result
         return result
 
     def addFrame(self, patches):
