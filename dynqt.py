@@ -1,3 +1,48 @@
+import sys
+
+class QtDriver(object):
+	DRIVERS = ('PyQt4', 'PySide', 'PythonQt')
+	
+	@classmethod
+	def detect_qt(cls):
+		for drv in cls.DRIVERS:
+			if drv in sys.modules:
+				return drv
+		return None
+
+	def name(self):
+		return self._drv
+
+	def __init__(self, drv = None):
+		if drv is None:
+			drv = self.detect_qt()
+		if drv is None:
+			drv = 'PyQt4' # default to PyQt4
+		assert drv in self.DRIVERS
+		self._drv = drv
+
+	@staticmethod
+	def _initPyQt4():
+		"""initialize PyQt4 to be compatible with PySide"""
+		if 'sip' in sys.modules:
+			return # too late, let's assume it was properly parameterized... (TODO: check & warn?)
+		import sip
+		sip.setapi("QString", 2)
+		sip.setapi("QVariant", 2)
+
+	def importMod(self, mod):
+		if self._drv == 'PyQt4':
+			self._initPyQt4()
+		qt = __import__('%s.%s' % (self._drv, mod))
+		return getattr(qt, mod)
+
+	def __getattr__(self, name):
+		if name.startswith('Qt'):
+			return self.importMod(name)
+		return super(QtDriver, self).__getattr__(name)
+
+# --------------------------------------------------------------------
+
 import numpy
 
 def array2qimage_pure_python(arr):
@@ -8,20 +53,12 @@ def array2qimage_pure_python(arr):
 	result = QtGui.QImage(aligned.data, w, h, QtGui.QImage.Format_RGB32)
 	return result.copy()
 
-if True:
-	import sip
-	sip.setapi("QString", 2)
-	sip.setapi("QVariant", 2)
-	from PyQt4 import QtCore, QtGui, QtOpenGL
-	qtSignal = QtCore.pyqtSignal
+qt = QtDriver()
+QtCore = qt.QtCore
+QtGui = qt.QtGui
+QtOpenGL = qt.QtOpenGL
 
-	from qimage2ndarray import array2qimage, rgb_view
-elif False:
-	from PySide import QtCore, QtGui, QtOpenGL
-
+if qt.name() == 'PySide':
 	array2qimage = array2qimage_pure_python
-
-	rgb_view = NotImplemented
 else:
-	from PythonQt import QtCore, QtGui, QtOpenGL
 	from qimage2ndarray import array2qimage, rgb_view
