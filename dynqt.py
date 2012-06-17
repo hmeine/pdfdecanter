@@ -1,4 +1,4 @@
-import sys
+import sys, os
 
 class QtDriver(object):
 	DRIVERS = ('PyQt4', 'PySide', 'PythonQt')
@@ -13,7 +13,7 @@ class QtDriver(object):
 	def name(self):
 		return self._drv
 
-	def __init__(self, drv = None):
+	def __init__(self, drv = os.environ.get('QT_DRIVER')):
 		if drv is None:
 			drv = self.detect_qt()
 		if drv is None:
@@ -60,5 +60,6 @@ QtOpenGL = qt.QtOpenGL
 
 if qt.name() == 'PySide':
 	array2qimage = array2qimage_pure_python
+	rgb_view = None
 else:
 	from qimage2ndarray import array2qimage, rgb_view
