@@ -44,7 +44,7 @@ class PDFPresenter(QtCore.QObject):
             view.resize(w, h)
         self._view = view
 
-        view.installEventFilter(self)
+        self._view.installEventFilter(self)
 
         self._view.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.SmoothPixmapTransform)
 
@@ -93,6 +93,15 @@ class PDFPresenter(QtCore.QObject):
         self._clearMouseReleaseFlagTimer.setInterval(100)
         self._clearMouseReleaseFlagTimer.timeout.connect(self._clearMouseReleaseFlag)
 
+        self._hideMouseTimer = QtCore.QTimer(self)
+        self._hideMouseTimer.setSingleShot(False)
+        self._hideMouseTimer.setInterval(1000)
+        self._hideMouseTimer.timeout.connect(self._hideMouse)
+        self._hideMouseTimer.start()
+
+        self._view.viewport().setMouseTracking(True)
+        self._view.viewport().installEventFilter(self)
+
         self._inOverview = False
 
     def view(self):
@@ -132,6 +141,10 @@ class PDFPresenter(QtCore.QObject):
                            self._renderers[slideIndex].currentFrame(), animated = False)
 
     def eventFilter(self, obj, event):
+        if event.type() == QtCore.QEvent.MouseMove:
+            self.mouseMoveEvent(event)
+            return False
+
         event.ignore()
         if obj is self._view:
             if event.type() == QtCore.QEvent.KeyPress:
@@ -139,7 +152,7 @@ class PDFPresenter(QtCore.QObject):
             elif event.type() == QtCore.QEvent.Resize:
                 self.resizeEvent(event)
         elif obj is self._scene:
-            if event.type() in (QtCore.QEvent.MouseButtonRelease, QtCore.QEvent.GraphicsSceneMouseRelease):
+            if event.type() == QtCore.QEvent.GraphicsSceneMouseRelease:
                 self.mouseReleaseEvent(event)
         if event.isAccepted():
             return True
@@ -151,6 +164,13 @@ class PDFPresenter(QtCore.QObject):
                      float(e.size().height()) / h)
         self._view.resetMatrix()
         self._view.scale(factor, factor)
+
+    def mouseMoveEvent(self, e):
+        self._view.unsetCursor()
+        self._hideMouseTimer.start()
+
+    def _hideMouse(self):
+        self._view.setCursor(QtCore.Qt.BlankCursor)
 
     def mouseReleaseEvent(self, e):
         self._selectionChangeComesFromButtonRelease = True
