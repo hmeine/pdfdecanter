@@ -132,5 +132,8 @@ Unfinished / planned features:
 * Zooming (e.g. to the original / increased resolution of embedded
   figures)
 
+* The slide numbers should (optionally) be displayed somewhere in
+  order to make the "jump to slide" feature more useful.
+
 .. _LaTeX-beamer: https://bitbucket.org/rivanvx/beamer/overview
 .. _pdftoppm: http://poppler.freedesktop.org/
