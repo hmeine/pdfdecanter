@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from dynqt import QtCore, QtGui, QtOpenGL
 
-import numpy, os, sys, tempfile, math
+import numpy, os, sys, tempfile, math, operator
 import pdftoppm_renderer, pdf_infos, bz2_pickle, slide
 
 __version__ = "0.1"
@@ -473,20 +473,7 @@ class PDFPresenter(QtCore.QObject):
         if self._inOverview:
             if event.key() in (QtCore.Qt.Key_Right, QtCore.Qt.Key_Left,
                                QtCore.Qt.Key_Down, QtCore.Qt.Key_Up):
-                currentSlideIndex, _ = self._frame2Slide[self._currentFrameIndex]
-                # TODO: instead of _overviewColumnCount, go geometrically up/down
-                desiredSlideIndex = currentSlideIndex + {
-                    QtCore.Qt.Key_Right : +1,
-                    QtCore.Qt.Key_Left  : -1,
-                    QtCore.Qt.Key_Down  : +self._overviewColumnCount,
-                    QtCore.Qt.Key_Up    : -self._overviewColumnCount}[event.key()]
-
-                desiredSlideIndex = max(0, min(desiredSlideIndex, len(self._slides)-1))
-                self._currentFrameIndex = (
-                    self._slide2Frame[desiredSlideIndex] +
-                    self._renderers[desiredSlideIndex].currentFrame())
-
-                self._updateCursor(animated = True)
+                self._handleCursorKeyInOverview(event)
                 event.accept()
             elif event.key() in (QtCore.Qt.Key_Home, ):
                 if self._currentFrameIndex:
@@ -524,6 +511,77 @@ class PDFPresenter(QtCore.QObject):
             elif event.key() in (QtCore.Qt.Key_Tab, ):
                 self.showOverview()
                 event.accept()
+
+    def _handleCursorKeyInOverview(self, event):
+        item = self._currentRenderer()
+        r = item.sceneBoundingRect()
+        c = r.center()
+
+        desiredSlideIndex = None
+
+        # naming of variables follows downwards-case, other cases are rotated:
+        if event.key() == QtCore.Qt.Key_Down:
+            ge = operator.ge
+            bottom = r.bottom()
+            getTop = QtCore.QRectF.top
+            getX = QtCore.QPointF.x
+            getY = QtCore.QPointF.y
+            sortDirection = 1 # ascending Y
+            mustOverlapVertically = False
+        elif event.key() == QtCore.Qt.Key_Up:
+            ge = operator.le
+            bottom = r.top()
+            getTop = QtCore.QRectF.bottom
+            getX = QtCore.QPointF.x
+            getY = QtCore.QPointF.y
+            sortDirection = -1 # descending Y
+            mustOverlapVertically = False
+        elif event.key() == QtCore.Qt.Key_Right:
+            ge = operator.ge
+            bottom = r.right()
+            getTop = QtCore.QRectF.left
+            getX = QtCore.QPointF.y
+            getY = QtCore.QPointF.x
+            sortDirection = 1 # ascending X
+            mustOverlapVertically = True
+        elif event.key() == QtCore.Qt.Key_Left:
+            ge = operator.le
+            bottom = r.left()
+            getTop = QtCore.QRectF.right
+            getX = QtCore.QPointF.y
+            getY = QtCore.QPointF.x
+            sortDirection = -1 # descending X
+            mustOverlapVertically = True
+
+        # handle all cases, with naming of variables following downwards-case (see above)
+        belowItems = []
+        for otherItem in self._renderers:
+            r2 = otherItem.sceneBoundingRect()
+            if ge(getTop(r2), bottom):
+                if mustOverlapVertically:
+                    if r2.bottom() < r.top() or r2.top() > r.bottom():
+                        continue # don't jump between rows
+                c2 = r2.center()
+                belowItems.append((sortDirection * getY(c2), abs(getX(c2) - getX(c)), otherItem))
+
+        if belowItems:
+            belowItems.sort()
+            desiredSlide = belowItems[0][-1]
+            desiredSlideIndex = self._renderers.index(desiredSlide)
+        else:
+            currentSlideIndex, _ = self._frame2Slide[self._currentFrameIndex]
+            if event.key() == QtCore.Qt.Key_Right:
+                if currentSlideIndex < len(self._slides)-1:
+                    desiredSlideIndex = currentSlideIndex + 1
+            elif event.key() == QtCore.Qt.Key_Left:
+                if currentSlideIndex > 0:
+                    desiredSlideIndex = currentSlideIndex - 1
+
+        if desiredSlideIndex is not None:
+            self._currentFrameIndex = (
+                self._slide2Frame[desiredSlideIndex] +
+                self._renderers[desiredSlideIndex].currentFrame())
+            self._updateCursor(animated = True)
 
 
 def start(view = None):

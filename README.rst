@@ -95,9 +95,6 @@ right now:
 
 * Presentations with non-white background may not work as well.
 
-* Cursor up/down in the overview behave strangely in the presence of an
-  outline. (The non-grid layout is not yet respected.)
-
 * The header transition is buggy (if one looks closely).
 
 * Overall, the current model of a frame as "previous frame + overlaid
