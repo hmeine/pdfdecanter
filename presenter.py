@@ -77,6 +77,7 @@ class PDFPresenter(QtCore.QObject):
         cursorRect = QtGui.QGraphicsRectItem(self._scene.sceneRect(), self._cursor)
         cursorRect.setPen(QtGui.QPen(QtCore.Qt.yellow, 25))
         cursorRect.setBrush(QtGui.QBrush(QtGui.QColor(255, 255, 0, 100)))
+        self._cursorPos = None
 
         self._renderers = None
         self._currentFrameIndex = None
@@ -323,6 +324,7 @@ class PDFPresenter(QtCore.QObject):
         self._resetSlideAnimation()
 
         self._updateCursor(animated = False)
+        self._cursorPos = None
 
         self._animateOverviewGroup(self._overviewPosForCursor(), self._overviewScale())
 
@@ -515,7 +517,8 @@ class PDFPresenter(QtCore.QObject):
     def _handleCursorKeyInOverview(self, event):
         item = self._currentRenderer()
         r = item.sceneBoundingRect()
-        c = r.center()
+        if self._cursorPos is None:
+            self._cursorPos = r.center()
 
         desiredSlideIndex = None
 
@@ -526,48 +529,61 @@ class PDFPresenter(QtCore.QObject):
             getTop = QtCore.QRectF.top
             getX = QtCore.QPointF.x
             getY = QtCore.QPointF.y
+            setY = QtCore.QPointF.setY
             sortDirection = 1 # ascending Y
-            mustOverlapVertically = False
+            mustOverlapInY = False
         elif event.key() == QtCore.Qt.Key_Up:
             ge = operator.le
             bottom = r.top()
             getTop = QtCore.QRectF.bottom
             getX = QtCore.QPointF.x
             getY = QtCore.QPointF.y
+            setY = QtCore.QPointF.setY
             sortDirection = -1 # descending Y
-            mustOverlapVertically = False
+            mustOverlapInY = False
         elif event.key() == QtCore.Qt.Key_Right:
             ge = operator.ge
             bottom = r.right()
             getTop = QtCore.QRectF.left
             getX = QtCore.QPointF.y
             getY = QtCore.QPointF.x
+            setY = QtCore.QPointF.setX
             sortDirection = 1 # ascending X
-            mustOverlapVertically = True
+            mustOverlapInY = True
         elif event.key() == QtCore.Qt.Key_Left:
             ge = operator.le
             bottom = r.left()
             getTop = QtCore.QRectF.right
             getX = QtCore.QPointF.y
             getY = QtCore.QPointF.x
+            setY = QtCore.QPointF.setX
             sortDirection = -1 # descending X
-            mustOverlapVertically = True
+            mustOverlapInY = True
 
         # handle all cases, with naming of variables following downwards-case (see above)
         belowItems = []
         for otherItem in self._renderers:
             r2 = otherItem.sceneBoundingRect()
             if ge(getTop(r2), bottom):
-                if mustOverlapVertically:
+                if mustOverlapInY:
                     if r2.bottom() < r.top() or r2.top() > r.bottom():
                         continue # don't jump between rows
                 c2 = r2.center()
-                belowItems.append((sortDirection * getY(c2), abs(getX(c2) - getX(c)), otherItem))
+                # sort by Y first (moving as few as possible in cursor dir.),
+                # then sort by difference in X to "current pos"
+                # (self._cursorPos is similar to r.center(), but allows to
+                # move over rows with fewer items without losing the original
+                # x position)
+                belowItems.append((sortDirection * getY(c2),
+                                   abs(getX(c2) - getX(self._cursorPos)),
+                                   otherItem))
 
         if belowItems:
             belowItems.sort()
-            desiredSlide = belowItems[0][-1]
+            sortY, _, desiredSlide = belowItems[0]
+            centerY = sortDirection * sortY
             desiredSlideIndex = self._renderers.index(desiredSlide)
+            setY(self._cursorPos, centerY)
         else:
             currentSlideIndex, _ = self._frame2Slide[self._currentFrameIndex]
             if event.key() == QtCore.Qt.Key_Right:
