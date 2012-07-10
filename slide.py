@@ -83,9 +83,8 @@ class Slide(object):
                 continue
             x1, y1 = rect[0]
             w, h = rect[1] - rect[0]
-            print w, h, w * self._size.width(), h * self._size.height()
             yield (QtCore.QRectF(x1 * self._size.width(),
-                                 y1 * self._size.height(),
+                                 (1 - y1 - h) * self._size.height() - 1,
                                  w * self._size.width(),
                                  h * self._size.height()),
                    link)
@@ -286,6 +285,12 @@ class SlideRenderer(QtGui.QGraphicsWidget):
                         item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
                         item.setPos(rect.topLeft())
                         movie.start()
+
+                if self.DEBUG:
+                    for rect, link in self._slide.linkRects(frameIndex, onlyExternal = False):
+                        linkFrame = QtGui.QGraphicsRectItem(rect, parentItem)
+                        linkFrame.setAcceptedMouseButtons(QtCore.Qt.NoButton)
+                        linkFrame.setPen(QtGui.QPen(QtCore.Qt.yellow))
 
             self._items[frameIndex] = result
 
