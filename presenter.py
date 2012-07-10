@@ -464,9 +464,13 @@ class PDFPresenter(QtCore.QObject):
             self._view.window().close()
             event.accept()
         elif event.text() == 'P':
-            onoff = not self._currentRenderer().navigationItem().isVisible()
+            headerItem, footerItem = self._currentRenderer().navigationItem().childItems()
+            onoff = headerItem.isVisible() + 2*footerItem.isVisible()
+            onoff = (onoff + 1) % 4
             for r in self._renderers:
-                r.navigationItem().setVisible(onoff)
+                headerItem, footerItem = r.navigationItem().childItems()
+                headerItem.setVisible(onoff % 2)
+                footerItem.setVisible(onoff / 2)
             event.accept()
 
         if event.isAccepted():
