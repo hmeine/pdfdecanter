@@ -373,7 +373,10 @@ class SlideRenderer(QtGui.QGraphicsWidget):
         return self._currentFrame
 
 
-def changed_rects(a, b):
+def changed_rects_numpy_only(a, b):
+    """Given two images, returns a list of QRects containing all
+    regions that changed."""
+    
     changed = (b != a).any(-1)
     changed_row = changed.any(-1)
     toggle_rows = list(numpy.nonzero(numpy.diff(changed_row))[0] + 1)
@@ -392,8 +395,99 @@ def changed_rects(a, b):
     return result
 
 
+def area(rect):
+    return rect.width() * rect.height()
+
+
+def join_close_rects(rects):
+    dx, dy = 3, 3
+    # each pixel takes roughly 4 additional bytes, and 320 bytes is a
+    # very rough guess of the cost of extra rects/objects:
+    pixel_threshold = 80
+
+    origCount = len(rects)
+    
+    result = []
+    while rects:
+        r = rects.pop()
+        bigger = r.adjusted(-dx, -dy, dx, dy)
+
+        # as long as rect changed (got united with other), we keep
+        # looking for new intersecting rects:
+        changed = True
+        while changed:
+            changed = False
+            rest = []
+            for other in rects:
+                joined = None
+                if bigger.intersects(other):
+                    joined = r | other
+                    if area(joined) - (area(r) + area(other)) > pixel_threshold:
+                        joined = None
+                    
+                if joined:
+                    r = joined
+                    bigger = r.adjusted(0, 0, dx, dy)
+                    changed = True
+                else:
+                    rest.append(other)
+            rects = rest
+
+        result.append(r)
+
+    #print 'join_close_rects: returning %d/%d rects' % (len(result), origCount)
+    if origCount > len(result):
+        return join_close_rects(result)
+
+    return result
+
+
+def changed_rects_skimage(a, b):
+    """Given two images, returns a list of QRects containing all
+    regions that changed."""
+    
+    import skimage.morphology, skimage.measure
+    
+    changed = (b != a).any(-1)
+    # FIXME: the following gives a
+    # ValueError: Does not understand character buffer dtype format string ('?')
+    lab = skimage.morphology.label(changed)
+    props = skimage.measure.regionprops(lab, properties = ['BoundingBox'])
+    
+    result = []
+    for p in props:
+        y1, x1, y2, x2 = p['BoundingBox']
+        result.append(QtCore.QRect(QtCore.QPoint(x1, y1), QtCore.QPoint(x2, y2)))
+    return join_close_rects(result)
+
+
+def changed_rects_ndimage(a, b):
+    """Given two images, returns a list of QRects containing all
+    regions that changed."""
+    
+    import scipy.ndimage
+    
+    changed = (b != a).any(-1)
+    lab, cnt = scipy.ndimage.measurements.label(changed)
+    
+    result = []
+    for y, x in scipy.ndimage.measurements.find_objects(lab, cnt):
+        result.append(QtCore.QRect(x.start, y.start,
+                                   x.stop - x.start, y.stop - y.start))
+    return join_close_rects(result)
+
+
+changed_rects = changed_rects_ndimage
+#changed_rects = changed_rects_numpy_only
+
+
 def decompose_slide(rects, header_bottom, footer_top):
+    """Separates changed rects into (header, content, footer) triple."""
+    
+    rects.sort(key = lambda r: r.top())
+
     header = []
+    # FIXME: this takes *at most* one item, but e.g. Niko uses chapter / title rows:
     if rects[0].bottom() < header_bottom:
         header.append(rects[0])
         del rects[0]
@@ -402,9 +496,8 @@ def decompose_slide(rects, header_bottom, footer_top):
     while len(rects):
         if rects[-1].top() < footer_top:
             break
-        r = rects[-1]
+        r = rects.pop()
         footer.append(r)
-        del rects[-1]
         # if r.height() < 10 and r.width() > frame_size.width() * .8:
         #     # separator line detected
         #     break
@@ -413,6 +506,9 @@ def decompose_slide(rects, header_bottom, footer_top):
 
 
 def extractPatches(frame, rects):
+    """Given frame as image, and a list of QRects, return list of
+    (pos, QImage) pairs, where pos is a QPoint."""
+    
     patches = Patches()
     for r in rects:
         x1, y1 = r.x(), r.y()
@@ -422,6 +518,8 @@ def extractPatches(frame, rects):
 
 
 def detectBackground(raw_frames, useFrames = 15):
+    """Return image with most common pixel values from given sample size."""
+    
     if len(raw_frames) <= useFrames:
         sample_frames = raw_frames
     else:
