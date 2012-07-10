@@ -103,7 +103,12 @@ class Slide(object):
 
     def pixelCount(self):
         result = 0
-        for frame in self._frames:
+        patches = list(self._frames)
+        if self._header:
+            patches.append(self._header)
+        if self._footer:
+            patches.append(self._footer)
+        for frame in patches:
             for pos, patch in frame:
                 result += patch.width() * patch.height()
         return result
