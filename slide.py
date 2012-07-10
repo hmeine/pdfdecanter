@@ -533,33 +533,40 @@ def detectBackground(raw_frames, useFrames = 15):
         sample_frames = raw_frames[1:end:inc]
 
     h, w = raw_frames[0].shape[:2]
-    candidates = []
-    candidates.append(sample_frames[0])
-    weights = [numpy.ones((h, w), numpy.uint8)]
+
+    weighted_occurences_dtype = numpy.dtype([('color', (numpy.uint8, 3)),
+                                             ('_dummy', numpy.uint8),
+                                             ('count', numpy.uint32)])
     
-    for i in range(1, len(sample_frames)):
+    weighted_occurences = numpy.zeros((10, h, w), weighted_occurences_dtype)
+
+    candidate_count = 1
+    
+    for i in range(len(sample_frames)):
         sys.stdout.write("\ranalyzing background sample frame %d / %d..." % (i + 1, len(sample_frames)))
         sys.stdout.flush()
         todo = numpy.ones((h, w), bool)
-        for j in range(len(candidates)):
-            # find pixels that are still 'todo' among the candidates:
-            same = (sample_frames[i] == candidates[j]).all(-1) * todo
+        done = False
+        for j in range(candidate_count):
+            if j and not numpy.any(todo):
+                done = True
+                break
+            candidates = weighted_occurences[j]
+            # find pixels that are still 'todo' (not found yet) among the candidates:
+            same = (sample_frames[i] == candidates['color']).all(-1) * todo
             # increase weight of candidate:
-            weights[j] += same
+            candidates['count'] += same
             # stop search for those pixels:
             todo -= same
-            if not numpy.any(todo):
-                break
-        if numpy.any(todo) and len(candidates) < 12:
-            candidates.append(sample_frames[i] * todo[...,None])
-            weights.append(todo.astype(numpy.uint8))
+        if not done and candidate_count < len(weighted_occurences):
+            weighted_occurences[candidate_count]['color'] = sample_frames[i]
+            weighted_occurences[candidate_count]['count'] = todo
+            candidate_count += 1
     
     sys.stdout.write("\restimating background from samples...         ")
     sys.stdout.flush()
-    weights = numpy.asarray(weights)
-    candidates = numpy.asarray(candidates)
-    maxpos = numpy.argmax(weights, 0)
-    canvas = numpy.choose(maxpos[...,None], candidates)
+    maxpos = numpy.argmax(weighted_occurences['count'], 0)
+    canvas = numpy.choose(maxpos[...,None], weighted_occurences['color'])
     sys.stdout.write("\restimating background from samples... done.\n")
     return canvas
 
