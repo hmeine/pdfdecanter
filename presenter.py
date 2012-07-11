@@ -73,11 +73,7 @@ class PDFPresenter(QtCore.QObject):
 
         self._presentationItem = QtGui.QGraphicsWidget(self._slideViewport)
 
-        self._cursor = QtGui.QGraphicsWidget(self._presentationItem)
-        cursorRect = QtGui.QGraphicsRectItem(self._scene.sceneRect(), self._cursor)
-        cursorRect.setPen(QtGui.QPen(QtCore.Qt.yellow, 25))
-        cursorRect.setBrush(QtGui.QBrush(QtGui.QColor(255, 255, 0, 100)))
-        self._cursorPos = None
+        self._cursor = None
 
         self._renderers = None
         self._currentFrameIndex = None
@@ -268,6 +264,14 @@ class PDFPresenter(QtCore.QObject):
             col += 1
 
     def _updateCursor(self, animated):
+        if self._cursor is None:
+            self._cursor = QtGui.QGraphicsWidget(self._presentationItem)
+            cursorRect = QtGui.QGraphicsRectItem(self._scene.sceneRect(), self._cursor)
+            cursorRect.setPen(QtGui.QPen(QtCore.Qt.yellow, 25))
+            cursorRect.setBrush(QtGui.QBrush(QtGui.QColor(255, 255, 0, 100)))
+            self._cursor.setZValue(-10)
+            self._cursorPos = None
+
         r = QtCore.QRectF(self._currentRenderer().pos(),
                           self._currentRenderer().slide().size())
 
