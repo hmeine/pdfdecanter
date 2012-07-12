@@ -1,4 +1,4 @@
-import numpy, sys, os
+import numpy, sys, os, time
 from dynqt import QtCore, QtGui, array2qimage, rgb_view
 
 UNSEEN_OPACITY = 0.5
@@ -541,7 +541,8 @@ def detectBackground(raw_frames, useFrames = 15):
     weighted_occurences = numpy.zeros((10, h, w), weighted_occurences_dtype)
 
     candidate_count = 1
-    
+
+    t = time.clock()
     for i in range(len(sample_frames)):
         sys.stdout.write("\ranalyzing background sample frame %d / %d..." % (i + 1, len(sample_frames)))
         sys.stdout.flush()
@@ -562,6 +563,9 @@ def detectBackground(raw_frames, useFrames = 15):
             weighted_occurences[candidate_count]['color'] = sample_frames[i]
             weighted_occurences[candidate_count]['count'] = todo
             candidate_count += 1
+    t = time.clock() - t
+    sys.stdout.write("\ranalyzing %d background sample frames took %.3gs.\n" % (
+        len(sample_frames), t))
     
     sys.stdout.write("\restimating background from samples...         ")
     sys.stdout.flush()
