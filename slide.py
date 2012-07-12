@@ -170,11 +170,27 @@ def boundingRect(rects):
 
 
 class Patches(list):
+    """List of (pos, patch) pairs, where pos is a QPoint and patch a
+    QImage."""
+    
     __slots__ = ()
     
     def boundingRect(self):
         return boundingRect(QtCore.QRect(pos, patch.size())
                             for pos, patch in self)
+
+    @classmethod
+    def extract(cls, frame, rects):
+        """Extract patches from a full frame and list of rects.
+        Parameters are the frame image as ndarray, and a list of
+        QRects."""
+        
+        patches = cls()
+        for r in rects:
+            x1, y1 = r.x(), r.y()
+            x2, y2 = r.right() + 1, r.bottom() + 1
+            patches.append((r.topLeft(), array2qimage(frame[y1:y2,x1:x2])))
+        return patches
 
 
 class SlideRenderer(QtGui.QGraphicsWidget):
@@ -510,18 +526,6 @@ def decompose_slide(rects, header_bottom, footer_top):
     return header, rects, footer
 
 
-def extractPatches(frame, rects):
-    """Given frame as image, and a list of QRects, return list of
-    (pos, QImage) pairs, where pos is a QPoint."""
-    
-    patches = Patches()
-    for r in rects:
-        x1, y1 = r.x(), r.y()
-        x2, y2 = r.right() + 1, r.bottom() + 1
-        patches.append((r.topLeft(), array2qimage(frame[y1:y2,x1:x2])))
-    return patches
-
-
 def detectBackground(raw_frames, useFrames = 15):
     """Return image with most common pixel values from given sample size."""
     
@@ -617,12 +621,12 @@ def stack_frames(raw_frames):
 
         if isNewSlide:
             s = Slide(frame_size)
-            s.setHeader(extractPatches(frame2, header))
-            s.setFooter(extractPatches(frame2, footer))
-            s.addFrame(extractPatches(frame2, content))
+            s.setHeader(Patches.extract(frame2, header))
+            s.setFooter(Patches.extract(frame2, footer))
+            s.addFrame(Patches.extract(frame2, content))
             result.append(s)
         else:
-            result[-1].addFrame(extractPatches(frame2, changed))
+            result[-1].addFrame(Patches.extract(frame2, changed))
 
         frame1 = frame2
         prev_header = header
