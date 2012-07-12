@@ -1,4 +1,4 @@
-import numpy, sys, os, time
+import numpy, sys, time
 from dynqt import QtCore, QtGui, array2qimage, rgb_view
 
 UNSEEN_OPACITY = 0.5
@@ -526,9 +526,51 @@ def decompose_slide(rects, header_bottom, footer_top):
     return header, rects, footer
 
 
+class BackgroundDetection(object):
+    """Computes image with most common pixel values from given sample
+    size."""
+
+    weighted_occurences_dtype = numpy.dtype([('color', (numpy.uint8, 3)),
+                                             ('_dummy', numpy.uint8),
+                                             ('count', numpy.uint32)])
+
+    def __init__(self):
+        self.weighted_occurences = None
+
+    def add_frame(self, frame):
+        h, w = frame.shape[:2]
+
+        if self.weighted_occurences is None:
+            self.weighted_occurences = numpy.zeros(
+                (10, h, w), self.weighted_occurences_dtype)
+            self.candidate_count = 0
+
+        todo = numpy.ones((h, w), bool)
+        done = False
+        for j in range(self.candidate_count):
+            if j and not numpy.any(todo):
+                done = True
+                break
+            candidates = self.weighted_occurences[j]
+            # find pixels that are still 'todo' (not found yet) among the candidates:
+            same = (frame == candidates['color']).all(-1) * todo
+            # increase weight of candidate:
+            candidates['count'] += same
+            # stop search for those pixels:
+            todo -= same
+        if not done and self.candidate_count < len(self.weighted_occurences):
+            self.weighted_occurences[self.candidate_count]['color'] = frame
+            self.weighted_occurences[self.candidate_count]['count'] = todo
+            self.candidate_count += 1
+            # TODO: think about pixel-wise candidate counts (some
+            # pixels might still have entries with zero counts)
+
+    def current_estimate(self):
+        maxpos = numpy.argmax(self.weighted_occurences['count'], 0)
+        return numpy.choose(maxpos[...,None], self.weighted_occurences['color'])
+
+
 def detectBackground(raw_frames, useFrames = 15):
-    """Return image with most common pixel values from given sample size."""
-    
     if len(raw_frames) <= useFrames:
         sample_frames = raw_frames
     else:
@@ -536,45 +578,20 @@ def detectBackground(raw_frames, useFrames = 15):
         end = 1 + inc * useFrames
         sample_frames = raw_frames[1:end:inc]
 
-    h, w = raw_frames[0].shape[:2]
-
-    weighted_occurences_dtype = numpy.dtype([('color', (numpy.uint8, 3)),
-                                             ('_dummy', numpy.uint8),
-                                             ('count', numpy.uint32)])
-    
-    weighted_occurences = numpy.zeros((10, h, w), weighted_occurences_dtype)
-
-    candidate_count = 1
+    bgd = BackgroundDetection()
 
     t = time.clock()
     for i in range(len(sample_frames)):
         sys.stdout.write("\ranalyzing background sample frame %d / %d..." % (i + 1, len(sample_frames)))
         sys.stdout.flush()
-        todo = numpy.ones((h, w), bool)
-        done = False
-        for j in range(candidate_count):
-            if j and not numpy.any(todo):
-                done = True
-                break
-            candidates = weighted_occurences[j]
-            # find pixels that are still 'todo' (not found yet) among the candidates:
-            same = (sample_frames[i] == candidates['color']).all(-1) * todo
-            # increase weight of candidate:
-            candidates['count'] += same
-            # stop search for those pixels:
-            todo -= same
-        if not done and candidate_count < len(weighted_occurences):
-            weighted_occurences[candidate_count]['color'] = sample_frames[i]
-            weighted_occurences[candidate_count]['count'] = todo
-            candidate_count += 1
+        bgd.add_frame(sample_frames[i])
     t = time.clock() - t
     sys.stdout.write("\ranalyzing %d background sample frames took %.3gs.\n" % (
         len(sample_frames), t))
     
     sys.stdout.write("\restimating background from samples...         ")
     sys.stdout.flush()
-    maxpos = numpy.argmax(weighted_occurences['count'], 0)
-    canvas = numpy.choose(maxpos[...,None], weighted_occurences['color'])
+    canvas = bgd.current_estimate()
     sys.stdout.write("\restimating background from samples... done.\n")
     return canvas
 
