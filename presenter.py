@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from dynqt import QtCore, QtGui, QtOpenGL
 
-import numpy, os, sys, tempfile, math, operator
+import numpy, os, sys, time, tempfile, math, operator
 import pdftoppm_renderer, pdf_infos, bz2_pickle, slide
 
 __version__ = "0.1"
@@ -204,11 +204,17 @@ class PDFPresenter(QtCore.QObject):
             #     pageWidthInches = numpy.diff(infos.pageBoxes()[0], axis = 0)[0,0] / 72
             #     dpi = self.slideSize()[0] / pageWidthInches
 
-            raw_frames = list(pdftoppm_renderer.renderAllPages(pdfFilename, sizePX = self.slideSize(),
-                                                               pageCount = infos and infos.pageCount()))
+            wallClockTime = time.time()
+            cpuTime = time.clock()
+
+            raw_frames = pdftoppm_renderer.renderAllPages(pdfFilename, sizePX = self.slideSize(),
+                                                          pageCount = infos and infos.pageCount())
 
             slides = slide.stack_frames(raw_frames)
             slides.setPDFInfos(infos)
+
+            print "complete rendering took %.3gs. (%.3gs. real time)" % (
+                time.clock() - cpuTime, time.time() - wallClockTime)
 
             if cacheFilename:
                 sys.stdout.write("caching in '%s'...\n" % cacheFilename)

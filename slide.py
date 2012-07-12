@@ -597,6 +597,7 @@ def detectBackground(raw_frames, useFrames = 15):
 
 
 def stack_frames(raw_frames):
+    raw_frames = list(raw_frames)
     frame_size = QtCore.QSizeF(raw_frames[0].shape[1], raw_frames[0].shape[0])
     header_rows = frame_size.height() * 11 / 48
 
