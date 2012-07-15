@@ -535,39 +535,44 @@ class BackgroundDetection(object):
                                              ('count', numpy.uint32)])
 
     def __init__(self):
-        self.weighted_occurences = None
+        self._weighted_occurences = None
+        self._frameIndices = None
+
+    def include_frame_indices(self, fi):
+        self._frameIndices = fi
+        self._frameIndex = 0
 
     def add_frame(self, frame):
         h, w = frame.shape[:2]
 
-        if self.weighted_occurences is None:
-            self.weighted_occurences = numpy.zeros(
-                (10, h, w), self.weighted_occurences_dtype)
-            self.candidate_count = 0
+        if self._weighted_occurences is None:
+            self._weighted_occurences = numpy.zeros(
+                (10, h, w), self._weighted_occurences_dtype)
+            self._candidate_count = 0
 
         todo = numpy.ones((h, w), bool)
         done = False
-        for j in range(self.candidate_count):
+        for j in range(self._candidate_count):
             if j and not numpy.any(todo):
                 done = True
                 break
-            candidates = self.weighted_occurences[j]
+            candidates = self._weighted_occurences[j]
             # find pixels that are still 'todo' (not found yet) among the candidates:
             same = (frame == candidates['color']).all(-1) * todo
             # increase weight of candidate:
             candidates['count'] += same
             # stop search for those pixels:
             todo -= same
-        if not done and self.candidate_count < len(self.weighted_occurences):
-            self.weighted_occurences[self.candidate_count]['color'] = frame
-            self.weighted_occurences[self.candidate_count]['count'] = todo
-            self.candidate_count += 1
+        if not done and self._candidate_count < len(self._weighted_occurences):
+            self._weighted_occurences[self._candidate_count]['color'] = frame
+            self._weighted_occurences[self._candidate_count]['count'] = todo
+            self._candidate_count += 1
             # TODO: think about pixel-wise candidate counts (some
             # pixels might still have entries with zero counts)
 
     def current_estimate(self):
-        maxpos = numpy.argmax(self.weighted_occurences['count'], 0)
-        return numpy.choose(maxpos[...,None], self.weighted_occurences['color'])
+        maxpos = numpy.argmax(self._weighted_occurences['count'], 0)
+        return numpy.choose(maxpos[...,None], self._weighted_occurences['color'])
 
 
 def detectBackground(raw_frames, useFrames = 15):
