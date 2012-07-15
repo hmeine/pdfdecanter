@@ -543,11 +543,17 @@ class BackgroundDetection(object):
         self._frameIndex = 0
 
     def add_frame(self, frame):
+        if self._frameIndices is not None:
+            include_this = (self._frameIndex in self._frameIndices)
+            self._frameIndex += 1
+            if not include_this:
+                return
+        
         h, w = frame.shape[:2]
 
         if self._weighted_occurences is None:
             self._weighted_occurences = numpy.zeros(
-                (10, h, w), self._weighted_occurences_dtype)
+                (10, h, w), self.weighted_occurences_dtype)
             self._candidate_count = 0
 
         todo = numpy.ones((h, w), bool)
@@ -576,23 +582,22 @@ class BackgroundDetection(object):
 
 
 def detectBackground(raw_frames, useFrames = 15):
-    if len(raw_frames) <= useFrames:
-        sample_frames = raw_frames
-    else:
-        inc = len(raw_frames)/useFrames
-        end = 1 + inc * useFrames
-        sample_frames = raw_frames[1:end:inc]
-
     bgd = BackgroundDetection()
 
+    if len(raw_frames) > useFrames:
+        inc = len(raw_frames)/useFrames
+        end = 1 + inc * useFrames
+        bgd.include_frame_indices(range(len(raw_frames))[1:end:inc])
+    else:
+        useFrames = len(raw_frames)
+
     t = time.clock()
-    for i in range(len(sample_frames)):
-        sys.stdout.write("\ranalyzing background sample frame %d / %d..." % (i + 1, len(sample_frames)))
+    for i in range(len(raw_frames)):
+        sys.stdout.write("\ranalyzing background sample frame %d / %d..." % (i + 1, len(raw_frames)))
         sys.stdout.flush()
-        bgd.add_frame(sample_frames[i])
+        bgd.add_frame(raw_frames[i])
     t = time.clock() - t
-    sys.stdout.write("\ranalyzing %d background sample frames took %.3gs.\n" % (
-        len(sample_frames), t))
+    sys.stdout.write("\ranalyzing %d background sample frames took %.3gs.\n" % (useFrames, t))
     
     sys.stdout.write("\restimating background from samples...         ")
     sys.stdout.flush()
