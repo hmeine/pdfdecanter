@@ -55,7 +55,7 @@ Start PDF Decanter like this::
 
   <path_to_pdfdecanter>/pdf_decanter.py mypresentation.pdf
 
-This will render the PDF into images (requiring the ``pdftoppm_``
+This will render the PDF into images (requiring the ``pdftoppm``_
 commandline program that usually comes with the ``poppler-utils``
 package) and start the presentation.  The rendering process takes a
 while, so the result will be cached.
