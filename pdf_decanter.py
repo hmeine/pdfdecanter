@@ -4,6 +4,14 @@ from dynqt import QtCore, QtGui, QtOpenGL
 import numpy, os, sys, time, tempfile, math, operator
 import pdftoppm_renderer, pdf_infos, bz2_pickle, slide
 
+try:
+    import poppler_renderer
+except ImportError, e:
+    print 'QtPoppler not found, falling back to pdftoppm...'
+    renderer = pdftoppm_renderer
+else:
+    renderer = poppler_renderer
+
 __version__ = "0.1"
 
 w, h = 1024, 768
@@ -207,8 +215,8 @@ class PDFDecanter(QtCore.QObject):
             wallClockTime = time.time()
             cpuTime = time.clock()
 
-            raw_frames = pdftoppm_renderer.renderAllPages(pdfFilename, sizePX = self.slideSize(),
-                                                          pageCount = infos and infos.pageCount())
+            raw_frames = renderer.renderAllPages(pdfFilename, sizePX = self.slideSize(),
+                                                 pageCount = infos and infos.pageCount())
 
             slides = slide.stack_frames(raw_frames)
             slides.setPDFInfos(infos)
