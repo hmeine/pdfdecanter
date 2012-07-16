@@ -1,5 +1,5 @@
 ============
-PDFPresenter
+PDF Decanter
 ============
 
 This is a simple program optimized for PDF-based presentations.  I
@@ -14,14 +14,14 @@ I wrote this mainly for the following reasons:
    per slide, i.e. each content frame is sub-divided into multiple
    animation frames.  Common PDF readers will display ridiculous page
    numbers like "35 of 245" for a 20 minute presentation; I wanted
-   PDFPresenter to recognize multiple PDF pages that belong together and
+   PDF Decanter to recognize multiple PDF pages that belong together and
    be able to **present an overview of the logical slides**, with
    animation frames batched together.
 
 2. Although I like some(!) animated transitions, I find it highly
    irritating to see the logo of one PDF page leave the screen to the
    left, only to have it appear (on the next page) from the right again.
-   PDFPresenter shall recognize and **not animate content that does not
+   PDF Decanter shall recognize and **not animate content that does not
    change**.
 
 3. Although possible, it is a real hassle to embed videos in PDF
@@ -43,12 +43,17 @@ Other interesting features:
 
 * Hyperlinks within the presentation are supported.
 
+The name "PDF Decanter" stands for "PDF decomposer for animated
+transitions whose expedience rocks".  (I am not too happy with the
+last part, but otherwise it more or less conveys the gist of the
+software.  If you have a better suggestion, please tell me.)  ;-)
+
 Usage
 =====
 
-Start PDFPresenter like this::
+Start PDF Decanter like this::
 
-  <path_to_pdfpresenter>/presenter.py mypresentation.pdf
+  <path_to_pdfdecanter>/pdf_decanter.py mypresentation.pdf
 
 This will render the PDF into images (requiring the ``pdftoppm_``
 commandline program that usually comes with the ``poppler-utils``
@@ -89,7 +94,7 @@ Bugs and Limitations
 
 I am aware of a lot of bugs and limitations, and I will try to make
 this more transparent by filing `issues at GitHub
-<https://github.com/hmeine/pdfpresenter/issues>`_.  I tried to get to
+<https://github.com/hmeine/pdfdecanter/issues>`_.  I tried to get to
 a working state and publish this as soon as possible, which means that
 right now:
 

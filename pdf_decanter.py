@@ -35,7 +35,7 @@ class GeometryAnimation(QtCore.QVariantAnimation):
         self._item.setScale(value.width())
 
 
-class PDFPresenter(QtCore.QObject):
+class PDFDecanter(QtCore.QObject):
     def __init__(self, view = None):
         QtCore.QObject.__init__(self)
 
@@ -185,7 +185,7 @@ class PDFPresenter(QtCore.QObject):
             if cacheFilename is True:
                 cacheFilename = os.path.join(
                     tempfile.gettempdir(),
-                    "pdf_presenter_cache_%s.bz2" % (os.path.abspath(pdfFilename).replace("/", "!"), ))
+                    "pdf_decanter_cache_%s.bz2" % (os.path.abspath(pdfFilename).replace("/", "!"), ))
                 sys.stderr.write('ATTENTION! unpickling from system-wide tempdir is a security risk!\n')
 
             if os.path.exists(cacheFilename):
@@ -622,10 +622,10 @@ def start(view = None):
         app = QtGui.QApplication(sys.argv)
     else:
         app = hasApp
-    app.setApplicationName("PDF Presenter")
+    app.setApplicationName("PDF Decanter")
     app.setApplicationVersion(__version__)
 
-    result = PDFPresenter(view)
+    result = PDFDecanter(view)
     result.hadEventLoop = hasattr(app, '_in_event_loop') and app._in_event_loop # IPython support
     return result
 
