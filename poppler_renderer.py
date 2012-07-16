@@ -22,3 +22,5 @@ def renderAllPages(pdfFilename, sizePX = None, dpi = None, pageCount = None):
             scale = renderSize.width() / page.pageSize().width()
             qImg = page.renderToImage(scale * 72, scale * 72)
             yield qimage2ndarray.rgb_view(qImg)
+
+    print
