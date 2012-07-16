@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from __future__ import division
+
 from dynqt import QtCore, QtGui, QtOpenGL
 
 import numpy, os, sys, time, tempfile, math, operator
@@ -165,8 +167,8 @@ class PDFDecanter(QtCore.QObject):
 
     def resizeEvent(self, e):
         w, h = self.slideSize()
-        factor = min(float(e.size().width()) / w,
-                     float(e.size().height()) / h)
+        factor = min(e.size().width() / w,
+                     e.size().height() / h)
         self._view.resetMatrix()
         self._view.scale(factor, factor)
 
@@ -326,7 +328,7 @@ class PDFDecanter(QtCore.QObject):
         self._overviewAnimation.start()
 
     def _overviewScale(self):
-        return float(self._scene.sceneRect().width()) / self.presentationBounds().width()
+        return self._scene.sceneRect().width() / self.presentationBounds().width()
 
     def _overviewPosForCursor(self, r = None):
         if r is None:
@@ -488,7 +490,7 @@ class PDFDecanter(QtCore.QObject):
             for r in self._renderers:
                 headerItem, footerItem = r.navigationItem().childItems()
                 headerItem.setVisible(onoff % 2)
-                footerItem.setVisible(onoff / 2)
+                footerItem.setVisible(onoff // 2)
             event.accept()
 
         if event.isAccepted():
