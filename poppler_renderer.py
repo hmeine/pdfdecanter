@@ -7,7 +7,7 @@ import sys
 class PopplerRenderer(object):
     def __init__(self, pdfFilename, sizePX = None, dpi = None, pageCount = None):
         self._doc = QtPoppler.Poppler.Document.load(pdfFilename)
-        self._doc.setRenderHint(QtPoppler.Poppler.Document.Antialiasing and
+        self._doc.setRenderHint(QtPoppler.Poppler.Document.Antialiasing |
                                 QtPoppler.Poppler.Document.TextAntialiasing)
 
         self._sizePX = sizePX
