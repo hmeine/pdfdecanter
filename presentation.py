@@ -33,6 +33,21 @@ class Patches(list):
         return patches
 
 
+class Frame(object):
+    """Single frame (PDF page) with content, header, footer.  Belongs
+    to a parent Slide."""
+
+    def __init__(self, contentPatches, slide):
+        self._content = contentPatches
+        self._slide = slide
+
+    def content(self):
+        return self._content
+
+    def patchSet(self):
+        return set(self._content)
+
+
 class Slide(object):
     __slots__ = ('_size', '_header', '_footer', '_frames', '_pdfInfos')
     
@@ -77,7 +92,7 @@ class Slide(object):
         return result
 
     def addFrame(self, patches):
-        self._frames.append(patches)
+        self._frames.append(Frame(patches, self))
 
     def frame(self, frameIndex):
         return self._frames[frameIndex]
@@ -113,16 +128,19 @@ class Slide(object):
                 return link
         return None
 
+    def patchSet(self):
+        """mostly for debugging/statistics: set of Patch objects"""
+        patches = set.union(*[frame.patchSet() for frame in self._frames])
+        if self._header:
+            patches.update(self._header)
+        if self._footer:
+            patches.update(self._footer)
+        return patches
+
     def pixelCount(self):
         result = 0
-        patches = list(self._frames)
-        if self._header:
-            patches.append(self._header)
-        if self._footer:
-            patches.append(self._footer)
-        for frame in patches:
-            for pos, patch in frame:
-                result += patch.width() * patch.height()
+        for pos, patch in self.patchSet():
+            result += patch.width() * patch.height()
         return result
 
     def __getstate__(self):
@@ -132,7 +150,7 @@ class Slide(object):
         return ((self._size.width(), self._size.height()),
                 serializePatches(self._header) if self._header else None,
                 serializePatches(self._footer) if self._footer else None,
-                map(serializePatches, self._frames),
+                [serializePatches(frame.content()) for frame in self._frames],
                 self._pdfInfos)
 
     def __setstate__(self, state):
@@ -143,7 +161,7 @@ class Slide(object):
         self._size = QtCore.QSizeF(w, h)
         self._header = header and deserializePatches(header)
         self._footer = footer and deserializePatches(footer)
-        self._frames = map(deserializePatches, frames)
+        self._frames = [Frame(deserializePatches(frame), self) for frame in frames]
         self._pdfInfos = infos
 
 

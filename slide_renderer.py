@@ -81,7 +81,7 @@ class SlideRenderer(QtGui.QGraphicsWidget):
                 parentItem = self._items['navigation']
                 zValue = 50
             else:
-                patches = self._slide.frame(frameIndex)
+                patches = self._slide.frame(frameIndex).content()
                 parentItem = self._items['content']
                 zValue = 100 + frameIndex
 
