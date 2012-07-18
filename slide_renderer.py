@@ -25,14 +25,13 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
         self._frame = None
         self._linkHandler = None
+        self._helperItems = {}
         self._items = {}
         # possible keys:
         # - Patch instances
         # - links (as string)
         # - 'DEBUG_[somelink]' (link rects in debug mode)
         # - 'bg_<red>_<green>_<blue>'
-        # - 'content'
-        # - 'cover'
         # - 'custom' (LIST of items!)
 
     def setLinkHandler(self, linkHandler):
@@ -105,7 +104,6 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
         addItems = {}
         removeItems = dict(self._items)
-        del removeItems['content']
         
         items = self._frameItems(frame)
         for key, item in items.iteritems():
@@ -122,26 +120,14 @@ class FrameRenderer(QtGui.QGraphicsWidget):
     def _frameRect(self):
         return QtCore.QRectF(QtCore.QPointF(0, 0), self._frame.size())
 
-    def _rectItem(self, color, key):
-        result = self._items.get(key, None)
-        
-        if result is None:
-            result = QtGui.QGraphicsRectItem(self._frameRect(), self)
-            result.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-            result.setBrush(color)
-            result.setPen(QtGui.QPen(QtCore.Qt.NoPen))
-            self._items[key] = result
-
-        return result
-
     def _contentItem(self, key = 'content'):
         """QGraphicsWidget container child, used for animations"""
-        result = self._items.get(key, None)
+        result = self._helperItems.get(key, None)
 
         if result is None:
             result = QtGui.QGraphicsWidget(self)
             result.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-            self._items[key] = result
+            self._helperItems[key] = result
 
         return result
 
@@ -163,14 +149,23 @@ class SlideRenderer(FrameRenderer):
         self._frameCallbacks = []
 
         self.showFrame()
+        self._coverItem()
 
     def slide(self):
         return self._slide
 
     def _coverItem(self):
-        result = self._rectItem(QtCore.Qt.black, key = 'cover')
-        result.setZValue(1000)
-        result.setOpacity(1.0 - UNSEEN_OPACITY)
+        result = self._helperItems.get('cover')
+        
+        if result is None:
+            result = QtGui.QGraphicsRectItem(self._frameRect(), self)
+            result.setAcceptedMouseButtons(QtCore.Qt.NoButton)
+            result.setBrush(QtCore.Qt.black)
+            result.setOpacity(1.0 - UNSEEN_OPACITY)
+            result.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+            result.setZValue(1000)
+            self._helperItems['cover'] = result
+
         result.setVisible(not self._slide.seen())
         return result
 
