@@ -5,7 +5,7 @@ from dynqt import QtCore, QtGui, QtOpenGL
 
 import numpy, os, sys, time, tempfile, math, operator
 import pdftoppm_renderer, pdf_infos, bz2_pickle
-import presentation
+import presentation, slide_renderer
 
 try:
     import poppler_renderer
@@ -244,7 +244,7 @@ class PDFDecanter(QtCore.QObject):
         self._slides = slides
         self._slidesChanged()
         assert not self._renderers, "FIXME: delete old renderers / graphics items"
-        self._renderers = [presentation.SlideRenderer(s, self._presentationItem) for s in slides]
+        self._renderers = [slide_renderer.SlideRenderer(s, self._presentationItem) for s in slides]
         for r in self._renderers:
             r.setLinkHandler(self.followLink)
         self._setupGrid()
