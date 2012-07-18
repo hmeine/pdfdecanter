@@ -286,7 +286,11 @@ class PDFDecanter(QtCore.QObject):
 
     def _animateOverviewGroup(self, pos, scale):
         if pos.y() > 0.0:
-            pos.setY(0.0)
+            # center overview if smaller than scene (evenly distributing black margin):
+            if self._scene.sceneRect().height() > self.presentationBounds().height() * scale:
+                pos.setY(0.5 * (self._scene.sceneRect().height() - self.presentationBounds().height() * scale))
+            else:
+                pos.setY(0.0)
         else:
             minY = self._scene.sceneRect().height() - self.presentationBounds().height() * scale
             if pos.y() < minY:
