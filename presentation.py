@@ -76,23 +76,6 @@ class Slide(object):
             result.adjust(margin, margin, -margin, -margin)
         return result
 
-    def maxRectAround(self, x, y):
-        result = self.contentRect()
-        for patches in self._frames:
-            for pos, patch in patches:
-                print result
-                if pos.x() < x:
-                    result.setRight(min(result.right(), pos.x() - 1))
-                else:
-                    result.setLeft(max(result.left(), pos.x() + patch.size().width()))
-
-                if pos.y() < y:
-                    result.setBottom(min(result.bottom(), pos.y() - 1))
-                else:
-                    result.setTop(max(result.top(), pos.y() + patch.size().height()))
-        print result
-        return result
-
     def addFrame(self, patches):
         self._frames.append(patches)
 
