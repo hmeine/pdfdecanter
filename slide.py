@@ -507,11 +507,16 @@ def decompose_slide(rects, header_bottom, footer_top):
     
     rects.sort(key = lambda r: r.top())
 
-    header = []
+    header = Patches()
     # FIXME: this takes *at most* one item, but e.g. Niko uses chapter / title rows:
     if rects[0].bottom() < header_bottom:
-        header.append(rects[0])
-        del rects[0]
+		headerRect = QtCore.QRect(rects[0])
+		i = 1
+		while i < len(rects) and rects[i].top() < headerRect.bottom():
+			headerRect |= rects[i]
+			i += 1
+		header.extend(rects[:i])
+		del rects[:i]
 
     footer = []
     while len(rects):
