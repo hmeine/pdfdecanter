@@ -17,11 +17,22 @@ else:
 
 __version__ = "0.1"
 
+from optparse import OptionParser
+
+op = OptionParser(usage = "%prog [options] <filename.pdf>")
+op.add_option("--no-opengl", action = "store_false",
+			  dest = "use_opengl", default = True,
+			  help = "disable OpenGL for rendering (default: use OpenGL)")
+op.add_option("--cache", action = "store_true",
+			  dest = "use_cache", default = False,
+			  help = "use caching in system-wide temp folder")
+options, args = op.parse_args()
+
 w, h = 1024, 768
 
 BLEND_DURATION = 150
-USE_GL = True # False
-USE_CACHING = True # False
+USE_GL = options.use_opengl
+USE_CACHING = options.use_cache
 
 PADDING_X = int(w * 0.03)
 PADDING_Y = int(h * 0.03)
@@ -648,10 +659,6 @@ if __name__ == "__main__":
     g.view().show()
     if sys.platform == "darwin":
         g.view().raise_()
-
-    from optparse import OptionParser
-    op = OptionParser(usage = "%prog [options] <filename1> <filename2>")
-    options, args = op.parse_args()
 
     pdfFilename, = args
 
