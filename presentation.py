@@ -1,6 +1,38 @@
 import numpy, sys, time
 from dynqt import QtCore, array2qimage, rgb_view
 
+
+def boundingRect(rects):
+    result = QtCore.QRect()
+    for r in rects:
+        result |= r
+    return result
+
+
+class Patches(list):
+    """List of (pos, patch) pairs, where pos is a QPoint and patch a
+    QImage."""
+    
+    __slots__ = ()
+    
+    def boundingRect(self):
+        return boundingRect(QtCore.QRect(pos, patch.size())
+                            for pos, patch in self)
+
+    @classmethod
+    def extract(cls, frame, rects):
+        """Extract patches from a full frame and list of rects.
+        Parameters are the frame image as ndarray, and a list of
+        QRects."""
+        
+        patches = cls()
+        for r in rects:
+            x1, y1 = r.x(), r.y()
+            x2, y2 = r.right() + 1, r.bottom() + 1
+            patches.append((r.topLeft(), array2qimage(frame[y1:y2,x1:x2])))
+        return patches
+
+
 class Slide(object):
     __slots__ = ('_size', '_header', '_footer', '_frames', '_pdfInfos')
     
@@ -160,37 +192,7 @@ class Presentation(list):
         self._pdfInfos, = state
 
 
-def boundingRect(rects):
-    result = QtCore.QRect()
-    for r in rects:
-        result |= r
-    return result
-
-
-class Patches(list):
-    """List of (pos, patch) pairs, where pos is a QPoint and patch a
-    QImage."""
-    
-    __slots__ = ()
-    
-    def boundingRect(self):
-        return boundingRect(QtCore.QRect(pos, patch.size())
-                            for pos, patch in self)
-
-    @classmethod
-    def extract(cls, frame, rects):
-        """Extract patches from a full frame and list of rects.
-        Parameters are the frame image as ndarray, and a list of
-        QRects."""
-        
-        patches = cls()
-        for r in rects:
-            x1, y1 = r.x(), r.y()
-            x2, y2 = r.right() + 1, r.bottom() + 1
-            patches.append((r.topLeft(), array2qimage(frame[y1:y2,x1:x2])))
-        return patches
-
-
+# --------------------------------------------------------------------
 
 
 def changed_rects_numpy_only(a, b):
