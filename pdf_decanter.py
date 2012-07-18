@@ -200,7 +200,6 @@ class PDFDecanter(QtCore.QObject):
                 sys.stderr.write('ATTENTION! unpickling from system-wide tempdir is a security risk!\n')
 
             if os.path.exists(cacheFilename):
-                # FIXME: handle Presentation.FORMAT_VERSION
                 if os.path.getmtime(cacheFilename) >= os.path.getmtime(pdfFilename):
                     sys.stdout.write("reading cache '%s'...\n" % cacheFilename)
                     try:

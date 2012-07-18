@@ -133,7 +133,7 @@ class Slide(object):
 
 
 class Presentation(list):
-    FORMAT_VERSION = 3
+    """List of slides."""
 
     def __init__(self, infos = None):
         self._pdfInfos = infos
@@ -309,13 +309,13 @@ def decompose_slide(rects, header_bottom, footer_top):
     header = Patches()
     # FIXME: this takes *at most* one item, but e.g. Niko uses chapter / title rows:
     if rects[0].bottom() < header_bottom:
-		headerRect = QtCore.QRect(rects[0])
-		i = 1
-		while i < len(rects) and rects[i].top() < headerRect.bottom():
-			headerRect |= rects[i]
-			i += 1
-		header.extend(rects[:i])
-		del rects[:i]
+        headerRect = QtCore.QRect(rects[0])
+        i = 1
+        while i < len(rects) and rects[i].top() < headerRect.bottom():
+            headerRect |= rects[i]
+            i += 1
+        header.extend(rects[:i])
+        del rects[:i]
 
     footer = []
     while len(rects):
