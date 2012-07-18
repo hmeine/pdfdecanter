@@ -24,7 +24,7 @@ class PopplerRenderer(object):
         if self._pageIndex >= pageCount:
             raise StopIteration
         
-        sys.stdout.write("\rrendering page %d / %d..." % (self._pageIndex, pageCount))
+        sys.stdout.write("\rrendering page %d / %d..." % (self._pageIndex + 1, pageCount))
         sys.stdout.flush()
 
         page = self._doc.page(self._pageIndex)
