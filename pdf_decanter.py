@@ -60,8 +60,6 @@ class PDFDecanter(QtCore.QObject):
             self._scene = QtGui.QGraphicsScene(0, 0, w, h)
             self._view.setScene(self._scene)
         self._scene.setBackgroundBrush(QtCore.Qt.black)
-        self._scene.selectionChanged.connect(self._selectionChanged)
-        self._selectionChangeComesFromButtonRelease = False
         self._scene.installEventFilter(self) # for MouseButtonRelease events
 
         self._slideViewport = QtGui.QGraphicsRectItem(QtCore.QRectF(0, 0, w, h))
@@ -81,11 +79,6 @@ class PDFDecanter(QtCore.QObject):
         self._gotoSlideTimer.setSingleShot(True)
         self._gotoSlideTimer.setInterval(1000)
         self._gotoSlideTimer.timeout.connect(self._clearGotoSlide)
-
-        self._clearMouseReleaseFlagTimer = QtCore.QTimer(self)
-        self._clearMouseReleaseFlagTimer.setSingleShot(True)
-        self._clearMouseReleaseFlagTimer.setInterval(100)
-        self._clearMouseReleaseFlagTimer.timeout.connect(self._clearMouseReleaseFlag)
 
         self._hideMouseTimer = QtCore.QTimer(self)
         self._hideMouseTimer.setSingleShot(False)
@@ -130,28 +123,6 @@ class PDFDecanter(QtCore.QObject):
             result |= br
         return result
 
-    def _selectionChanged(self):
-        selectedItems = self._scene.selectedItems()
-        if not selectedItems:
-            return
-
-        # we need to get selectionChanged events also for multiple
-        # clicks on the same slide, so unselect here:
-        self._scene.setSelectionArea(QtGui.QPainterPath())
-
-        if self._selectionChangeComesFromButtonRelease:
-            self._selectionChangeComesFromButtonRelease = False
-            return
-
-        if not self._inOverview:
-            if self._currentFrameIndex < len(self._frame2Slide) - 1:
-                self.gotoFrame(self._currentFrameIndex + 1, animated = True)
-        else:
-            selectedItem, = selectedItems
-            slideIndex = self._renderers.index(selectedItem)
-            self.gotoFrame(self._slide2Frame[slideIndex] +
-                           self._renderers[slideIndex].currentFrame(), animated = False)
-
     def eventFilter(self, obj, event):
         if event.type() == QtCore.QEvent.MouseMove:
             self.mouseMoveEvent(event)
@@ -184,14 +155,18 @@ class PDFDecanter(QtCore.QObject):
     def _hideMouse(self):
         self._view.setCursor(QtCore.Qt.BlankCursor)
 
-    def mouseReleaseEvent(self, e):
-        self._selectionChangeComesFromButtonRelease = True
-        self._clearMouseReleaseFlagTimer.start()
 
-    def _clearMouseReleaseFlag(self):
-        if self._selectionChangeComesFromButtonRelease:
-            #print "DEBUG: mouse button release flag still active, clearing..."
-            self._selectionChangeComesFromButtonRelease = False
+    def mouseReleaseEvent(self, e):
+        if not self._inOverview:
+            if self._currentFrameIndex < len(self._frame2Slide) - 1:
+                self.gotoFrame(self._currentFrameIndex + 1, animated = True)
+        else:
+            for item in self._scene.items(e.scenePos()):
+                if isinstance(item, slide_renderer.SlideRenderer):
+                    slideIndex = self._renderers.index(item)
+                    self.gotoFrame(self._slide2Frame[slideIndex] +
+                                   self._renderers[slideIndex].currentFrame(), animated = False)
+                    break
 
     def loadPDF(self, pdfFilename, cacheFilename = None):
         slides = None

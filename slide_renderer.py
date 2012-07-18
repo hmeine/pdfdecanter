@@ -9,8 +9,6 @@ class SlideRenderer(QtGui.QGraphicsWidget):
         QtGui.QGraphicsWidget.__init__(self, parentItem)
         self._slide = slide
         self.setGeometry(QtCore.QRectF(QtCore.QPointF(0, 0), slide.size()))
-        #self.setFlag(QtGui.QGraphicsItem.ItemIsMovable)
-        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable)
 
         self._currentFrame = None
         self._seen = False
