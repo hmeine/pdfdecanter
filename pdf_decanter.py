@@ -17,17 +17,6 @@ else:
 
 __version__ = "0.1"
 
-from optparse import OptionParser
-
-op = OptionParser(usage = "%prog [options] <filename.pdf>")
-op.add_option("--no-opengl", action = "store_false",
-              dest = "use_opengl", default = True,
-              help = "disable OpenGL for rendering (default: use OpenGL)")
-op.add_option("--cache", action = "store_true",
-              dest = "use_cache", default = False,
-              help = "use caching in system-wide temp folder")
-options, args = op.parse_args()
-
 w, h = 1024, 768
 
 BLEND_DURATION = 150
@@ -657,6 +646,17 @@ def start(view = None):
 
 if __name__ == "__main__":
     import sys
+
+    from optparse import OptionParser
+
+    op = OptionParser(usage = "%prog [options] <filename.pdf>")
+    op.add_option("--no-opengl", action = "store_false",
+                  dest = "use_opengl", default = True,
+                  help = "disable OpenGL for rendering (default: use OpenGL)")
+    op.add_option("--cache", action = "store_true",
+                  dest = "use_cache", default = False,
+                  help = "use caching in system-wide temp folder")
+    options, args = op.parse_args()
 
     g = start()
     
