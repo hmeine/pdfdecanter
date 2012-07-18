@@ -31,21 +31,11 @@ options, args = op.parse_args()
 w, h = 1024, 768
 
 BLEND_DURATION = 150
-USE_GL = options.use_opengl
-USE_CACHING = options.use_cache
 
 PADDING_X = int(w * 0.03)
 PADDING_Y = int(h * 0.03)
 LINEBREAK_PADDING = int(3.5 * PADDING_Y)
 INDENT_X = 0 # w / 8
-
-if USE_GL:
-    try:
-        from OpenGL import GL
-    except ImportError:
-        USE_GL = False
-        sys.stderr.write("WARNING: OpenGL could not be loaded, running without GL...\n")
-
 
 class GeometryAnimation(QtCore.QVariantAnimation):
     def __init__(self, item, parent = None):
@@ -73,10 +63,6 @@ class PDFDecanter(QtCore.QObject):
         self._view.setFrameStyle(QtGui.QFrame.NoFrame)
         self._view.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self._view.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-
-        if USE_GL:
-            self._view.setViewport(QtOpenGL.QGLWidget(QtOpenGL.QGLFormat(QtOpenGL.QGL.SampleBuffers)))
-            self._view.setViewportUpdateMode(QtGui.QGraphicsView.FullViewportUpdate)
 
         if view.scene() is not None:
             self._scene = view.scene()
@@ -122,6 +108,24 @@ class PDFDecanter(QtCore.QObject):
         self._view.viewport().installEventFilter(self)
 
         self._inOverview = False
+
+    def enableGL(self):
+        try:
+            from OpenGL import GL
+        except ImportError:
+            sys.stderr.write("WARNING: OpenGL could not be imported, running without GL...\n")
+            return False
+
+        glWidget = QtOpenGL.QGLWidget(QtOpenGL.QGLFormat(QtOpenGL.QGL.SampleBuffers))
+        if not glWidget.isValid():
+            sys.stderr.write("WARNING: Could not create valid OpenGL context, running without GL...\n")
+            return False
+
+        self._view.setViewport(glWidget)
+        self._view.setViewportUpdateMode(QtGui.QGraphicsView.FullViewportUpdate)
+        self._view.viewport().setMouseTracking(True)
+        self._view.viewport().installEventFilter(self)
+        return True
 
     def view(self):
         return self._view
@@ -660,10 +664,13 @@ if __name__ == "__main__":
     if sys.platform == "darwin":
         g.view().raise_()
 
+    if options.use_opengl:
+        g.enableGL()
+
     pdfFilename, = args
 
     if not 'slides' in globals():
-        g.loadPDF(pdfFilename, cacheFilename = USE_CACHING)
+        g.loadPDF(pdfFilename, cacheFilename = options.use_cache)
 
         pixelCount = sum(s.pixelCount() for s in g._slides)
         ss = g._slides[0].size()
