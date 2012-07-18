@@ -4,7 +4,8 @@ from __future__ import division
 from dynqt import QtCore, QtGui, QtOpenGL
 
 import numpy, os, sys, time, tempfile, math, operator
-import pdftoppm_renderer, pdf_infos, bz2_pickle, slide
+import pdftoppm_renderer, pdf_infos, bz2_pickle
+import presentation
 
 try:
     import poppler_renderer
@@ -220,7 +221,7 @@ class PDFDecanter(QtCore.QObject):
             raw_frames = renderer.renderAllPages(pdfFilename, sizePX = self.slideSize(),
                                                  pageCount = infos and infos.pageCount())
 
-            slides = slide.stack_frames(raw_frames)
+            slides = presentation.stack_frames(raw_frames)
             slides.setPDFInfos(infos)
 
             print "complete rendering took %.3gs. (%.3gs. real time)" % (
@@ -243,7 +244,7 @@ class PDFDecanter(QtCore.QObject):
         self._slides = slides
         self._slidesChanged()
         assert not self._renderers, "FIXME: delete old renderers / graphics items"
-        self._renderers = [slide.SlideRenderer(s, self._presentationItem) for s in slides]
+        self._renderers = [presentation.SlideRenderer(s, self._presentationItem) for s in slides]
         for r in self._renderers:
             r.setLinkHandler(self.followLink)
         self._setupGrid()
