@@ -9,6 +9,22 @@ def boundingRect(rects):
     return result
 
 
+class Patch(object):
+    def __init__(self, pos, image):
+        self._pos = pos
+        self._image = image
+
+    @classmethod
+    def extract(cls, frame, rect):
+        x1, y1 = rect.x(), rect.y()
+        x2, y2 = rect.right() + 1, rect.bottom() + 1
+        return cls(rect.topLeft(), array2qimage(frame[y1:y2,x1:x2]))
+
+    def __iter__(self):
+        yield self._pos
+        yield self._image
+
+
 class Patches(list):
     """List of (pos, patch) pairs, where pos is a QPoint and patch a
     QImage."""
@@ -27,9 +43,7 @@ class Patches(list):
         
         patches = cls()
         for r in rects:
-            x1, y1 = r.x(), r.y()
-            x2, y2 = r.right() + 1, r.bottom() + 1
-            patches.append((r.topLeft(), array2qimage(frame[y1:y2,x1:x2])))
+            patches.append(Patch.extract(frame, r))
         return patches
 
 
