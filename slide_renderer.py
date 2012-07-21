@@ -32,10 +32,6 @@ class SlideRenderer(QtGui.QGraphicsWidget):
         contentItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
         self._items['content'] = contentItem
 
-        navigationItem = QtGui.QGraphicsWidget(self)
-        navigationItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-        self._items['navigation'] = navigationItem
-
         self._coverItem()
 
     def _slideRect(self):
@@ -115,9 +111,6 @@ class SlideRenderer(QtGui.QGraphicsWidget):
                 event.accept()
                 return
         QtGui.QGraphicsWidget.mousePressEvent(self, event)
-
-    def navigationItem(self):
-        return self._items['navigation']
 
     def contentItem(self):
         return self._items['content']

@@ -346,8 +346,6 @@ class PDFDecanter(QtCore.QObject):
             r2.contentItem().setPos(QtCore.QPointF(0, 0))
             movedRenderer.setPos(oldPos)
             movedRenderer._backgroundItem().show()
-            r1.navigationItem().setOpacity(1.0)
-            r2.navigationItem().setOpacity(1.0)
             if not self._inOverview:
                 self._presentationItem.setPos(-r2.pos())
 
@@ -393,25 +391,8 @@ class PDFDecanter(QtCore.QObject):
                 slideInAnim.setStartValue(QtCore.QPoint(offset, 0))
                 slideInAnim.setEndValue(QtCore.QPoint(0, 0))
 
-                blendAnimation1 = QtCore.QPropertyAnimation(
-                    renderer.navigationItem(), "opacity", self._slideAnimation)
-                blendAnimation1.setDuration(BLEND_DURATION)
-                blendAnimation1.setStartValue(0.0)
-                blendAnimation1.setEndValue(1.0)
-
-                blendAnimation2 = QtCore.QPropertyAnimation(
-                    previousRenderer.navigationItem(), "opacity", self._slideAnimation)
-                blendAnimation2.setDuration(BLEND_DURATION)
-                blendAnimation2.setStartValue(1.0)
-                blendAnimation2.setEndValue(0.0)
-
-                blendSequence = QtCore.QSequentialAnimationGroup(self._slideAnimation)
-                blendSequence.addAnimation(blendAnimation1)
-                blendSequence.addAnimation(blendAnimation2)
-
                 self._slideAnimation.addAnimation(slideOutAnim)
                 self._slideAnimation.addAnimation(slideInAnim)
-                self._slideAnimation.addAnimation(blendSequence)
                 self._slideAnimation.start()
             elif animated != 'slide':
                 self._blendAnimation = QtCore.QPropertyAnimation(
