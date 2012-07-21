@@ -389,13 +389,11 @@ def stack_frames(raw_frames):
     background = detectBackground(raw_frames)
     rects = changed_rects(canvas, background)
 
-    it = iter(raw_frames)
-    frame1 = canvas
-
     result = Presentation()
     result.background = background
 
-    for frame2 in it:
+    frame1 = canvas
+    for frame2 in raw_frames:
         changed = changed_rects(frame1, frame2)
         rects = changed_rects(canvas, frame2)
 
