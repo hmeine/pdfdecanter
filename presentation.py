@@ -51,8 +51,11 @@ class Frame(object):
     """Single frame (PDF page) with content, header, footer.  Belongs
     to a parent Slide."""
 
-    def __init__(self, contentPatches, slide):
+    def __init__(self, contentPatches, slide = None):
         self._content = contentPatches
+        self._slide = slide
+
+    def setSlide(self, slide):
         self._slide = slide
 
     def content(self):
@@ -92,8 +95,9 @@ class Slide(object):
     #         result.adjust(margin, margin, -margin, -margin)
     #     return result
 
-    def addFrame(self, patches):
-        self._frames.append(Frame(patches, self))
+    def addFrame(self, frame):
+        self._frames.append(frame)
+        frame.setSlide(self)
 
     def frame(self, frameIndex):
         return self._frames[frameIndex]
@@ -398,11 +402,11 @@ def stack_frames(raw_frames):
         isNewSlide = True
 
         if isNewSlide:
-            s = Slide(frame_size)
-            s.addFrame(Patches.extract(frame2, rects))
-            result.append(s)
+            result.append(Slide(frame_size))
+            frame = Frame(Patches.extract(frame2, rects))
         else:
-            result[-1].addFrame(Patches.extract(frame2, changed))
+            frame = Frame(Patches.extract(frame2, changed))
+        result[-1].addFrame(frame)
 
         frame1 = frame2
 
