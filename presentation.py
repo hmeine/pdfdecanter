@@ -49,11 +49,10 @@ class Frame(object):
 
 
 class Slide(object):
-    __slots__ = ('_size', '_header', '_footer', '_frames', '_pdfInfos')
+    __slots__ = ('_size', '_frames', '_pdfInfos')
     
     def __init__(self, size):
         self._size = size
-        self._header = self._footer = None
         self._frames = []
 
         self._pdfInfos = None
@@ -67,29 +66,17 @@ class Slide(object):
     def __getitem__(self, frameIndex):
         return self.frame(frameIndex)
 
-    def setHeader(self, patches):
-        self._header = patches
-
-    def header(self):
-        return self._header
-
-    def setFooter(self, patches):
-        self._footer = patches
-
-    def footer(self):
-        return self._footer
-
-    def contentRect(self, margin = 0):
-        header_rect = self._header and self._header.boundingRect()
-        footer_rect = self._footer and self._footer.boundingRect()
-        header_height = header_rect.bottom() + 1 if self._header else 0
-        result = QtCore.QRectF(0, header_height,
-                               self._size.width(),
-                               footer_rect.top() - header_height
-                               if self._footer else self._size.height())
-        if margin:
-            result.adjust(margin, margin, -margin, -margin)
-        return result
+    # def contentRect(self, margin = 0):
+    #     header_rect = self._header and self._header.boundingRect()
+    #     footer_rect = self._footer and self._footer.boundingRect()
+    #     header_height = header_rect.bottom() + 1 if self._header else 0
+    #     result = QtCore.QRectF(0, header_height,
+    #                            self._size.width(),
+    #                            footer_rect.top() - header_height
+    #                            if self._footer else self._size.height())
+    #     if margin:
+    #         result.adjust(margin, margin, -margin, -margin)
+    #     return result
 
     def addFrame(self, patches):
         self._frames.append(Frame(patches, self))
@@ -130,12 +117,7 @@ class Slide(object):
 
     def patchSet(self):
         """mostly for debugging/statistics: set of Patch objects"""
-        patches = set.union(*[frame.patchSet() for frame in self._frames])
-        if self._header:
-            patches.update(self._header)
-        if self._footer:
-            patches.update(self._footer)
-        return patches
+        return set.union(*[frame.patchSet() for frame in self._frames])
 
     def pixelCount(self):
         result = 0
@@ -148,8 +130,6 @@ class Slide(object):
             return [((pos.x(), pos.y()), rgb_view(patch).copy())
                     for pos, patch in patches]
         return ((self._size.width(), self._size.height()),
-                serializePatches(self._header) if self._header else None,
-                serializePatches(self._footer) if self._footer else None,
                 [serializePatches(frame.content()) for frame in self._frames],
                 self._pdfInfos)
 
@@ -157,10 +137,8 @@ class Slide(object):
         def deserializePatches(patches):
             return Patches((QtCore.QPoint(x, y), array2qimage(patch))
                            for (x, y), patch in patches)
-        (w, h), header, footer, frames, infos = state
+        (w, h), frames, infos = state
         self._size = QtCore.QSizeF(w, h)
-        self._header = header and deserializePatches(header)
-        self._footer = footer and deserializePatches(footer)
         self._frames = [Frame(deserializePatches(frame), self) for frame in frames]
         self._pdfInfos = infos
 
@@ -304,35 +282,6 @@ changed_rects = changed_rects_ndimage
 #changed_rects = changed_rects_numpy_only
 
 
-def decompose_slide(rects, header_bottom, footer_top):
-    """Separates changed rects into (header, content, footer) triple."""
-
-    rects.sort(key = lambda r: r.top())
-
-    header = Patches()
-    # FIXME: this takes *at most* one item, but e.g. Niko uses chapter / title rows:
-    if rects and rects[0].bottom() < header_bottom:
-        headerRect = QtCore.QRect(rects[0])
-        i = 1
-        while i < len(rects) and rects[i].top() < headerRect.bottom():
-            headerRect |= rects[i]
-            i += 1
-        header.extend(rects[:i])
-        del rects[:i]
-
-    footer = []
-    while len(rects):
-        if rects[-1].top() < footer_top:
-            break
-        r = rects.pop()
-        footer.append(r)
-        # if r.height() < 10 and r.width() > frame_size.width() * .8:
-        #     # separator line detected
-        #     break
-    
-    return header, rects, footer
-
-
 class BackgroundDetection(object):
     """Computes image with most common pixel values from given sample
     size."""
@@ -416,54 +365,31 @@ def detectBackground(raw_frames, useFrames = 15):
 def stack_frames(raw_frames):
     raw_frames = list(raw_frames)
     frame_size = QtCore.QSizeF(raw_frames[0].shape[1], raw_frames[0].shape[0])
-    header_rows = frame_size.height() * 11 / 48
 
     canvas = numpy.ones_like(raw_frames[0]) * 255
 
     background = detectBackground(raw_frames)
     rects = changed_rects(canvas, background)
-    header, content, footer = decompose_slide(
-        rects, frame_size.height() / 3, frame_size.height() * 0.75)
-    #assert not content, "could not find header/footer ranges"
 
     it = iter(raw_frames)
     frame1 = canvas
 
     result = Presentation()
     result.background = background
-    result.header_rect = boundingRect(header)
-    result.footer_rect = boundingRect(footer)
-
-    prev_header = None
 
     for frame2 in it:
         changed = changed_rects(frame1, frame2)
-        content = changed_rects(canvas, frame2)
-
-        header, content, footer = decompose_slide(
-            content, result.header_rect.bottom() * 1.3, result.footer_rect.top())
-
-        # TODO: handle case of full-screen overlay (e.g. slide 10/11 of FATE_Motivation)?
-        # (currently, goes as new slide because the header is hit)
+        rects = changed_rects(canvas, frame2)
 
         isNewSlide = True
-        if header and header == prev_header:
-            isNewSlide = False
-            for r in changed:
-                if r.intersects(result.header_rect):
-                    isNewSlide = True
-                    break
 
         if isNewSlide:
             s = Slide(frame_size)
-            s.setHeader(Patches.extract(frame2, header))
-            s.setFooter(Patches.extract(frame2, footer))
-            s.addFrame(Patches.extract(frame2, content))
+            s.addFrame(Patches.extract(frame2, rects))
             result.append(s)
         else:
             result[-1].addFrame(Patches.extract(frame2, changed))
 
         frame1 = frame2
-        prev_header = header
 
     return result

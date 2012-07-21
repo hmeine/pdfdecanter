@@ -155,7 +155,6 @@ class PDFDecanter(QtCore.QObject):
     def _hideMouse(self):
         self._view.setCursor(QtCore.Qt.BlankCursor)
 
-
     def mouseReleaseEvent(self, e):
         if not self._inOverview:
             if self._currentFrameIndex < len(self._frame2Slide) - 1:
@@ -465,15 +464,6 @@ class PDFDecanter(QtCore.QObject):
                                self._renderers[slideIndex].currentFrame(), animated = True)
         elif event.text() == 'Q':
             self._view.window().close()
-            event.accept()
-        elif event.text() == 'P':
-            headerItem, footerItem = self._currentRenderer().navigationItem().childItems()
-            onoff = headerItem.isVisible() + 2*footerItem.isVisible()
-            onoff = (onoff + 1) % 4
-            for r in self._renderers:
-                headerItem, footerItem = r.navigationItem().childItems()
-                headerItem.setVisible(onoff % 2)
-                footerItem.setVisible(onoff // 2)
             event.accept()
 
         if event.isAccepted():

@@ -76,7 +76,6 @@ The following keybindings are **always** available (i.e. in both modes):
 F, L           jump to [F]irst / [L]ast frame state of current slide
 Shift-F        Enter/leave [F]ullscreen mode
 Shift-Q        [Q]uit
-(Shift-P       Debugging: Toggle navigation visibility)
 ============== ===================================================
 
 In the **overview mode**, these are the keybindings:

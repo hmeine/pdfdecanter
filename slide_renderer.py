@@ -36,9 +36,6 @@ class SlideRenderer(QtGui.QGraphicsWidget):
         navigationItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
         self._items['navigation'] = navigationItem
 
-        self.frameItem('header')
-        self.frameItem('footer')
-
         self._coverItem()
 
     def _slideRect(self):
@@ -70,18 +67,9 @@ class SlideRenderer(QtGui.QGraphicsWidget):
         result = self._items.get(frameIndex, None)
         
         if result is None:
-            if frameIndex == 'header':
-                patches = self._slide.header() or ()
-                parentItem = self._items['navigation']
-                zValue = 50
-            elif frameIndex == 'footer':
-                patches = self._slide.footer() or ()
-                parentItem = self._items['navigation']
-                zValue = 50
-            else:
-                patches = self._slide.frame(frameIndex).content()
-                parentItem = self._items['content']
-                zValue = 100 + frameIndex
+            patches = self._slide.frame(frameIndex).content()
+            parentItem = self._items['content']
+            zValue = 100 + frameIndex
 
             result = QtGui.QGraphicsWidget(parentItem)
             result.setZValue(zValue)
