@@ -1,4 +1,4 @@
-import numpy, sys, time
+import numpy, sys, time, hashlib
 from dynqt import QtCore, array2qimage, rgb_view
 
 
@@ -14,6 +14,12 @@ class Patch(object):
         self._pos = pos
         self._image = image
 
+    def xy(self):
+        return self._pos.x(), self._pos.y()
+
+    def ndarray(self):
+        return rgb_view(self._image)
+
     @classmethod
     def extract(cls, frame, rect):
         x1, y1 = rect.x(), rect.y()
@@ -23,6 +29,18 @@ class Patch(object):
     def __iter__(self):
         yield self._pos
         yield self._image
+
+    def __hash__(self):
+        return hash((self.xy(),
+                     hashlib.md5(self.ndarray()).digest()))
+
+    def __cmp__(self, other):
+        result = cmp(type(self), type(other)) or cmp(self.xy(), other.xy())
+        if result:
+            return result
+        if numpy.all(self.ndarray() == other.ndarray()):
+            return 0
+        return cmp(self._image, other._image) # fall back to id (memory address)
 
 
 class Patches(list):
@@ -36,14 +54,19 @@ class Patches(list):
                             for pos, patch in self)
 
     @classmethod
-    def extract(cls, frame, rects):
+    def extract(cls, frame, rects, cache = None):
         """Extract patches from a full frame and list of rects.
         Parameters are the frame image as ndarray, and a list of
         QRects."""
         
         patches = cls()
         for r in rects:
-            patches.append(Patch.extract(frame, r))
+            patch = Patch.extract(frame, r)
+            if cache is not None:
+                # reuse existing Patch if it compares equal:
+                patch = cache.get(patch, patch)
+                cache[patch] = patch
+            patches.append(patch)
         return patches
 
 
@@ -380,32 +403,34 @@ def detectBackground(raw_frames, useFrames = 15):
     return canvas
 
 
-def stack_frames(raw_frames):
-    raw_frames = list(raw_frames)
-    frame_size = QtCore.QSizeF(raw_frames[0].shape[1], raw_frames[0].shape[0])
+def stack_frames(raw_pages):
+    raw_pages = list(raw_pages)
+    frame_size = QtCore.QSizeF(raw_pages[0].shape[1], raw_pages[0].shape[0])
 
-    canvas = numpy.ones_like(raw_frames[0]) * 255
+    canvas = numpy.ones_like(raw_pages[0]) * 255
 
-    background = detectBackground(raw_frames)
+    background = detectBackground(raw_pages)
     rects = changed_rects(canvas, background)
 
     result = Presentation()
     result.background = background
 
-    frame1 = canvas
-    for frame2 in raw_frames:
-        changed = changed_rects(frame1, frame2)
-        rects = changed_rects(canvas, frame2)
+    cache = {}
+
+    page1 = canvas
+    for page2 in raw_pages:
+        changed = changed_rects(page1, page2)
+        rects = changed_rects(canvas, page2)
 
         isNewSlide = True
 
         if isNewSlide:
             result.append(Slide(frame_size))
-            frame = Frame(Patches.extract(frame2, rects))
+            frame = Frame(Patches.extract(page2, rects, cache))
         else:
-            frame = Frame(Patches.extract(frame2, changed))
+            frame = Frame(Patches.extract(page2, changed, cache))
         result[-1].addFrame(frame)
 
-        frame1 = frame2
+        page1 = page2
 
     return result
