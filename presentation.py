@@ -89,13 +89,16 @@ class Frame(object):
 
 
 class Slide(object):
-    __slots__ = ('_size', '_frames', '_pdfInfos')
+    __slots__ = ('_size', '_frames', '_pdfInfos', '_currentFrame', '_seen')
     
     def __init__(self, size):
         self._size = size
         self._frames = []
 
         self._pdfInfos = None
+
+        self._currentFrame = None
+        self._seen = False
 
     def size(self):
         return self._size
@@ -125,6 +128,20 @@ class Slide(object):
     def frame(self, frameIndex):
         return self._frames[frameIndex]
 
+    def currentFrame(self):
+        return self._currentFrame
+
+    def setCurrentFrame(self, index):
+        self._currentFrame = index
+        # TODO: notification?
+
+    def seen(self):
+        return self._seen
+
+    def setSeen(self, seen):
+        self._seen = seen
+        # TODO: notification?
+
     def setPDFInfos(self, infos):
         if infos:
             assert len(infos) == len(self)
@@ -145,7 +162,10 @@ class Slide(object):
                                  h * self._size.height()),
                    link)
 
-    def linkAt(self, frameIndex, pos):
+    # TODO: move into Frame
+    def linkAt(self, pos):
+        frameIndex = self._currentFrame  
+        
         if not self._pdfInfos or frameIndex >= len(self._pdfInfos):
             return None
         
@@ -182,6 +202,9 @@ class Slide(object):
         self._size = QtCore.QSizeF(w, h)
         self._frames = [Frame(deserializePatches(frame), self) for frame in frames]
         self._pdfInfos = infos
+        # __init__ is not called:
+        self._currentFrame = None
+        self._seen = None
 
 
 class Presentation(list):

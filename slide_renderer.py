@@ -10,8 +10,6 @@ class SlideRenderer(QtGui.QGraphicsWidget):
         self._slide = slide
         self.setGeometry(QtCore.QRectF(QtCore.QPointF(0, 0), slide.size()))
 
-        self._currentFrame = None
-        self._seen = False
         self._frameCallbacks = []
         self._linkHandler = None
 
@@ -56,7 +54,7 @@ class SlideRenderer(QtGui.QGraphicsWidget):
         result = self._rectItem(QtCore.Qt.black, key = 'cover')
         result.setZValue(1000)
         result.setOpacity(1.0 - UNSEEN_OPACITY)
-        result.setVisible(not self._seen)
+        result.setVisible(not self._slide.seen())
         return result
 
     def frameItem(self, frameIndex):
@@ -105,7 +103,7 @@ class SlideRenderer(QtGui.QGraphicsWidget):
 
     def mousePressEvent(self, event):
         if self._linkHandler:
-            link = self._slide.linkAt(self._currentFrame, event.pos())
+            link = self._slide.linkAt(event.pos())
             if link is not None:
                 self._linkHandler(link)
                 event.accept()
@@ -135,7 +133,7 @@ class SlideRenderer(QtGui.QGraphicsWidget):
 
         # set parent of custom items:
         parent = self.frameItem(frameIndex)
-        parent.setVisible(frameIndex <= self._currentFrame)
+        parent.setVisible(frameIndex <= self._slide.currentFrame())
         for item in items:
             item.setParentItem(parent)
 
@@ -150,11 +148,11 @@ class SlideRenderer(QtGui.QGraphicsWidget):
 
         TODO: Call with None if slide becomes invisible/inactive."""
         self._frameCallbacks.append(cb)
-        if self._currentFrame is not None:
-            cb(self, self._currentFrame)
+        if self._slide.currentFrame() is not None:
+            cb(self, self._slide.currentFrame())
 
     def uncover(self, seen = True):
-        self._seen = seen
+        self._slide.setSeen(seen)
         self._coverItem().setVisible(not seen)
 
     def showFrame(self, frameIndex = 0):
@@ -164,9 +162,9 @@ class SlideRenderer(QtGui.QGraphicsWidget):
         for cb in self._frameCallbacks:
             cb(self, frameIndex)
 
-        self._currentFrame = frameIndex
+        self._slide.setCurrentFrame(frameIndex)
 
-        for i in range(0, self._currentFrame + 1):
+        for i in range(0, self._slide.currentFrame() + 1):
             item = self.frameItem(i)
             item.setVisible(True)
             if self.DEBUG:
@@ -177,6 +175,3 @@ class SlideRenderer(QtGui.QGraphicsWidget):
                 self._items[i].setVisible(False)
 
         return self
-
-    def currentFrame(self):
-        return self._currentFrame
