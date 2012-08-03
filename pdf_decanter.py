@@ -414,9 +414,13 @@ class PDFDecanter(QtCore.QObject):
         self._gotoSlideIndex = None
 
     def followLink(self, link):
+        if self._inOverview:
+            return False
         if isinstance(link, int):
             frameIndex = link
             self.gotoFrame(frameIndex, animated = True)
+            return True
+        return False
 
     def keyPressEvent(self, event):
         if event.text() == 'F':

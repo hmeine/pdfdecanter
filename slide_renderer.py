@@ -105,9 +105,9 @@ class SlideRenderer(QtGui.QGraphicsWidget):
         if self._linkHandler:
             link = self._slide.currentFrame().linkAt(event.pos())
             if link is not None:
-                self._linkHandler(link)
-                event.accept()
-                return
+                if self._linkHandler(link):
+                    event.accept()
+                    return
         QtGui.QGraphicsWidget.mousePressEvent(self, event)
 
     def contentItem(self):
