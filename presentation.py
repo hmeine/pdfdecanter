@@ -10,6 +10,8 @@ def boundingRect(rects):
 
 
 class Patch(object):
+    __slots__ = ('_pos', '_image')
+    
     def __init__(self, pos, image):
         self._pos = pos
         self._image = image
@@ -19,6 +21,9 @@ class Patch(object):
 
     def ndarray(self):
         return rgb_view(self._image)
+
+    def pixelCount(self):
+        return self._image.width() * self._image.height()
 
     @classmethod
     def extract(cls, frame, rect):
@@ -183,16 +188,6 @@ class Slide(object):
         self._seen = seen
         # TODO: notification?
 
-    def patchSet(self):
-        """mostly for debugging/statistics: set of Patch objects"""
-        return set.union(*[frame.patchSet() for frame in self._frames])
-
-    def pixelCount(self):
-        result = 0
-        for pos, patch in self.patchSet():
-            result += patch.width() * patch.height()
-        return result
-
     def __getstate__(self):
         def serializePatches(patches):
             return [((pos.x(), pos.y()), rgb_view(patch).copy())
@@ -202,7 +197,7 @@ class Slide(object):
 
     def __setstate__(self, state):
         def deserializePatches(patches):
-            return Patches((QtCore.QPoint(x, y), array2qimage(patch))
+            return Patches(Patch(QtCore.QPoint(x, y), array2qimage(patch))
                            for (x, y), patch in patches)
         (w, h), frames = state
         self._size = QtCore.QSizeF(w, h)
@@ -232,6 +227,16 @@ class Presentation(list):
             assert len(list(self.frames())) == len(infos)
             for frame, pageInfos in zip(self.frames(), infos):
                 frame.setPDFPageInfos(pageInfos)
+
+    def patchSet(self):
+        """mostly for debugging/statistics: set of Patch objects"""
+        return set.union(*[frame.patchSet() for frame in self.frames()])
+
+    def pixelCount(self):
+        result = 0
+        for patch in self.patchSet():
+            result += patch.pixelCount()
+        return result
 
     def __getnewargs__(self):
         return (list(self), )

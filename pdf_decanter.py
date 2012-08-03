@@ -639,7 +639,7 @@ if __name__ == "__main__":
     if not 'slides' in globals():
         g.loadPDF(pdfFilename, cacheFilename = options.use_cache)
 
-        pixelCount = sum(s.pixelCount() for s in g._slides)
+        pixelCount = g._slides.pixelCount()
         ss = g._slides[0].size()
         rawCount = len(g._frame2Slide) * ss.width() * ss.height()
         print "%d pixels out of %d retained. (%.1f%%)" % (pixelCount, rawCount, 100.0 * pixelCount / rawCount)
