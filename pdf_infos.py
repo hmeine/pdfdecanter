@@ -1,5 +1,11 @@
 import numpy, os.path
 
+# TODO:
+# 1) move links & pageBoxes info PDFPageInfo objects
+# 2) add __getitem__ to PDFInfos which returns PDFPageInfo
+# 3) let Frame store PDFPageInfo, removing PDFInfos from Slides altogether
+# 4) let Presentation store copy of outline, with page indices replaced by Frame references
+
 class PDFInfos(object):
     __slots__ = ('_metaInfo', '_pageCount', '_outline', '_links', '_pageBoxes')
     
