@@ -74,9 +74,12 @@ class Frame(object):
     """Single frame (PDF page) with content, header, footer.  Belongs
     to a parent Slide."""
 
+    __slots__ = ('_content', '_slide', '_pdfPageInfos')
+
     def __init__(self, contentPatches, slide = None):
         self._content = contentPatches
         self._slide = slide
+        self._pdfPageInfos = None
 
     def setSlide(self, slide):
         self._slide = slide
@@ -87,17 +90,52 @@ class Frame(object):
     def patchSet(self):
         return set(self._content)
 
+    def setPDFPageInfos(self, infos):
+        self._pdfPageInfos = infos
+
+    def linkRects(self, onlyExternal = True):
+        if not self._pdfPageInfos:
+            return
+
+        frameSize = self._slide.size()
+
+        for rect, link in self._pdfPageInfos.relativeLinks():
+            if onlyExternal and isinstance(link, int):
+                continue
+            x1, y1 = rect[0]
+            w, h = rect[1] - rect[0]
+            yield (QtCore.QRectF(x1 * frameSize.width(),
+                                 (1 - y1 - h) * frameSize.height() - 1,
+                                 w * frameSize.width(),
+                                 h * frameSize.height()),
+                   link)
+
+    def linkAt(self, pos):
+        if not self._pdfPageInfos:
+            return None
+        
+        frameSize = self._slide.size()
+        relPos = (pos.x() / frameSize.width(),
+                  (frameSize.height() - pos.y()) / frameSize.height())
+        for rect, link in self._pdfPageInfos.relativeLinks():
+            if numpy.all((relPos >= rect[0]) * (relPos <= rect[1])):
+                return link
+        return None
+
+
 
 class Slide(object):
-    __slots__ = ('_size', '_frames', '_pdfInfos', '_currentFrame', '_seen')
+    """Collection of Frames that belong together, i.e. PDF pages that
+    represent transition states of the same presentation slide.  It is
+    assumed that all frames have the same size."""
+    
+    __slots__ = ('_size', '_frames', '_currentFrameIndex', '_seen')
     
     def __init__(self, size):
         self._size = size
         self._frames = []
 
-        self._pdfInfos = None
-
-        self._currentFrame = None
+        self._currentFrameIndex = None
         self._seen = False
 
     def size(self):
@@ -128,11 +166,14 @@ class Slide(object):
     def frame(self, frameIndex):
         return self._frames[frameIndex]
 
-    def currentFrame(self):
-        return self._currentFrame
+    def currentFrameIndex(self):
+        return self._currentFrameIndex
 
-    def setCurrentFrame(self, index):
-        self._currentFrame = index
+    def currentFrame(self):
+        return self.frame(self._currentFrameIndex)
+
+    def setCurrentFrameIndex(self, index):
+        self._currentFrameIndex = index
         # TODO: notification?
 
     def seen(self):
@@ -141,40 +182,6 @@ class Slide(object):
     def setSeen(self, seen):
         self._seen = seen
         # TODO: notification?
-
-    def setPDFInfos(self, infos):
-        if infos:
-            assert len(infos) == len(self)
-        self._pdfInfos = infos
-
-    def linkRects(self, frameIndex, onlyExternal = True):
-        if not self._pdfInfos or frameIndex >= len(self._pdfInfos):
-            return
-
-        for rect, link in self._pdfInfos.relativeLinks(frameIndex):
-            if onlyExternal and isinstance(link, int):
-                continue
-            x1, y1 = rect[0]
-            w, h = rect[1] - rect[0]
-            yield (QtCore.QRectF(x1 * self._size.width(),
-                                 (1 - y1 - h) * self._size.height() - 1,
-                                 w * self._size.width(),
-                                 h * self._size.height()),
-                   link)
-
-    # TODO: move into Frame
-    def linkAt(self, pos):
-        frameIndex = self._currentFrame  
-        
-        if not self._pdfInfos or frameIndex >= len(self._pdfInfos):
-            return None
-        
-        relPos = (pos.x() / self._size.width(),
-                  (self._size.height() - pos.y()) / self._size.height())
-        for rect, link in self._pdfInfos.relativeLinks(frameIndex):
-            if numpy.all((relPos >= rect[0]) * (relPos <= rect[1])):
-                return link
-        return None
 
     def patchSet(self):
         """mostly for debugging/statistics: set of Patch objects"""
@@ -191,19 +198,17 @@ class Slide(object):
             return [((pos.x(), pos.y()), rgb_view(patch).copy())
                     for pos, patch in patches]
         return ((self._size.width(), self._size.height()),
-                [serializePatches(frame.content()) for frame in self._frames],
-                self._pdfInfos)
+                [serializePatches(frame.content()) for frame in self._frames])
 
     def __setstate__(self, state):
         def deserializePatches(patches):
             return Patches((QtCore.QPoint(x, y), array2qimage(patch))
                            for (x, y), patch in patches)
-        (w, h), frames, infos = state
+        (w, h), frames = state
         self._size = QtCore.QSizeF(w, h)
         self._frames = [Frame(deserializePatches(frame), self) for frame in frames]
-        self._pdfInfos = infos
         # __init__ is not called:
-        self._currentFrame = None
+        self._currentFrameIndex = None
         self._seen = None
 
 
@@ -216,14 +221,17 @@ class Presentation(list):
     def pdfInfos(self):
         return self._pdfInfos
 
+    def frames(self):
+        for slide in self:
+            for frame in slide:
+                yield frame
+
     def setPDFInfos(self, infos):
         self._pdfInfos = infos
         if infos:
-            pageIndex = 0
-            for sl in self:
-                sl.setPDFInfos(infos[pageIndex:pageIndex+len(sl)])
-                pageIndex += len(sl)
-            assert pageIndex == infos.pageCount()
+            assert len(list(self.frames())) == len(infos)
+            for frame, pageInfos in zip(self.frames(), infos):
+                frame.setPDFPageInfos(pageInfos)
 
     def __getnewargs__(self):
         return (list(self), )
@@ -232,7 +240,8 @@ class Presentation(list):
         return (self._pdfInfos, )
 
     def __setstate__(self, state):
-        self._pdfInfos, = state
+        pdfInfos, = state
+        self.setPDFInfos(pdfInfos)
 
 
 # --------------------------------------------------------------------

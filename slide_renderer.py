@@ -78,7 +78,7 @@ class SlideRenderer(QtGui.QGraphicsWidget):
                 pmItem.setTransformationMode(QtCore.Qt.SmoothTransformation)
 
             if parentItem is self._items['content']:
-                for rect, link in self._slide.linkRects(frameIndex):
+                for rect, link in self._slide.frame(frameIndex).linkRects():
                     if link.startswith('file:') and link.endswith('.mng'):
                         movie = QtGui.QMovie(link[5:])
                         player = QtGui.QLabel()
@@ -92,7 +92,7 @@ class SlideRenderer(QtGui.QGraphicsWidget):
                         movie.start()
 
                 if self.DEBUG:
-                    for rect, link in self._slide.linkRects(frameIndex, onlyExternal = False):
+                    for rect, link in self._slide.frame(frameIndex).linkRects(onlyExternal = False):
                         linkFrame = QtGui.QGraphicsRectItem(rect, parentItem)
                         linkFrame.setAcceptedMouseButtons(QtCore.Qt.NoButton)
                         linkFrame.setPen(QtGui.QPen(QtCore.Qt.yellow))
@@ -103,7 +103,7 @@ class SlideRenderer(QtGui.QGraphicsWidget):
 
     def mousePressEvent(self, event):
         if self._linkHandler:
-            link = self._slide.linkAt(event.pos())
+            link = self._slide.currentFrame().linkAt(event.pos())
             if link is not None:
                 self._linkHandler(link)
                 event.accept()
@@ -133,7 +133,7 @@ class SlideRenderer(QtGui.QGraphicsWidget):
 
         # set parent of custom items:
         parent = self.frameItem(frameIndex)
-        parent.setVisible(frameIndex <= self._slide.currentFrame())
+        parent.setVisible(frameIndex <= self._slide.currentFrameIndex())
         for item in items:
             item.setParentItem(parent)
 
@@ -143,13 +143,13 @@ class SlideRenderer(QtGui.QGraphicsWidget):
     def addCustomCallback(self, cb):
         """Register callback for frame changes.  Expects callable that
         will be called with two arguments: the SlideRenderer (which
-        can be queried for the currentFrame()) and the new frameIndex
-        that is about to become the currentFrame().
+        can be queried for the currentFrameIndex()) and the new frameIndex
+        that is about to become the currentFrameIndex().
 
         TODO: Call with None if slide becomes invisible/inactive."""
         self._frameCallbacks.append(cb)
-        if self._slide.currentFrame() is not None:
-            cb(self, self._slide.currentFrame())
+        if self._slide.currentFrameIndex() is not None:
+            cb(self, self._slide.currentFrameIndex())
 
     def uncover(self, seen = True):
         self._slide.setSeen(seen)
@@ -162,9 +162,9 @@ class SlideRenderer(QtGui.QGraphicsWidget):
         for cb in self._frameCallbacks:
             cb(self, frameIndex)
 
-        self._slide.setCurrentFrame(frameIndex)
+        self._slide.setCurrentFrameIndex(frameIndex)
 
-        for i in range(0, self._slide.currentFrame() + 1):
+        for i in range(0, self._slide.currentFrameIndex() + 1):
             item = self.frameItem(i)
             item.setVisible(True)
             if self.DEBUG:

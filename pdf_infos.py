@@ -1,20 +1,36 @@
 import numpy, os.path
 
 # TODO:
-# 1) move links & pageBoxes info PDFPageInfo objects
-# 2) add __getitem__ to PDFInfos which returns PDFPageInfo
-# 3) let Frame store PDFPageInfo, removing PDFInfos from Slides altogether
-# 4) let Presentation store copy of outline, with page indices replaced by Frame references
+# - let Presentation store copy of outline, with page indices replaced by Frame references
+
+class PDFPageInfos(object):
+    def __init__(self, pageBox, links):
+        self._pageBox = pageBox
+        self._links = links
+
+    def pageBox(self):
+        return self._pageBox
+
+    def links(self):
+        """Return list of (rect, pageIndex) tuples links on this page, where rect is a 2x2 ndarray"""
+        return self._links
+
+    def relativeLinks(self):
+        """Same as links, but with rects scaled relative to pageBox"""
+        pageBox = self._pageBox
+        pageSize = numpy.diff(pageBox, axis = 0)[0]
+        return [((rect - pageBox[0]) / pageSize, link)
+                for rect, link in self.links()]
+
 
 class PDFInfos(object):
-    __slots__ = ('_metaInfo', '_pageCount', '_outline', '_links', '_pageBoxes')
+    __slots__ = ('_metaInfo', '_pageCount', '_outline', '_pageInfos')
     
     def __init__(self):
         self._metaInfo = None
         self._pageCount = None
         self._outline = None
-        self._links = None
-        self._pageBoxes = None
+        self._pageInfos = None
 
     def metaInfo(self):
         """Return dict with meta information about PDF document, e.g. keys like Title, Author, Creator, ..."""
@@ -26,24 +42,6 @@ class PDFInfos(object):
     def outline(self):
         """Return list of (level, title, pageIndex) tuples"""
         return self._outline
-
-    def links(self, pageIndex = None):
-        """Return list of (rect, pageIndex) tuples for every (or given) page, where rect is a 2x2 ndarray"""
-        if pageIndex is not None:
-            return self._links[pageIndex]
-        return self._links
-
-    def relativeLinks(self, pageIndex = None):
-        """Same as links, but with rects scaled relative to pageBoxes"""
-        if pageIndex is None:
-            return [self.relativeLinks(i) for i in range(len(self))]
-        pageBox = self._pageBoxes[pageIndex]
-        pageSize = numpy.diff(pageBox, axis = 0)[0]
-        return [((rect - pageBox[0]) / pageSize, link)
-                for rect, link in self.links(pageIndex)]
-
-    def pageBoxes(self):
-        return self._pageBoxes
 
     def __len__(self):
         return self._pageCount
@@ -60,9 +58,11 @@ class PDFInfos(object):
         result._pageCount = e - b
         result._outline = self._outline and [(l, t, pi) for l, t, pi in self._outline
                                              if b <= pi < e]
-        result._links = self._links and self._links[b:e]
-        result._pageBoxes = self._pageBoxes[b:e]
+        result._pageInfos = self._pageInfos and self._pageInfos[b:e]
         return result
+
+    def __getitem__(self, index):
+        return self._pageInfos[index]
 
     @classmethod
     def create(cls, filename):
@@ -120,7 +120,7 @@ class PDFInfos(object):
         except pdfminer.pdfparser.PDFNoOutlines:
             result._outline = None
 
-        result._links = []
+        result._pageInfos = []
 
         # get annotations (links):
         for page in doc.get_pages():
@@ -142,9 +142,8 @@ class PDFInfos(object):
                                                       link[5:])
                     pageLinks.append((rect, link))
 
-            result._links.append(pageLinks)
+            pageBox = numpy.array([page.mediabox], float).reshape((2, 2))
 
-        result._pageBoxes = numpy.array([page.mediabox for page in doc.get_pages()],
-                                        float).reshape((-1, 2, 2))
+            result._pageInfos.append(PDFPageInfos(links = pageLinks, pageBox = pageBox))
 
         return result
