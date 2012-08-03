@@ -135,7 +135,9 @@ class PDFDecanter(QtCore.QObject):
             elif event.type() == QtCore.QEvent.Resize:
                 self.resizeEvent(event)
         elif obj is self._scene:
-            if event.type() == QtCore.QEvent.GraphicsSceneMouseRelease:
+            if event.type() == QtCore.QEvent.GraphicsSceneMousePress:
+                self.mousePressEvent(event)
+            elif event.type() == QtCore.QEvent.GraphicsSceneMouseRelease:
                 self.mouseReleaseEvent(event)
         if event.isAccepted():
             return True
@@ -155,7 +157,16 @@ class PDFDecanter(QtCore.QObject):
     def _hideMouse(self):
         self._view.setCursor(QtCore.Qt.BlankCursor)
 
+    def mousePressEvent(self, e):
+        self._mousePressPos = e.screenPos()
+
     def mouseReleaseEvent(self, e):
+        wasClick = (self._mousePressPos is not None) \
+            and (e.screenPos() - self._mousePressPos).manhattanLength() < 6
+        self._mousePressPos = None
+        if not wasClick:
+            return
+        
         if not self._inOverview:
             if self._currentFrameIndex < len(self._frame2Slide) - 1:
                 self.gotoFrame(self._currentFrameIndex + 1, animated = True)
@@ -376,6 +387,7 @@ class PDFDecanter(QtCore.QObject):
                 self._animatedRenderers = (previousRenderer, renderer, topRenderer, oldPos)
 
                 self._slideAnimation = QtCore.QParallelAnimationGroup()
+                self._slideAnimation.finished.connect(self._resetSlideAnimation)
 
                 offset = w if frameIndex > self._currentFrameIndex else -w
 
@@ -419,6 +431,7 @@ class PDFDecanter(QtCore.QObject):
         if isinstance(link, int):
             frameIndex = link
             self.gotoFrame(frameIndex, animated = True)
+            self._mousePressPos = None # don't handle click again in mouseReleaseEvent
             return True
         return False
 
