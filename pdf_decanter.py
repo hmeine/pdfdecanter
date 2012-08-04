@@ -175,7 +175,7 @@ class PDFDecanter(QtCore.QObject):
                 if isinstance(item, slide_renderer.SlideRenderer):
                     slideIndex = self._renderers.index(item)
                     self.gotoFrame(self._slide2Frame[slideIndex] +
-                                   self._slides[slideIndex].currentFrameIndex(), animated = False)
+                                   self._slides[slideIndex].currentSubIndex(), animated = False)
                     break
 
     def loadPDF(self, pdfFilename, cacheFilename = None):
@@ -408,7 +408,7 @@ class PDFDecanter(QtCore.QObject):
                 self._slideAnimation.start()
             elif animated != 'slide':
                 self._blendAnimation = QtCore.QPropertyAnimation(
-                    renderer.frameItem(renderer.slide().currentFrameIndex()), "opacity")
+                    renderer.frameItem(renderer.slide().currentSubIndex()), "opacity")
                 self._blendAnimation.setDuration(BLEND_DURATION)
                 self._blendAnimation.setStartValue(0.0)
                 self._blendAnimation.setEndValue(1.0)
@@ -459,7 +459,7 @@ class PDFDecanter(QtCore.QObject):
                 slideIndex = self._gotoSlideIndex - 1
                 self._gotoSlideIndex = None
                 self.gotoFrame(self._slide2Frame[slideIndex] +
-                               self._slides[slideIndex].currentFrameIndex(), animated = True)
+                               self._slides[slideIndex].currentSubIndex(), animated = True)
         elif event.text() == 'Q':
             self._view.window().close()
             event.accept()
@@ -591,7 +591,7 @@ class PDFDecanter(QtCore.QObject):
         if desiredSlideIndex is not None:
             self._currentFrameIndex = (
                 self._slide2Frame[desiredSlideIndex] +
-                self._slides[desiredSlideIndex].currentFrameIndex())
+                self._slides[desiredSlideIndex].currentSubIndex())
             self._updateCursor(animated = True)
 
 

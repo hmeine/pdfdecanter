@@ -133,7 +133,7 @@ class SlideRenderer(QtGui.QGraphicsWidget):
 
         # set parent of custom items:
         parent = self.frameItem(frameIndex)
-        parent.setVisible(frameIndex <= self._slide.currentFrameIndex())
+        parent.setVisible(frameIndex <= self._slide.currentSubIndex())
         for item in items:
             item.setParentItem(parent)
 
@@ -143,13 +143,13 @@ class SlideRenderer(QtGui.QGraphicsWidget):
     def addCustomCallback(self, cb):
         """Register callback for frame changes.  Expects callable that
         will be called with two arguments: the SlideRenderer (which
-        can be queried for the currentFrameIndex()) and the new frameIndex
-        that is about to become the currentFrameIndex().
+        can be queried for the currentSubIndex()) and the new frameIndex
+        that is about to become the currentSubIndex().
 
         TODO: Call with None if slide becomes invisible/inactive."""
         self._frameCallbacks.append(cb)
-        if self._slide.currentFrameIndex() is not None:
-            cb(self, self._slide.currentFrameIndex())
+        if self._slide.currentSubIndex() is not None:
+            cb(self, self._slide.currentSubIndex())
 
     def uncover(self, seen = True):
         self._slide.setSeen(seen)
@@ -162,9 +162,9 @@ class SlideRenderer(QtGui.QGraphicsWidget):
         for cb in self._frameCallbacks:
             cb(self, frameIndex)
 
-        self._slide.setCurrentFrameIndex(frameIndex)
+        self._slide.setCurrentSubIndex(frameIndex)
 
-        for i in range(0, self._slide.currentFrameIndex() + 1):
+        for i in range(0, self._slide.currentSubIndex() + 1):
             item = self.frameItem(i)
             item.setVisible(True)
             if self.DEBUG:

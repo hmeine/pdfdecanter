@@ -134,13 +134,13 @@ class Slide(object):
     represent transition states of the same presentation slide.  It is
     assumed that all frames have the same size."""
     
-    __slots__ = ('_size', '_frames', '_currentFrameIndex', '_seen')
+    __slots__ = ('_size', '_frames', '_currentSubIndex', '_seen')
     
     def __init__(self, size):
         self._size = size
         self._frames = []
 
-        self._currentFrameIndex = None
+        self._currentSubIndex = None
         self._seen = False
 
     def size(self):
@@ -149,8 +149,8 @@ class Slide(object):
     def __len__(self):
         return len(self._frames)
 
-    def __getitem__(self, frameIndex):
-        return self.frame(frameIndex)
+    def __getitem__(self, subIndex):
+        return self.frame(subIndex)
 
     # def contentRect(self, margin = 0):
     #     header_rect = self._header and self._header.boundingRect()
@@ -168,17 +168,17 @@ class Slide(object):
         self._frames.append(frame)
         frame.setSlide(self)
 
-    def frame(self, frameIndex):
-        return self._frames[frameIndex]
+    def frame(self, subIndex):
+        return self._frames[subIndex]
 
-    def currentFrameIndex(self):
-        return self._currentFrameIndex
+    def currentSubIndex(self):
+        return self._currentSubIndex
 
     def currentFrame(self):
-        return self.frame(self._currentFrameIndex)
+        return self.frame(self._currentSubIndex)
 
-    def setCurrentFrameIndex(self, index):
-        self._currentFrameIndex = index
+    def setCurrentSubIndex(self, index):
+        self._currentSubIndex = index
         # TODO: notification?
 
     def seen(self):
@@ -203,7 +203,7 @@ class Slide(object):
         self._size = QtCore.QSizeF(w, h)
         self._frames = [Frame(deserializePatches(frame), self) for frame in frames]
         # __init__ is not called:
-        self._currentFrameIndex = None
+        self._currentSubIndex = None
         self._seen = None
 
 
