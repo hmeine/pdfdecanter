@@ -168,14 +168,13 @@ class PDFDecanter(QtCore.QObject):
             return
         
         if not self._inOverview:
-            if self._currentFrameIndex < len(self._frame2Slide) - 1:
+            if self._currentFrameIndex < self._slides.frameCount() - 1:
                 self.gotoFrame(self._currentFrameIndex + 1, animated = True)
         else:
             for item in self._scene.items(e.scenePos()):
                 if isinstance(item, slide_renderer.SlideRenderer):
                     slideIndex = self._renderers.index(item)
-                    self.gotoFrame(self._slide2Frame[slideIndex] +
-                                   self._slides[slideIndex].currentSubIndex(), animated = False)
+                    self.gotoFrame(self._slides[slideIndex].currentFrame().frameIndex(), animated = False)
                     break
 
     def loadPDF(self, pdfFilename, cacheFilename = None):
@@ -221,16 +220,8 @@ class PDFDecanter(QtCore.QObject):
 
         self.setSlides(slides)
 
-    def _slidesChanged(self):
-        self._frame2Slide = []
-        self._slide2Frame = []
-        for i, s in enumerate(self._slides):
-            self._slide2Frame.append(len(self._frame2Slide))
-            self._frame2Slide.extend([(i, j) for j in range(len(s))])
-
     def setSlides(self, slides):
         self._slides = slides
-        self._slidesChanged()
         assert not self._renderers, "FIXME: delete old renderers / graphics items"
         self._renderers = [slide_renderer.SlideRenderer(s, self._presentationItem) for s in slides]
         for r in self._renderers:
@@ -246,8 +237,9 @@ class PDFDecanter(QtCore.QObject):
         infos = self._slides.pdfInfos()
         if infos and infos.outline():
             for level, title, frameIndex in infos.outline():
-                slideLevel[self._frame2Slide[frameIndex][0]] = level
+                slideLevel[self._slides.frame(frameIndex).slide().slideIndex()] = level
 
+            # prevent too many linebreaks (very fine-grained PDF outline):
             while numpy.diff(numpy.nonzero(slideLevel)[0]).mean() < self._overviewColumnCount-0.5:
                 slideLevel[slideLevel == slideLevel.max()] = 0
 
@@ -344,7 +336,7 @@ class PDFDecanter(QtCore.QObject):
         self._inOverview = True
 
     def _currentRenderer(self):
-        slideIndex, _ = self._frame2Slide[self._currentFrameIndex]
+        slideIndex = self._slides.frame(self._currentFrameIndex).slide().slideIndex()
         return self._renderers[slideIndex]
 
     def _resetSlideAnimation(self):
@@ -363,10 +355,10 @@ class PDFDecanter(QtCore.QObject):
     def gotoFrame(self, frameIndex, animated = False):
         self._resetSlideAnimation()
 
-        slideIndex, subFrame = self._frame2Slide[frameIndex]
-        renderer = self._renderers[slideIndex]
+        targetFrame = self._slides.frame(frameIndex)
+        renderer = self._renderers[targetFrame.slide().slideIndex()]
         renderer.uncover()
-        renderer.showFrame(subFrame)
+        renderer.showFrame(targetFrame.subIndex())
 
         if animated:
             previousRenderer = self._currentRenderer()
@@ -458,8 +450,7 @@ class PDFDecanter(QtCore.QObject):
                 event.accept()
                 slideIndex = self._gotoSlideIndex - 1
                 self._gotoSlideIndex = None
-                self.gotoFrame(self._slide2Frame[slideIndex] +
-                               self._slides[slideIndex].currentSubIndex(), animated = True)
+                self.gotoFrame(self._slides[slideIndex].currentFrame().frameIndex(), animated = True)
         elif event.text() == 'Q':
             self._view.window().close()
             event.accept()
@@ -494,7 +485,7 @@ class PDFDecanter(QtCore.QObject):
                 event.accept()
         else:
             if event.key() in (QtCore.Qt.Key_Space, QtCore.Qt.Key_Right, QtCore.Qt.Key_PageDown):
-                if self._currentFrameIndex < len(self._frame2Slide) - 1:
+                if self._currentFrameIndex < self._slides.frameCount() - 1:
                     self.gotoFrame(self._currentFrameIndex + 1, animated = True)
                     event.accept()
             elif event.key() in (QtCore.Qt.Key_Backspace, QtCore.Qt.Key_Left, QtCore.Qt.Key_PageUp):
@@ -580,7 +571,7 @@ class PDFDecanter(QtCore.QObject):
             desiredSlideIndex = self._renderers.index(desiredSlide)
             setY(self._cursorPos, centerY)
         else:
-            currentSlideIndex, _ = self._frame2Slide[self._currentFrameIndex]
+            currentSlideIndex = self._slides.frame(self._currentFrameIndex).slide().slideIndex()
             if event.key() == QtCore.Qt.Key_Right:
                 if currentSlideIndex < len(self._slides)-1:
                     desiredSlideIndex = currentSlideIndex + 1
@@ -589,9 +580,7 @@ class PDFDecanter(QtCore.QObject):
                     desiredSlideIndex = currentSlideIndex - 1
 
         if desiredSlideIndex is not None:
-            self._currentFrameIndex = (
-                self._slide2Frame[desiredSlideIndex] +
-                self._slides[desiredSlideIndex].currentSubIndex())
+            self._currentFrameIndex = self._slides[desiredSlideIndex].currentFrame().frameIndex()
             self._updateCursor(animated = True)
 
 
@@ -641,7 +630,7 @@ if __name__ == "__main__":
 
         pixelCount = g._slides.pixelCount()
         ss = g._slides[0].size()
-        rawCount = len(g._frame2Slide) * ss.width() * ss.height()
+        rawCount = g._slides.frameCount() * ss.width() * ss.height()
         print "%d pixels out of %d retained. (%.1f%%)" % (pixelCount, rawCount, 100.0 * pixelCount / rawCount)
 
     if not g.hadEventLoop:

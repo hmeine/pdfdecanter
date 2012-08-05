@@ -89,11 +89,25 @@ class Frame(object):
     def setSlide(self, slide):
         self._slide = slide
 
+    def slide(self):
+        return self._slide
+
+    def presentation(self):
+        return self._slide.presentation()
+
     def content(self):
         return self._content
 
     def patchSet(self):
         return set(self._content)
+
+    def frameIndex(self):
+        """Return frameIndex() into whole presentation()."""
+        return self.presentation().frameIndex(self)
+
+    def subIndex(self):
+        """Return subIndex() into parent slide()."""
+        return self.slide().index(self)
 
     def setPDFPageInfos(self, infos):
         self._pdfPageInfos = infos
@@ -134,10 +148,11 @@ class Slide(object):
     represent transition states of the same presentation slide.  It is
     assumed that all frames have the same size."""
     
-    __slots__ = ('_size', '_frames', '_currentSubIndex', '_seen')
+    __slots__ = ('_size', '_presentation', '_frames', '_currentSubIndex', '_seen')
     
-    def __init__(self, size):
+    def __init__(self, size, presentation):
         self._size = size
+        self._presentation = presentation
         self._frames = []
 
         self._currentSubIndex = None
@@ -146,11 +161,20 @@ class Slide(object):
     def size(self):
         return self._size
 
+    def presentation(self):
+        return self._presentation
+
+    def slideIndex(self):
+        return self._presentation.index(self)
+
     def __len__(self):
         return len(self._frames)
 
     def __getitem__(self, subIndex):
         return self.frame(subIndex)
+
+    def index(self, frame):
+        return self._frames.index(frame)
 
     # def contentRect(self, margin = 0):
     #     header_rect = self._header and self._header.boundingRect()
@@ -201,6 +225,7 @@ class Slide(object):
                            for (x, y), patch in patches)
         (w, h), frames = state
         self._size = QtCore.QSizeF(w, h)
+        self._presentation = None
         self._frames = [Frame(deserializePatches(frame), self) for frame in frames]
         # __init__ is not called:
         self._currentSubIndex = None
@@ -212,14 +237,34 @@ class Presentation(list):
 
     def __init__(self, infos = None):
         self._pdfInfos = infos
+        self._slidesChanged()
+
+    def _slidesChanged(self):
+        self._frame2Slide = []
+        self._slide2Frame = []
+        for i, s in enumerate(self):
+            self._slide2Frame.append(len(self._frame2Slide))
+            self._frame2Slide.extend([(i, j) for j in range(len(s))])
+            s._presentation = self
 
     def pdfInfos(self):
         return self._pdfInfos
+
+    def frameCount(self):
+        return len(self._frame2Slide)
 
     def frames(self):
         for slide in self:
             for frame in slide:
                 yield frame
+
+    def frame(self, frameIndex):
+        slideIndex, subIndex = self._frame2Slide[frameIndex]
+        return self[slideIndex][subIndex]
+
+    def frameIndex(self, frame):
+        slideIndex = self.index(frame.slide())
+        return self._slide2Frame[slideIndex] + frame.subIndex()
 
     def setPDFInfos(self, infos):
         self._pdfInfos = infos
@@ -247,6 +292,7 @@ class Presentation(list):
     def __setstate__(self, state):
         pdfInfos, = state
         self.setPDFInfos(pdfInfos)
+        self._slidesChanged()
 
 
 # --------------------------------------------------------------------
@@ -462,7 +508,7 @@ def stack_frames(raw_pages):
         isNewSlide = True
 
         if isNewSlide:
-            result.append(Slide(frame_size))
+            result.append(Slide(frame_size, result))
             frame = Frame(Patches.extract(page2, rects, cache))
         else:
             frame = Frame(Patches.extract(page2, changed, cache))
