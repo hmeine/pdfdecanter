@@ -56,10 +56,18 @@ class Patch(object):
             return 0
         return cmp(self._image, other._image) # fall back to id (memory address)
 
+    def __getstate__(self):
+        return (self.xy(), self.ndarray().copy())
+
+    def __setstate__(self, state):
+        (x, y), patch = state
+        self._pos = QtCore.QPoint(x, y)
+        self._image = array2qimage(patch)
+        self._pixmap = None
+
 
 class Patches(list):
-    """List of (pos, patch) pairs, where pos is a QPoint and patch a
-    QImage."""
+    """List of Patch instances, which are basically positioned QImage patches."""
     
     __slots__ = ()
     
@@ -222,20 +230,14 @@ class Slide(object):
         # TODO: notification?
 
     def __getstate__(self):
-        def serializePatches(patches):
-            return [((pos.x(), pos.y()), rgb_view(patch).copy())
-                    for pos, patch in patches]
         return ((self._size.width(), self._size.height()),
-                [serializePatches(frame.content()) for frame in self._frames])
+                [frame.content() for frame in self._frames])
 
     def __setstate__(self, state):
-        def deserializePatches(patches):
-            return Patches(Patch(QtCore.QPoint(x, y), array2qimage(patch))
-                           for (x, y), patch in patches)
         (w, h), frames = state
         self._size = QtCore.QSizeF(w, h)
         self._presentation = None
-        self._frames = [Frame(deserializePatches(frame), self) for frame in frames]
+        self._frames = [Frame(frame, self) for frame in frames]
         # __init__ is not called:
         self._currentSubIndex = None
         self._seen = None
