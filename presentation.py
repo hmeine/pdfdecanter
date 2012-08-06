@@ -527,4 +527,5 @@ def stack_frames(raw_pages):
 
         page1 = page2
 
+    result._slidesChanged()
     return result
