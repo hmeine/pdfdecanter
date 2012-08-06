@@ -69,12 +69,11 @@ class SlideRenderer(QtGui.QGraphicsWidget):
             result.setZValue(zValue)
             result.setAcceptedMouseButtons(QtCore.Qt.NoButton)
 
-            for pos, patch in patches:
-                pixmap = QtGui.QPixmap.fromImage(patch)
+            for patch in patches:
                 pmItem = QtGui.QGraphicsPixmapItem(result)
                 pmItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-                pmItem.setPos(QtCore.QPointF(pos))
-                pmItem.setPixmap(pixmap)
+                pmItem.setPos(QtCore.QPointF(patch.pos()))
+                pmItem.setPixmap(patch.pixmap())
                 pmItem.setTransformationMode(QtCore.Qt.SmoothTransformation)
 
             if parentItem is self._items['content']:

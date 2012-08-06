@@ -1,5 +1,5 @@
 import numpy, sys, time, hashlib
-from dynqt import QtCore, array2qimage, rgb_view
+from dynqt import QtCore, QtGui, array2qimage, rgb_view
 
 
 def boundingRect(rects):
@@ -10,17 +10,26 @@ def boundingRect(rects):
 
 
 class Patch(object):
-    __slots__ = ('_pos', '_image')
+    __slots__ = ('_pos', '_image', '_pixmap')
     
     def __init__(self, pos, image):
         self._pos = pos
         self._image = image
+        self._pixmap = None
+
+    def pos(self):
+        return self._pos
 
     def xy(self):
         return self._pos.x(), self._pos.y()
 
     def ndarray(self):
         return rgb_view(self._image)
+
+    def pixmap(self):
+        if self._pixmap is None:
+            self._pixmap = QtGui.QPixmap.fromImage(self._image)
+        return self._pixmap
 
     def pixelCount(self):
         return self._image.width() * self._image.height()
