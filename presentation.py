@@ -44,17 +44,8 @@ class Patch(object):
         yield self._pos
         yield self._image
 
-    def __hash__(self):
-        return hash((self.xy(),
-                     hashlib.md5(self.ndarray()).digest()))
-
-    def __cmp__(self, other):
-        result = cmp(type(self), type(other)) or cmp(self.xy(), other.xy())
-        if result:
-            return result
-        if numpy.all(self.ndarray() == other.ndarray()):
-            return 0
-        return cmp(self._image, other._image) # fall back to id (memory address)
+    def key(self):
+        return (self.xy(), hashlib.md5(self.ndarray()).digest())
 
     def __getstate__(self):
         return (self.xy(), self.ndarray().copy())
@@ -85,9 +76,10 @@ class Patches(list):
         for r in rects:
             patch = Patch.extract(frame, r)
             if cache is not None:
-                # reuse existing Patch if it compares equal:
-                patch = cache.get(patch, patch)
-                cache[patch] = patch
+                # reuse existing Patch if it has the same key:
+                key = patch.key()
+                patch = cache.get(key, patch)
+                cache[key] = patch
             patches.append(patch)
         return patches
 
@@ -527,5 +519,6 @@ def stack_frames(raw_pages):
 
         page1 = page2
 
+    print len(cache)
     result._slidesChanged()
     return result
