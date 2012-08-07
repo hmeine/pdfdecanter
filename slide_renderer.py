@@ -61,7 +61,8 @@ class SlideRenderer(QtGui.QGraphicsWidget):
         result = self._items.get(frameIndex, None)
         
         if result is None:
-            patches = self._slide.frame(frameIndex).content()
+            frame = self._slide.frame(frameIndex)
+            
             parentItem = self._items['content']
             zValue = 100 + frameIndex
 
@@ -69,32 +70,31 @@ class SlideRenderer(QtGui.QGraphicsWidget):
             result.setZValue(zValue)
             result.setAcceptedMouseButtons(QtCore.Qt.NoButton)
 
-            for patch in patches:
+            for patch in frame.content():
                 pmItem = QtGui.QGraphicsPixmapItem(result)
                 pmItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
                 pmItem.setPos(QtCore.QPointF(patch.pos()))
                 pmItem.setPixmap(patch.pixmap())
                 pmItem.setTransformationMode(QtCore.Qt.SmoothTransformation)
 
-            if parentItem is self._items['content']:
-                for rect, link in self._slide.frame(frameIndex).linkRects():
-                    if link.startswith('file:') and link.endswith('.mng'):
-                        movie = QtGui.QMovie(link[5:])
-                        player = QtGui.QLabel()
-                        player.setMovie(movie)
-                        movie.setScaledSize(rect.size().toSize())
-                        player.resize(round(rect.width()), round(rect.height()))
-                        item = QtGui.QGraphicsProxyWidget(result)
-                        item.setWidget(player)
-                        item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-                        item.setPos(rect.topLeft())
-                        movie.start()
+            for rect, link in frame.linkRects():
+                if link.startswith('file:') and link.endswith('.mng'):
+                    movie = QtGui.QMovie(link[5:])
+                    player = QtGui.QLabel()
+                    player.setMovie(movie)
+                    movie.setScaledSize(rect.size().toSize())
+                    player.resize(round(rect.width()), round(rect.height()))
+                    item = QtGui.QGraphicsProxyWidget(result)
+                    item.setWidget(player)
+                    item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
+                    item.setPos(rect.topLeft())
+                    movie.start()
 
-                if self.DEBUG:
-                    for rect, link in self._slide.frame(frameIndex).linkRects(onlyExternal = False):
-                        linkFrame = QtGui.QGraphicsRectItem(rect, parentItem)
-                        linkFrame.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-                        linkFrame.setPen(QtGui.QPen(QtCore.Qt.yellow))
+            if self.DEBUG:
+                for rect, link in frame.linkRects(onlyExternal = False):
+                    linkFrame = QtGui.QGraphicsRectItem(rect, parentItem)
+                    linkFrame.setAcceptedMouseButtons(QtCore.Qt.NoButton)
+                    linkFrame.setPen(QtGui.QPen(QtCore.Qt.yellow))
 
             self._items[frameIndex] = result
 
