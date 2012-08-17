@@ -104,6 +104,12 @@ class Frame(object):
     def presentation(self):
         return self._slide.presentation()
 
+    def size(self):
+        return self._slide._size
+
+    def backgroundColor(self):
+        return QtCore.Qt.white
+
     def content(self):
         return self._content
 

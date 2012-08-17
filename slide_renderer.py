@@ -2,44 +2,63 @@ from dynqt import QtCore, QtGui
 
 UNSEEN_OPACITY = 0.5
 
-class SlideRenderer(QtGui.QGraphicsWidget):
+
+class FrameRenderer(QtGui.QGraphicsWidget):
     DEBUG = False # True
 
-    def __init__(self, slide, parentItem):
+    def __init__(self, parentItem):
         QtGui.QGraphicsWidget.__init__(self, parentItem)
-        self._slide = slide
-        self.setGeometry(QtCore.QRectF(QtCore.QPointF(0, 0), slide.size()))
 
-        self._frameCallbacks = []
+        self._frame = None
         self._linkHandler = None
-
         self._items = {}
-
-        self.showFrame()
-
-    def slide(self):
-        return self._slide
 
     def setLinkHandler(self, linkHandler):
         self._linkHandler = linkHandler
 
-    def _setupItems(self):
-        self._backgroundItem()
+    def setFrame(self, frame):
+        if self._frame is frame:
+            return
 
-        contentItem = QtGui.QGraphicsWidget(self)
-        contentItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-        self._items['content'] = contentItem
+        self._frame = frame
+        self.setGeometry(QtCore.QRectF(QtCore.QPointF(0, 0), frame.size()))
 
-        self._coverItem()
+        parentItem = self.contentItem()
 
-    def _slideRect(self):
-        return QtCore.QRectF(QtCore.QPointF(0, 0), self._slide.size())
+        for patch in frame.content():
+            pmItem = QtGui.QGraphicsPixmapItem(parentItem)
+            pmItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
+            pmItem.setPos(QtCore.QPointF(patch.pos()))
+            pmItem.setPixmap(patch.pixmap())
+            pmItem.setTransformationMode(QtCore.Qt.SmoothTransformation)
+
+        for rect, link in frame.linkRects():
+            if link.startswith('file:') and link.endswith('.mng'):
+                movie = QtGui.QMovie(link[5:])
+                player = QtGui.QLabel()
+                player.setMovie(movie)
+                movie.setScaledSize(rect.size().toSize())
+                player.resize(round(rect.width()), round(rect.height()))
+                item = QtGui.QGraphicsProxyWidget(parentItem)
+                item.setWidget(player)
+                item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
+                item.setPos(rect.topLeft())
+                movie.start()
+
+        if self.DEBUG:
+            for rect, link in frame.linkRects(onlyExternal = False):
+                linkFrame = QtGui.QGraphicsRectItem(rect, parentItem)
+                linkFrame.setAcceptedMouseButtons(QtCore.Qt.NoButton)
+                linkFrame.setPen(QtGui.QPen(QtCore.Qt.yellow))
+
+    def _frameRect(self):
+        return QtCore.QRectF(QtCore.QPointF(0, 0), self._frame.size())
 
     def _rectItem(self, color, key):
         result = self._items.get(key, None)
         
         if result is None:
-            result = QtGui.QGraphicsRectItem(self._slideRect(), self)
+            result = QtGui.QGraphicsRectItem(self._frameRect(), self)
             result.setAcceptedMouseButtons(QtCore.Qt.NoButton)
             result.setBrush(color)
             result.setPen(QtGui.QPen(QtCore.Qt.NoPen))
@@ -48,7 +67,41 @@ class SlideRenderer(QtGui.QGraphicsWidget):
         return result
 
     def _backgroundItem(self):
-        return self._rectItem(QtCore.Qt.white if not self.DEBUG else QtCore.Qt.red, key = 'bg')
+        return self._rectItem(self._frame.backgroundColor() if not self.DEBUG else QtCore.Qt.red, key = 'bg')
+
+    def contentItem(self):
+        result = self._items.get('content', None)
+
+        if result is None:
+            self._backgroundItem()
+
+            result = QtGui.QGraphicsWidget(self)
+            result.setAcceptedMouseButtons(QtCore.Qt.NoButton)
+            self._items['content'] = result
+
+        return result
+
+    def mousePressEvent(self, event):
+        if self._linkHandler:
+            link = self._frame.linkAt(event.pos())
+            if link is not None:
+                if self._linkHandler(link):
+                    event.accept()
+                    return
+        QtGui.QGraphicsWidget.mousePressEvent(self, event)
+
+
+class SlideRenderer(FrameRenderer):
+    def __init__(self, slide, parentItem):
+        FrameRenderer.__init__(self, parentItem)
+
+        self._slide = slide
+        self._frameCallbacks = []
+
+        self.showFrame()
+
+    def slide(self):
+        return self._slide
 
     def _coverItem(self):
         result = self._rectItem(QtCore.Qt.black, key = 'cover')
@@ -57,60 +110,7 @@ class SlideRenderer(QtGui.QGraphicsWidget):
         result.setVisible(not self._slide.seen())
         return result
 
-    def frameItem(self, frameIndex):
-        result = self._items.get(frameIndex, None)
-        
-        if result is None:
-            frame = self._slide.frame(frameIndex)
-            
-            parentItem = self._items['content']
-            zValue = 100 + frameIndex
-
-            result = QtGui.QGraphicsWidget(parentItem)
-            result.setZValue(zValue)
-            result.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-
-            for patch in frame.content():
-                pmItem = QtGui.QGraphicsPixmapItem(result)
-                pmItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-                pmItem.setPos(QtCore.QPointF(patch.pos()))
-                pmItem.setPixmap(patch.pixmap())
-                pmItem.setTransformationMode(QtCore.Qt.SmoothTransformation)
-
-            for rect, link in frame.linkRects():
-                if link.startswith('file:') and link.endswith('.mng'):
-                    movie = QtGui.QMovie(link[5:])
-                    player = QtGui.QLabel()
-                    player.setMovie(movie)
-                    movie.setScaledSize(rect.size().toSize())
-                    player.resize(round(rect.width()), round(rect.height()))
-                    item = QtGui.QGraphicsProxyWidget(result)
-                    item.setWidget(player)
-                    item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-                    item.setPos(rect.topLeft())
-                    movie.start()
-
-            if self.DEBUG:
-                for rect, link in frame.linkRects(onlyExternal = False):
-                    linkFrame = QtGui.QGraphicsRectItem(rect, parentItem)
-                    linkFrame.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-                    linkFrame.setPen(QtGui.QPen(QtCore.Qt.yellow))
-
-            self._items[frameIndex] = result
-
-        return result
-
-    def mousePressEvent(self, event):
-        if self._linkHandler:
-            link = self._slide.currentFrame().linkAt(event.pos())
-            if link is not None:
-                if self._linkHandler(link):
-                    event.accept()
-                    return
-        QtGui.QGraphicsWidget.mousePressEvent(self, event)
-
-    def contentItem(self):
-        return self._items['content']
+    #            frame = self._slide.frame(frameIndex)
 
     def addCustomContent(self, items, frameIndex = 0):
         """Add given custom items to the SlideRenderer, for the given
@@ -118,6 +118,8 @@ class SlideRenderer(QtGui.QGraphicsWidget):
         largest valid index, new frames will be added accordingly.  If
         frameIndex is None, it defaults to len(slide()),
         i.e. appending one new frame."""
+
+        assert False, "FIXME: not implemented (add CustomItem to Frame contents, alongside Patches?)"
 
         # add items:
         customItems = self.customItems()
@@ -155,22 +157,11 @@ class SlideRenderer(QtGui.QGraphicsWidget):
         self._coverItem().setVisible(not seen)
 
     def showFrame(self, frameIndex = 0):
-        if not self._items:
-            self._setupItems()
+        self._slide.setCurrentSubIndex(frameIndex)
+
+        self.setFrame(self._slide.currentFrame())
 
         for cb in self._frameCallbacks:
             cb(self, frameIndex)
-
-        self._slide.setCurrentSubIndex(frameIndex)
-
-        for i in range(0, self._slide.currentSubIndex() + 1):
-            item = self.frameItem(i)
-            item.setVisible(True)
-            if self.DEBUG:
-                item.setOpacity(0.5 if i < frameIndex else 1.0)
-
-        for i in range(frameIndex + 1, len(self._slide)):
-            if i in self._items:
-                self._items[i].setVisible(False)
 
         return self
