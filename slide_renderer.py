@@ -16,21 +16,16 @@ class FrameRenderer(QtGui.QGraphicsWidget):
     def setLinkHandler(self, linkHandler):
         self._linkHandler = linkHandler
 
-    def setFrame(self, frame):
-        if self._frame is frame:
-            return
-
-        self._frame = frame
-        self.setGeometry(QtCore.QRectF(QtCore.QPointF(0, 0), frame.size()))
-
-        parentItem = self.contentItem()
+    def _frameItems(self, frame):
+        result = {}
 
         for patch in frame.content():
-            pmItem = QtGui.QGraphicsPixmapItem(parentItem)
+            pmItem = QtGui.QGraphicsPixmapItem()
             pmItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
             pmItem.setPos(QtCore.QPointF(patch.pos()))
             pmItem.setPixmap(patch.pixmap())
             pmItem.setTransformationMode(QtCore.Qt.SmoothTransformation)
+            result[patch] = pmItem
 
         for rect, link in frame.linkRects():
             if link.startswith('file:') and link.endswith('.mng'):
@@ -39,17 +34,35 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                 player.setMovie(movie)
                 movie.setScaledSize(rect.size().toSize())
                 player.resize(round(rect.width()), round(rect.height()))
-                item = QtGui.QGraphicsProxyWidget(parentItem)
+
+                item = QtGui.QGraphicsProxyWidget()
                 item.setWidget(player)
                 item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
                 item.setPos(rect.topLeft())
                 movie.start()
+                result[link] = item
 
         if self.DEBUG:
             for rect, link in frame.linkRects(onlyExternal = False):
-                linkFrame = QtGui.QGraphicsRectItem(rect, parentItem)
+                linkFrame = QtGui.QGraphicsRectItem(rect)
                 linkFrame.setAcceptedMouseButtons(QtCore.Qt.NoButton)
                 linkFrame.setPen(QtGui.QPen(QtCore.Qt.yellow))
+                result['DEBUG_%s' % link] = linkFrame
+
+        return result
+
+    def setFrame(self, frame):
+        if self._frame is frame:
+            return
+
+        self._frame = frame
+        self.setGeometry(QtCore.QRectF(QtCore.QPointF(0, 0), frame.size()))
+
+        parentItem = self.contentItem()
+        items = self._frameItems(frame)
+        for item in items.values():
+            item.setParentItem(parentItem)
+        self._items.update(items)
 
     def _frameRect(self):
         return QtCore.QRectF(QtCore.QPointF(0, 0), self._frame.size())
@@ -67,7 +80,9 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         return result
 
     def _backgroundItem(self):
-        return self._rectItem(self._frame.backgroundColor() if not self.DEBUG else QtCore.Qt.red, key = 'bg')
+        return self._rectItem(self._frame.backgroundColor()
+                              if not self.DEBUG else QtCore.Qt.red,
+                              key = 'bg')
 
     def contentItem(self):
         result = self._items.get('content', None)
@@ -109,8 +124,6 @@ class SlideRenderer(FrameRenderer):
         result.setOpacity(1.0 - UNSEEN_OPACITY)
         result.setVisible(not self._slide.seen())
         return result
-
-    #            frame = self._slide.frame(frameIndex)
 
     def addCustomContent(self, items, frameIndex = 0):
         """Add given custom items to the SlideRenderer, for the given
