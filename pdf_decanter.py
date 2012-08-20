@@ -398,13 +398,6 @@ class PDFDecanter(QtCore.QObject):
                 self._slideAnimation.addAnimation(slideOutAnim)
                 self._slideAnimation.addAnimation(slideInAnim)
                 self._slideAnimation.start()
-            elif animated != 'slide':
-                self._blendAnimation = QtCore.QPropertyAnimation(
-                    renderer.frameItem(renderer.slide().currentSubIndex()), "opacity")
-                self._blendAnimation.setDuration(BLEND_DURATION)
-                self._blendAnimation.setStartValue(0.0)
-                self._blendAnimation.setEndValue(1.0)
-                self._blendAnimation.start()
 
         self._currentFrameIndex = frameIndex
 

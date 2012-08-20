@@ -20,6 +20,9 @@ class Patch(object):
     def pos(self):
         return self._pos
 
+    def size(self):
+        return self._image.size()
+
     def xy(self):
         return self._pos.x(), self._pos.y()
 
@@ -33,6 +36,9 @@ class Patch(object):
 
     def pixelCount(self):
         return self._image.width() * self._image.height()
+
+    def isSuccessorOf(self, other):
+        return self._pos == other._pos and self.size() == other.size()
 
     @classmethod
     def extract(cls, frame, rect):
@@ -156,6 +162,17 @@ class Frame(object):
                 return link
         return None
 
+    def isSuccessorOf(self, other):
+        for patch in other.content():
+            found = patch in self._content
+            if not found:
+                for replacement in self._content:
+                    if replacement.isSuccessorOf(patch):
+                        found = True
+                        break
+            if not found:
+                return False
+        return True
 
 
 class Slide(object):
@@ -509,21 +526,18 @@ def stack_frames(raw_pages):
 
     cache = {}
 
-    page1 = canvas
-    for page2 in raw_pages:
-        changed = changed_rects(page1, page2)
-        rects = changed_rects(canvas, page2)
+    prevFrame = None
+    for page in raw_pages:
+        rects = changed_rects(canvas, page)
 
-        isNewSlide = True
+        frame = Frame(Patches.extract(page, rects, cache))
 
-        if isNewSlide:
+        # new Slide?
+        if not prevFrame or not frame.isSuccessorOf(prevFrame):
             result.append(Slide(frame_size, result))
-            frame = Frame(Patches.extract(page2, rects, cache))
-        else:
-            frame = Frame(Patches.extract(page2, changed, cache))
-        result[-1].addFrame(frame)
 
-        page1 = page2
+        result[-1].addFrame(frame)
+        prevFrame = frame
 
     print len(cache)
     result._slidesChanged()
