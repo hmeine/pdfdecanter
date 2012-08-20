@@ -12,6 +12,14 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         self._frame = None
         self._linkHandler = None
         self._items = {}
+        # possible keys:
+        # - Patch instances
+        # - links (as string)
+        # - 'DEBUG_[somelink]' (link rects in debug mode)
+        # - 'bg'
+        # - 'content'
+        # - 'cover'
+        # - 'custom' (LIST of items!)
 
     def setLinkHandler(self, linkHandler):
         self._linkHandler = linkHandler
@@ -20,34 +28,41 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         result = {}
 
         for patch in frame.content():
-            pmItem = QtGui.QGraphicsPixmapItem()
-            pmItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-            pmItem.setPos(QtCore.QPointF(patch.pos()))
-            pmItem.setPixmap(patch.pixmap())
-            pmItem.setTransformationMode(QtCore.Qt.SmoothTransformation)
+            pmItem = self._items.get(patch, None)
+            if pmItem is None:
+                pmItem = QtGui.QGraphicsPixmapItem()
+                pmItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
+                pmItem.setPos(QtCore.QPointF(patch.pos()))
+                pmItem.setPixmap(patch.pixmap())
+                pmItem.setTransformationMode(QtCore.Qt.SmoothTransformation)
             result[patch] = pmItem
 
         for rect, link in frame.linkRects():
             if link.startswith('file:') and link.endswith('.mng'):
-                movie = QtGui.QMovie(link[5:])
-                player = QtGui.QLabel()
-                player.setMovie(movie)
-                movie.setScaledSize(rect.size().toSize())
-                player.resize(round(rect.width()), round(rect.height()))
+                item = self._items.get(link, None)
+                if item is None:
+                    movie = QtGui.QMovie(link[5:])
+                    player = QtGui.QLabel()
+                    player.setMovie(movie)
+                    movie.setScaledSize(rect.size().toSize())
+                    player.resize(round(rect.width()), round(rect.height()))
 
-                item = QtGui.QGraphicsProxyWidget()
-                item.setWidget(player)
-                item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-                item.setPos(rect.topLeft())
-                movie.start()
+                    item = QtGui.QGraphicsProxyWidget()
+                    item.setWidget(player)
+                    item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
+                    item.setPos(rect.topLeft())
+                    movie.start()
                 result[link] = item
 
         if self.DEBUG:
             for rect, link in frame.linkRects(onlyExternal = False):
-                linkFrame = QtGui.QGraphicsRectItem(rect)
-                linkFrame.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-                linkFrame.setPen(QtGui.QPen(QtCore.Qt.yellow))
-                result['DEBUG_%s' % link] = linkFrame
+                key = 'DEBUG_%s' % link
+                linkFrame = self._items.get(key, None)
+                if linkFrame is None:
+                    linkFrame = QtGui.QGraphicsRectItem(rect)
+                    linkFrame.setAcceptedMouseButtons(QtCore.Qt.NoButton)
+                    linkFrame.setPen(QtGui.QPen(QtCore.Qt.yellow))
+                result[key] = linkFrame
 
         return result
 
