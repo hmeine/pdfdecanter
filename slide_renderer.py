@@ -71,7 +71,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             return
 
         self._frame = frame
-        self.setGeometry(QtCore.QRectF(QtCore.QPointF(0, 0), frame.size()))
+        self.setGeometry(QtCore.QRectF(self.pos(), frame.size()))
 
         parentItem = self.contentItem()
         items = self._frameItems(frame)

@@ -26,6 +26,7 @@ PADDING_Y = int(h * 0.03)
 LINEBREAK_PADDING = int(2.5 * PADDING_Y)
 INDENT_X = 0 # w / 8
 
+
 class GeometryAnimation(QtCore.QVariantAnimation):
     def __init__(self, item, parent = None):
         QtCore.QVariantAnimation.__init__(self, parent)
@@ -287,13 +288,17 @@ class PDFDecanter(QtCore.QObject):
                 self._animateOverviewGroup(self._overviewPosForCursor(r), pres.scale())
 
     def _animateOverviewGroup(self, pos, scale):
+        # adjust position in order to prevent ugly black margins:
         if pos.y() > 0.0:
-            # center overview if smaller than scene (evenly distributing black margin):
+            # overview smaller than scene?
             if self._scene.sceneRect().height() > self.presentationBounds().height() * scale:
+                # yes, center overview (evenly distributing black margin):
                 pos.setY(0.5 * (self._scene.sceneRect().height() - self.presentationBounds().height() * scale))
             else:
+                # no, prevent black margin at top:
                 pos.setY(0.0)
         else:
+            # prevent black margin at bottom:
             minY = self._scene.sceneRect().height() - self.presentationBounds().height() * scale
             if pos.y() < minY:
                 pos.setY(minY)
