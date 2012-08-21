@@ -4,6 +4,19 @@ UNSEEN_OPACITY = 0.5
 
 
 class FrameRenderer(QtGui.QGraphicsWidget):
+    """QGraphicsWidget that renders a Frame instance.
+
+    The FrameRenderer itself is a QGraphicsWidget in order to
+    facilitate animations (geometry property etc.); it uses additional
+    child graphics items for rendering the Frame:
+
+    * one QGraphicsRectItem with the Frame.backgroundColor()
+    * one QGraphicsPixmapItem per Patch
+    * one QGraphicsProxyWidget per .mng link (movie player)
+    * one QGraphicsRectItem for implementing the 'covered' state
+    * custom items (TODO)
+    * optionally, QGraphicsRectItems for debugging link rects"""
+    
     DEBUG = False # True
 
     def __init__(self, parentItem):
@@ -16,7 +29,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         # - Patch instances
         # - links (as string)
         # - 'DEBUG_[somelink]' (link rects in debug mode)
-        # - 'bg'
+        # - 'bg_<red>_<green>_<blue>'
         # - 'content'
         # - 'cover'
         # - 'custom' (LIST of items!)
@@ -94,16 +107,16 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
         return result
 
-    def _backgroundItem(self):
-        return self._rectItem(self._frame.backgroundColor()
-                              if not self.DEBUG else QtCore.Qt.red,
-                              key = 'bg')
+    def _backgroundItem(self, frame):
+        color = frame.backgroundColor() if not self.DEBUG else QtCore.Qt.red
+        key = 'bg_%d_%d_%d' % color.getRgb()[:3]
+        return self._rectItem(color, key = key)
 
     def contentItem(self):
         result = self._items.get('content', None)
 
         if result is None:
-            self._backgroundItem()
+            self._backgroundItem(self._frame)
 
             result = QtGui.QGraphicsWidget(self)
             result.setAcceptedMouseButtons(QtCore.Qt.NoButton)
