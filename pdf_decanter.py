@@ -19,8 +19,6 @@ __version__ = "0.1"
 
 w, h = 1024, 768
 
-BLEND_DURATION = 150
-
 PADDING_X = int(w * 0.03)
 PADDING_Y = int(h * 0.03)
 LINEBREAK_PADDING = int(2.5 * PADDING_Y)
@@ -362,45 +360,12 @@ class PDFDecanter(QtCore.QObject):
         targetFrame = self._slides.frame(frameIndex)
         renderer = self._renderers[targetFrame.slide().slideIndex()]
         renderer.uncover()
-        renderer.showFrame(targetFrame.subIndex())
 
-        if animated:
-            previousRenderer = self._currentRenderer()
-
-            if previousRenderer is not renderer:
-                if frameIndex > self._currentFrameIndex:
-                    topRenderer = renderer
-                    bottomRenderer = previousRenderer
-                else:
-                    topRenderer = previousRenderer
-                    bottomRenderer = renderer
-
-                oldPos = topRenderer.pos()
-                topRenderer.setPos(bottomRenderer.pos())
-
-                # store information for later reset:
-                self._animatedRenderers = (previousRenderer, renderer, topRenderer, oldPos)
-
-                self._slideAnimation = QtCore.QParallelAnimationGroup()
-                self._slideAnimation.finished.connect(self._resetSlideAnimation)
-
-                offset = w if frameIndex > self._currentFrameIndex else -w
-
-                slideOutAnim = QtCore.QPropertyAnimation(
-                    previousRenderer.contentItem(), "pos", self._slideAnimation)
-                slideOutAnim.setDuration(250)
-                slideOutAnim.setStartValue(QtCore.QPoint(0, 0))
-                slideOutAnim.setEndValue(QtCore.QPoint(-offset, 0))
-
-                slideInAnim = QtCore.QPropertyAnimation(
-                    renderer.contentItem(), "pos", self._slideAnimation)
-                slideInAnim.setDuration(250)
-                slideInAnim.setStartValue(QtCore.QPoint(offset, 0))
-                slideInAnim.setEndValue(QtCore.QPoint(0, 0))
-
-                self._slideAnimation.addAnimation(slideOutAnim)
-                self._slideAnimation.addAnimation(slideInAnim)
-                self._slideAnimation.start()
+        if animated and False:
+            sourceFrame = self._currentRenderer().frame()
+            renderer.animatedTransition(sourceFrame, targetFrame)
+        else:
+            renderer.showFrame(targetFrame.subIndex())
 
         self._currentFrameIndex = frameIndex
 

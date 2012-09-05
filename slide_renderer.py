@@ -1,6 +1,7 @@
 from dynqt import QtCore, QtGui
 
 UNSEEN_OPACITY = 0.5
+BLEND_DURATION = 150
 
 
 class FrameRenderer(QtGui.QGraphicsWidget):
@@ -90,6 +91,9 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
         return result
 
+    def frame(self):
+        return self._frame
+
     def setFrame(self, frame):
         if self._frame is frame:
             return
@@ -97,11 +101,23 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         self._frame = frame
         self.setGeometry(QtCore.QRectF(self.pos(), frame.size()))
 
-        parentItem = self.contentItem()
+        parentItem = self._contentItem()
+
+        addItems = {}
+        removeItems = dict(self._items)
+        del removeItems['content']
+        
         items = self._frameItems(frame)
-        for item in items.values():
-            item.setParentItem(parentItem)
-        self._items.update(items)
+        for key, item in items.iteritems():
+            try:
+                del removeItems[key]
+            except KeyError:
+                item.setParentItem(parentItem)
+                addItems[key] = item
+
+        self._items.update(addItems)
+        for key, item in removeItems.iteritems():
+            del self._items[key]
 
     def _frameRect(self):
         return QtCore.QRectF(QtCore.QPointF(0, 0), self._frame.size())
@@ -118,13 +134,14 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
         return result
 
-    def contentItem(self):
-        result = self._items.get('content', None)
+    def _contentItem(self, key = 'content'):
+        """QGraphicsWidget container child, used for animations"""
+        result = self._items.get(key, None)
 
         if result is None:
             result = QtGui.QGraphicsWidget(self)
             result.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-            self._items['content'] = result
+            self._items[key] = result
 
         return result
 
