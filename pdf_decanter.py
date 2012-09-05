@@ -353,7 +353,6 @@ class PDFDecanter(QtCore.QObject):
             r1.contentItem().setPos(QtCore.QPointF(0, 0))
             r2.contentItem().setPos(QtCore.QPointF(0, 0))
             movedRenderer.setPos(oldPos)
-            movedRenderer._backgroundItem().show()
             if not self._inOverview:
                 self._presentationItem.setPos(-r2.pos())
 
@@ -378,7 +377,6 @@ class PDFDecanter(QtCore.QObject):
 
                 oldPos = topRenderer.pos()
                 topRenderer.setPos(bottomRenderer.pos())
-                topRenderer._backgroundItem().hide()
 
                 # store information for later reset:
                 self._animatedRenderers = (previousRenderer, renderer, topRenderer, oldPos)

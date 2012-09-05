@@ -40,6 +40,17 @@ class FrameRenderer(QtGui.QGraphicsWidget):
     def _frameItems(self, frame):
         result = {}
 
+        color = frame.backgroundColor() if not self.DEBUG else QtCore.Qt.red
+        key = 'bg_%d_%d_%d' % color.getRgb()[:3]
+        bgItem = self._items.get(key, None)
+        if bgItem is None:
+            bgItem = QtGui.QGraphicsRectItem(self._frameRect(), self)
+            bgItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
+            bgItem.setBrush(color)
+            bgItem.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+            bgItem.setZValue(-1)
+            result[key] = bgItem
+
         for patch in frame.content():
             pmItem = self._items.get(patch, None)
             if pmItem is None:
@@ -107,17 +118,10 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
         return result
 
-    def _backgroundItem(self, frame):
-        color = frame.backgroundColor() if not self.DEBUG else QtCore.Qt.red
-        key = 'bg_%d_%d_%d' % color.getRgb()[:3]
-        return self._rectItem(color, key = key)
-
     def contentItem(self):
         result = self._items.get('content', None)
 
         if result is None:
-            self._backgroundItem(self._frame)
-
             result = QtGui.QGraphicsWidget(self)
             result.setAcceptedMouseButtons(QtCore.Qt.NoButton)
             self._items['content'] = result
