@@ -167,13 +167,15 @@ class PDFDecanter(QtCore.QObject):
             return
         
         if not self._inOverview:
+            # advance one frame (if not at end):
             if self._currentFrameIndex < self._slides.frameCount() - 1:
-                self.gotoFrame(self._currentFrameIndex + 1, animated = True)
+                self.gotoFrame(self._currentFrameIndex + 1)
         else:
+            # find frame clicked on in overview and jump to it:
             for item in self._scene.items(e.scenePos()):
                 if isinstance(item, slide_renderer.SlideRenderer):
                     slideIndex = self._renderers.index(item)
-                    self.gotoFrame(self._slides[slideIndex].currentFrame().frameIndex(), animated = False)
+                    self.gotoFrame(self._slides[slideIndex].currentFrame().frameIndex())
                     break
 
     def loadPDF(self, pdfFilename, cacheFilename = None):
@@ -226,7 +228,7 @@ class PDFDecanter(QtCore.QObject):
         for r in self._renderers:
             r.setLinkHandler(self.followLink)
         self._setupGrid()
-        self.gotoFrame(0, animated = False)
+        self.gotoFrame(0)
 
     def _setupGrid(self):
         self._overviewColumnCount = min(5, int(math.ceil(math.sqrt(len(self._slides)))))
@@ -354,18 +356,18 @@ class PDFDecanter(QtCore.QObject):
             if not self._inOverview:
                 self._presentationItem.setPos(-r2.pos())
 
-    def gotoFrame(self, frameIndex, animated = False):
+    def gotoFrame(self, frameIndex):
+        """Identifies renderer responsible for the given frame and
+        lets it show that frame.  If we're in overview mode, the scene
+        is zoomed in to the above renderer."""
+
         self._resetSlideAnimation()
 
         targetFrame = self._slides.frame(frameIndex)
         renderer = self._renderers[targetFrame.slide().slideIndex()]
         renderer.uncover()
 
-        if animated and False:
-            sourceFrame = self._currentRenderer().frame()
-            renderer.animatedTransition(sourceFrame, targetFrame)
-        else:
-            renderer.showFrame(targetFrame.subIndex())
+        renderer.showFrame(targetFrame.subIndex())
 
         self._currentFrameIndex = frameIndex
 
@@ -383,7 +385,7 @@ class PDFDecanter(QtCore.QObject):
             return False
         if isinstance(link, int):
             frameIndex = link
-            self.gotoFrame(frameIndex, animated = True)
+            self.gotoFrame(frameIndex)
             self._mousePressPos = None # don't handle click again in mouseReleaseEvent
             return True
         return False
@@ -411,7 +413,7 @@ class PDFDecanter(QtCore.QObject):
                 event.accept()
                 slideIndex = self._gotoSlideIndex - 1
                 self._gotoSlideIndex = None
-                self.gotoFrame(self._slides[slideIndex].currentFrame().frameIndex(), animated = True)
+                self.gotoFrame(self._slides[slideIndex].currentFrame().frameIndex())
         elif event.text() == 'Q':
             self._view.window().close()
             event.accept()
@@ -447,11 +449,11 @@ class PDFDecanter(QtCore.QObject):
         else:
             if event.key() in (QtCore.Qt.Key_Space, QtCore.Qt.Key_Right, QtCore.Qt.Key_PageDown):
                 if self._currentFrameIndex < self._slides.frameCount() - 1:
-                    self.gotoFrame(self._currentFrameIndex + 1, animated = True)
+                    self.gotoFrame(self._currentFrameIndex + 1)
                     event.accept()
             elif event.key() in (QtCore.Qt.Key_Backspace, QtCore.Qt.Key_Left, QtCore.Qt.Key_PageUp):
                 if self._currentFrameIndex > 0:
-                    self.gotoFrame(self._currentFrameIndex - 1, animated = 'slide')
+                    self.gotoFrame(self._currentFrameIndex - 1)
                     event.accept()
             elif event.key() in (QtCore.Qt.Key_Home, ):
                 if self._currentFrameIndex:
