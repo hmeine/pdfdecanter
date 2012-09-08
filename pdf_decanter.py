@@ -71,7 +71,6 @@ class PDFDecanter(QtCore.QObject):
 
         self._renderers = None
         self._currentFrameIndex = None
-        self._slideAnimation = None
 
         self._gotoSlideIndex = None
         self._gotoSlideTimer = QtCore.QTimer(self)
@@ -330,9 +329,6 @@ class PDFDecanter(QtCore.QObject):
         return QtCore.QPointF(0, y)
 
     def showOverview(self):
-        # self._setupGrid()
-        self._resetSlideAnimation()
-
         self._updateCursor(animated = False)
         self._cursorPos = None
 
@@ -344,24 +340,10 @@ class PDFDecanter(QtCore.QObject):
         slideIndex = self._slides.frame(self._currentFrameIndex).slide().slideIndex()
         return self._renderers[slideIndex]
 
-    def _resetSlideAnimation(self):
-        """clean up previously offset items"""
-        if self._slideAnimation is not None:
-            self._slideAnimation.stop()
-            self._slideAnimation = None
-            r1, r2, movedRenderer, oldPos = self._animatedRenderers
-            r1.contentItem().setPos(QtCore.QPointF(0, 0))
-            r2.contentItem().setPos(QtCore.QPointF(0, 0))
-            movedRenderer.setPos(oldPos)
-            if not self._inOverview:
-                self._presentationItem.setPos(-r2.pos())
-
     def gotoFrame(self, frameIndex):
         """Identifies renderer responsible for the given frame and
         lets it show that frame.  If we're in overview mode, the scene
         is zoomed in to the above renderer."""
-
-        self._resetSlideAnimation()
 
         targetFrame = self._slides.frame(frameIndex)
         renderer = self._renderers[targetFrame.slide().slideIndex()]
