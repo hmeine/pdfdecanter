@@ -93,12 +93,14 @@ class FrameRenderer(QtGui.QGraphicsWidget):
     def frame(self):
         return self._frame
 
-    def setFrame(self, frame):
-        if self._frame is frame:
-            return
+    def _changeFrame(self, frame):
+        """Internal helper for setFrame() / animatedTransition();
+        change self._frame and returns the differences between the
+        current items and the new ones as (newGeometry, addItems,
+        removeItems) tuple."""
 
         self._frame = frame
-        self.setGeometry(QtCore.QRectF(self.pos(), frame.size()))
+        newGeometry = QtCore.QRectF(self.pos(), frame.size())
 
         parentItem = self._contentItem()
 
@@ -112,7 +114,16 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             except KeyError:
                 item.setParentItem(parentItem)
                 addItems[key] = item
+        
+        return newGeometry, addItems, removeItems
 
+    def setFrame(self, frame):
+        if self._frame is frame:
+            return
+
+        newGeometry, addItems, removeItems = self._changeFrame(frame)
+
+        self.setGeometry(newGeometry)
         self._items.update(addItems)
         for key, item in removeItems.iteritems():
             del self._items[key]
