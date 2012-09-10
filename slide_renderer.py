@@ -1,7 +1,9 @@
 from dynqt import QtCore, QtGui
+import presentation
 
 UNSEEN_OPACITY = 0.5
 BLEND_DURATION = 150
+SLIDE_DURATION = 250
 
 
 class FrameRenderer(QtGui.QGraphicsWidget):
@@ -34,6 +36,8 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         # - 'bg_<red>_<green>_<blue>'
         # - 'custom' (LIST of items!)
 
+        self._animation = None
+
     def setLinkHandler(self, linkHandler):
         self._linkHandler = linkHandler
 
@@ -49,7 +53,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             bgItem.setBrush(color)
             bgItem.setPen(QtGui.QPen(QtCore.Qt.NoPen))
             bgItem.setZValue(-1)
-            result[key] = bgItem
+        result[key] = bgItem
 
         for patch in frame.content():
             pmItem = self._items.get(patch, None)
@@ -99,6 +103,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         current items and the new ones as (newGeometry, addItems,
         removeItems) tuple."""
 
+        self._resetAnimation()
         self._frame = frame
         newGeometry = QtCore.QRectF(self.pos(), frame.size())
 
@@ -125,8 +130,105 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
         self.setGeometry(newGeometry)
         self._items.update(addItems)
-        for key, item in removeItems.iteritems():
+        self._removeItems(removeItems)
+
+    def _removeItems(self, items):
+        for key, item in items.iteritems():
+            self.scene().removeItem(item)
             del self._items[key]
+
+    def animatedTransition(self, sourceFrame, targetFrame):
+        self.setFrame(sourceFrame)
+        if targetFrame is sourceFrame:
+            return # raise?
+
+        slide = cmp(targetFrame.slide().slideIndex(),
+                    sourceFrame.slide().slideIndex())
+
+        oldGeometry = QtCore.QRectF(self.pos(), self._frame.size())
+        newGeometry, addItems, removeItems = self._changeFrame(targetFrame)
+
+        if oldGeometry != newGeometry:
+            self._geometryAnimation = QPropertyAnimation(self, 'geometry', self)
+            self._geometryAnimation.setEndValue(newGeometry)
+            self._geometryAnimation.setDuration(100)
+
+        self._animation = QtCore.QParallelAnimationGroup()
+        self._animation.finished.connect(self._resetAnimation)
+
+        fadeOut = {}
+        fadeIn = {}
+        slideOut = {}
+        slideIn = {}
+
+        # decide which items to slide and which to fade out/in:
+        if True:
+            slideOut = removeItems
+            slideIn = addItems
+        if not slide:
+            fadeOut = removeItems
+            fadeIn = addItems
+        else:
+            for newKey, newItem in addItems.iteritems():
+                changed = False
+                if not isinstance(newKey, presentation.Patch):
+                    fadeIn[newKey] = newItem
+                    continue
+                for oldKey, oldItem in removeItems.iteritems():
+                    if not isinstance(oldKey, presentation.Patch):
+                        continue
+                    if newKey.isSuccessorOf(oldKey):
+                        changed = True
+                        fadeOut[oldKey] = oldItem
+                        fadeIn[newKey] = newItem
+                        break
+                if not changed:
+                    slideOut[oldKey] = oldItem
+                    slideIn[newKey] = newItem
+
+        offset = self._frame.size().width() * slide
+
+        if slideOut:
+            parentItem = self._contentItem('slideOut')
+            for key, item in slideOut.iteritems():
+                item.setParentItem(parentItem)
+
+            slideOutAnim = QtCore.QPropertyAnimation(parentItem, "pos", self._animation)
+            slideOutAnim.setDuration(250)
+            slideOutAnim.setStartValue(QtCore.QPoint(0, 0))
+            slideOutAnim.setEndValue(QtCore.QPoint(-offset, 0))
+
+        if slideIn:
+            parentItem = self._contentItem('slideIn')
+            for key, item in slideIn.iteritems():
+                item.setParentItem(parentItem)
+
+            slideInAnim = QtCore.QPropertyAnimation(parentItem, "pos", self._animation)
+            slideInAnim.setDuration(250)
+            slideInAnim.setStartValue(QtCore.QPoint(offset, 0))
+            slideInAnim.setEndValue(QtCore.QPoint(0, 0))
+
+        self._items.update(addItems)
+        self._pendingRemove = removeItems
+
+        self._animation.start()
+
+    def _resetAnimation(self):
+        if not self._animation:
+            return
+
+        self._animation.stop()
+
+        # reset parent of all animated contents:
+        parentItem = self._contentItem()
+        for i in range(self._animation.animationCount()):
+            anim = self._animation.animationAt(i)
+            for item in anim.targetObject().childItems():
+                item.setParentItem(parentItem)
+
+        self._removeItems(self._pendingRemove)
+
+        self._animation = None
 
     def _frameRect(self):
         return QtCore.QRectF(QtCore.QPointF(0, 0), self._frame.size())
