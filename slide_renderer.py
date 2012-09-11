@@ -162,13 +162,11 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         slideIn = {}
 
         # decide which items to slide and which to fade out/in:
-        if True:
-            slideOut = removeItems
-            slideIn = addItems
         if not slide:
             fadeOut = removeItems
             fadeIn = addItems
         else:
+            slideOut.update(removeItems)
             for newKey, newItem in addItems.iteritems():
                 changed = False
                 if not isinstance(newKey, presentation.Patch):
@@ -181,9 +179,9 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                         changed = True
                         fadeOut[oldKey] = oldItem
                         fadeIn[newKey] = newItem
+                        del slideOut[oldKey]
                         break
                 if not changed:
-                    slideOut[oldKey] = oldItem
                     slideIn[newKey] = newItem
 
         offset = self._frame.size().width() * slide
