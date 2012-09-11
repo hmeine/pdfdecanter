@@ -352,9 +352,9 @@ def area(rect):
 
 def join_close_rects(rects):
     dx, dy = 3, 3
-    # each pixel takes roughly 4 additional bytes, and 320 bytes is a
-    # very rough guess of the cost of extra rects/objects:
-    pixel_threshold = 80
+    # heuristic that penalizes the cost of extra rects/objects
+    # (area of unchanged pixels included in joint rect):
+    pixel_threshold = 200
 
     origCount = len(rects)
     
