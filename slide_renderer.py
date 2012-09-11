@@ -2,7 +2,7 @@ from dynqt import QtCore, QtGui
 import presentation
 
 UNSEEN_OPACITY = 0.5
-BLEND_DURATION = 150
+FADE_DURATION = 150
 SLIDE_DURATION = 250
 
 
@@ -186,25 +186,26 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
         offset = self._frame.size().width() * slide
 
-        if slideOut:
-            parentItem = self._contentItem('slideOut')
-            for key, item in slideOut.iteritems():
-                item.setParentItem(parentItem)
+        # set up property animations for sliding/fading in/out:
+        for items, contentName, duration, propName, startValue, endValue in (
+                (slideOut, 'slideOut', SLIDE_DURATION,
+                 'pos', QtCore.QPoint(0, 0), QtCore.QPoint(-offset, 0)),
+                (slideIn, 'slideIn', SLIDE_DURATION,
+                 'pos', QtCore.QPoint(offset, 0), QtCore.QPoint(0, 0)),
+                (fadeOut, 'fadeOut', FADE_DURATION,
+                 'opacity', 1.0, 0.0),
+                (fadeIn, 'fadeIn', FADE_DURATION,
+                 'opacity', 0.0, 1.0),
+            ):
+            if items:
+                parentItem = self._contentItem(contentName)
+                for key, item in items.iteritems():
+                    item.setParentItem(parentItem)
 
-            slideOutAnim = QtCore.QPropertyAnimation(parentItem, "pos", self._animation)
-            slideOutAnim.setDuration(250)
-            slideOutAnim.setStartValue(QtCore.QPoint(0, 0))
-            slideOutAnim.setEndValue(QtCore.QPoint(-offset, 0))
-
-        if slideIn:
-            parentItem = self._contentItem('slideIn')
-            for key, item in slideIn.iteritems():
-                item.setParentItem(parentItem)
-
-            slideInAnim = QtCore.QPropertyAnimation(parentItem, "pos", self._animation)
-            slideInAnim.setDuration(250)
-            slideInAnim.setStartValue(QtCore.QPoint(offset, 0))
-            slideInAnim.setEndValue(QtCore.QPoint(0, 0))
+                anim = QtCore.QPropertyAnimation(parentItem, propName, self._animation)
+                anim.setDuration(duration)
+                anim.setStartValue(startValue)
+                anim.setEndValue(endValue)
 
         self._items.update(addItems)
         self._pendingRemove = removeItems
