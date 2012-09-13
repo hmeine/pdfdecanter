@@ -422,7 +422,7 @@ class PDFDecanter(QtCore.QObject):
                     event.accept()
             elif event.text() == 'U':
                 for renderer in self._renderers:
-                    renderer.uncover()
+                    renderer.uncoverAll()
                 event.accept()
             elif event.text() == 'R':
                 for renderer in self._renderers:

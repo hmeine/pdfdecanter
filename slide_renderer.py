@@ -322,8 +322,17 @@ class SlideRenderer(FrameRenderer):
             cb(self, self._slide.currentSubIndex())
 
     def uncover(self, seen = True):
+        """Show slide with full opacity.  (Technically, hides dark,
+        half-transparent cover item.)"""
         self._slide.setSeen(seen)
         self._coverItem().setVisible(not seen)
+
+    def uncoverAll(self):
+        """Like uncover(), but also shows all slide content.
+        Equivalent to uncover(), followed by
+        showFrame(lastSubFrameIndex)."""
+        self.uncover()
+        self.showFrame(len(self.slide())-1)
 
     def showFrame(self, frameIndex = 0):
         self._slide.setCurrentSubIndex(frameIndex)
