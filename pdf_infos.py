@@ -24,13 +24,14 @@ class PDFPageInfos(object):
 
 
 class PDFInfos(object):
-    __slots__ = ('_metaInfo', '_pageCount', '_outline', '_pageInfos')
+    __slots__ = ('_metaInfo', '_pageCount', '_outline', '_pageInfos', '_names')
     
     def __init__(self):
         self._metaInfo = None
         self._pageCount = None
         self._outline = None
         self._pageInfos = None
+        self._names = None
 
     def metaInfo(self):
         """Return dict with meta information about PDF document, e.g. keys like Title, Author, Creator, ..."""
@@ -42,6 +43,10 @@ class PDFInfos(object):
     def outline(self):
         """Return list of (level, title, pageIndex) tuples"""
         return self._outline
+
+    def names(self):
+        """Return dictionary of named (link) destinations"""
+        return self._names
 
     def __len__(self):
         return self._pageCount
@@ -145,5 +150,22 @@ class PDFInfos(object):
             pageBox = numpy.array([page.mediabox], float).reshape((2, 2))
 
             result._pageInfos.append(PDFPageInfos(links = pageLinks, pageBox = pageBox))
+
+        # extract all named destinations:
+        def extract_names(dests, result = None):
+            if result is None:
+                result = {}
+            if 'Names' in dests:
+                it = iter(get(dests, 'Names'))
+                result.update(dict(zip(it, it)))
+            if 'Kids' in dests:
+                for kid in get(dests, 'Kids'):
+                    extract_names(get(kid), result)
+            return result
+
+        try:
+            result._names = extract_names(get(doc.catalog['Names'], 'Dests'))
+        except KeyError:
+            pass
 
         return result
