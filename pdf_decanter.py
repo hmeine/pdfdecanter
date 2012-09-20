@@ -23,7 +23,7 @@ BLEND_DURATION = 150
 
 PADDING_X = int(w * 0.03)
 PADDING_Y = int(h * 0.03)
-LINEBREAK_PADDING = int(3.5 * PADDING_Y)
+LINEBREAK_PADDING = int(2.5 * PADDING_Y)
 INDENT_X = 0 # w / 8
 
 class GeometryAnimation(QtCore.QVariantAnimation):
@@ -238,14 +238,14 @@ class PDFDecanter(QtCore.QObject):
             for level, title, frameIndex in infos.outline():
                 slideLevel[self._frame2Slide[frameIndex][0]] = level
 
-            while numpy.diff(numpy.nonzero(slideLevel)[0]).mean() < self._overviewColumnCount:
+            while numpy.diff(numpy.nonzero(slideLevel)[0]).mean() < self._overviewColumnCount-0.5:
                 slideLevel[slideLevel == slideLevel.max()] = 0
 
         x = y = col = 0
         lastLineBreak = 0
         for i, renderer in enumerate(self._renderers):
             if slideLevel[i] and lastLineBreak < i - 1:
-                y += (h + LINEBREAK_PADDING)
+                y += (h + PADDING_Y + LINEBREAK_PADDING / slideLevel[i])
                 x = col = 0
                 lastLineBreak = i
             elif col >= self._overviewColumnCount:
