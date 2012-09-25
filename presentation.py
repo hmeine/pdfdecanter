@@ -306,12 +306,12 @@ changed_rects = changed_rects_ndimage
 
 def decompose_slide(rects, header_bottom, footer_top):
     """Separates changed rects into (header, content, footer) triple."""
-    
+
     rects.sort(key = lambda r: r.top())
 
     header = Patches()
     # FIXME: this takes *at most* one item, but e.g. Niko uses chapter / title rows:
-    if rects[0].bottom() < header_bottom:
+    if rects and rects[0].bottom() < header_bottom:
         headerRect = QtCore.QRect(rects[0])
         i = 1
         while i < len(rects) and rects[i].top() < headerRect.bottom():
