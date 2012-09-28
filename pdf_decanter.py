@@ -132,6 +132,8 @@ class PDFDecanter(QtCore.QObject):
                 self.keyPressEvent(event)
             elif event.type() == QtCore.QEvent.Resize:
                 self.resizeEvent(event)
+            elif event.type() == QtCore.QEvent.Wheel:
+                self.wheelEvent(event)
         elif obj is self._scene:
             if event.type() == QtCore.QEvent.GraphicsSceneMousePress:
                 self.mousePressEvent(event)
@@ -147,6 +149,16 @@ class PDFDecanter(QtCore.QObject):
                      e.size().height() / h)
         self._view.resetMatrix()
         self._view.scale(factor, factor)
+
+    def wheelEvent(self, e):
+        if self._inOverview:
+            overview = self._presentationItem
+            overviewPos = overview.pos()
+            overviewPos.setY(overviewPos.y() + e.delta())
+            self._adjustOverviewPos(overviewPos, self._overviewScale())
+            overview.setPos(overviewPos)
+        else:
+            e.ignore()
 
     def mouseMoveEvent(self, e):
         self._view.unsetCursor()
@@ -286,7 +298,7 @@ class PDFDecanter(QtCore.QObject):
                     r.center() * pres.scale() + pres.pos()):
                 self._animateOverviewGroup(self._overviewPosForCursor(r), pres.scale())
 
-    def _animateOverviewGroup(self, pos, scale):
+    def _adjustOverviewPos(self, pos, scale):
         # adjust position in order to prevent ugly black margins:
         if pos.y() > 0.0:
             # overview smaller than scene?
@@ -301,6 +313,9 @@ class PDFDecanter(QtCore.QObject):
             minY = self._scene.sceneRect().height() - self.presentationBounds().height() * scale
             if pos.y() < minY:
                 pos.setY(minY)
+
+    def _animateOverviewGroup(self, pos, scale):
+        self._adjustOverviewPos(pos, scale)
 
         currentGeometry = QtCore.QRectF(self._presentationItem.pos(),
                                         QtCore.QSizeF(self._presentationItem.scale(),
