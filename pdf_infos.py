@@ -157,7 +157,8 @@ class PDFInfos(object):
                 result = {}
             if 'Names' in dests:
                 it = iter(get(dests, 'Names'))
-                result.update(dict(zip(it, it)))
+                for name, ref in zip(it, it):
+                    result[name] = destToPageIndex(ref)
             if 'Kids' in dests:
                 for kid in get(dests, 'Kids'):
                     extract_names(get(kid), result)
@@ -169,3 +170,9 @@ class PDFInfos(object):
             pass
 
         return result
+
+    def __getstate__(self):
+        return (self._metaInfo, self._pageCount, self._outline, self._pageInfos, self._names)
+
+    def __setstate__(self, state):
+        self._metaInfo, self._pageCount, self._outline, self._pageInfos, self._names = state
