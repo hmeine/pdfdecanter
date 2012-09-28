@@ -107,6 +107,14 @@ class Frame(object):
     def slide(self):
         return self._slide
 
+    def header(self):
+        return [patch for patch in self._content
+                if patch.flag(Patch.FLAG_HEADER)]
+
+    def footer(self):
+        return [patch for patch in self._content
+                if patch.flag(Patch.FLAG_FOOTER)]
+
     def presentation(self):
         return self._slide.presentation()
 
@@ -174,6 +182,9 @@ class Frame(object):
                 return False
         return True
 
+    def __getnewargs__(self):
+        return self._content, self._slide
+
 
 class Slide(object):
     """Collection of Frames that belong together, i.e. PDF pages that
@@ -208,17 +219,22 @@ class Slide(object):
     def index(self, frame):
         return self._frames.index(frame)
 
-    # def contentRect(self, margin = 0):
-    #     header_rect = self._header and self._header.boundingRect()
-    #     footer_rect = self._footer and self._footer.boundingRect()
-    #     header_height = header_rect.bottom() + 1 if self._header else 0
-    #     result = QtCore.QRectF(0, header_height,
-    #                            self._size.width(),
-    #                            footer_rect.top() - header_height
-    #                            if self._footer else self._size.height())
-    #     if margin:
-    #         result.adjust(margin, margin, -margin, -margin)
-    #     return result
+    def contentRect(self, margin = 0):
+        result = QtCore.QRectF(0, 0, self._size.width(), self._size.height())
+
+        for frame in self:
+            for patch in frame.header():
+                r = patch.boundingRect()
+                result.setTop(max(result.top(), r.bottom() + 1))
+
+            for patch in frame.footer():
+                r = patch.boundingRect()
+                result.setBottom(min(result.bottom(), r.top() - 1))
+
+        if margin:
+            result.adjust(margin, margin, -margin, -margin)
+
+        return result
 
     def addFrame(self, frame):
         self._frames.append(frame)
@@ -245,14 +261,13 @@ class Slide(object):
         # TODO: notification?
 
     def __getstate__(self):
-        return ((self._size.width(), self._size.height()),
-                [frame.content() for frame in self._frames])
+        return ((self._size.width(), self._size.height()), self._frames)
 
     def __setstate__(self, state):
         (w, h), frames = state
         self._size = QtCore.QSizeF(w, h)
         self._presentation = None
-        self._frames = [Frame(frame, self) for frame in frames]
+        self._frames = frames
         # __init__ is not called:
         self._currentSubIndex = None
         self._seen = None
