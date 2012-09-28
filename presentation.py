@@ -10,12 +10,25 @@ def boundingRect(rects):
 
 
 class Patch(object):
-    __slots__ = ('_pos', '_image', '_pixmap')
+    __slots__ = ('_pos', '_image', '_pixmap', '_flags')
     
     def __init__(self, pos, image):
         self._pos = pos
         self._image = image
         self._pixmap = None
+        self._flags = 0
+
+    def setFlag(self, flag, onoff = True):
+        if onoff:
+            self._flags |= flag
+        else:
+            self._flags &= ~flag
+
+    def flags(self):
+        return self._flags
+
+    def flag(self, flag):
+        return self._flags & flag
 
     def pos(self):
         return self._pos
@@ -57,10 +70,10 @@ class Patch(object):
         return (self.xy(), hashlib.md5(self.ndarray()).digest())
 
     def __getstate__(self):
-        return (self.xy(), self.ndarray().copy())
+        return (self.xy(), self.ndarray().copy(), self._flags)
 
     def __setstate__(self, state):
-        (x, y), patch = state
+        (x, y), patch, self._flags = state
         self._pos = QtCore.QPoint(x, y)
         self._image = array2qimage(patch)
         self._pixmap = None
