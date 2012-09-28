@@ -23,6 +23,9 @@ class Patch(object):
     def size(self):
         return self._image.size()
 
+    def boundingRect(self):
+        return QtCore.QRect(self.pos(), self.size())
+
     def xy(self):
         return self._pos.x(), self._pos.y()
 
@@ -69,8 +72,7 @@ class Patches(list):
     __slots__ = ()
     
     def boundingRect(self):
-        return boundingRect(QtCore.QRect(pos, patch.size())
-                            for pos, patch in self)
+        return boundingRect(patch.boundingRect() for patch in self)
 
     @classmethod
     def extract(cls, frame, rects, cache = None):
