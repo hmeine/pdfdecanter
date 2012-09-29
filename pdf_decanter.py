@@ -221,6 +221,7 @@ class PDFDecanter(QtCore.QObject):
                                                  pageCount = infos and infos.pageCount())
 
             slides = presentation.stack_frames(raw_frames)
+            presentation.detect_navigation(slides)
             slides.setPDFInfos(infos)
 
             print "complete rendering took %.3gs. (%.3gs. real time)" % (

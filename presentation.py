@@ -11,7 +11,10 @@ def boundingRect(rects):
 
 class Patch(object):
     __slots__ = ('_pos', '_image', '_pixmap', '_flags')
-    
+
+    FLAG_HEADER = 1
+    FLAG_FOOTER = 2
+
     def __init__(self, pos, image):
         self._pos = pos
         self._image = image
@@ -540,6 +543,51 @@ def detectBackground(raw_frames, useFrames = 15):
     canvas = bgd.current_estimate()
     sys.stdout.write("\restimating background from samples... done.\n")
     return canvas
+
+
+def detect_navigation(presentation):
+    """Classify header and footer patches."""
+
+    for frame in presentation.frames():
+        frame_size = frame.size()
+
+        header_bottom = frame_size.height() * 11 / 48 # frame_size.height() / 3
+        footer_top    = frame_size.height() * 0.75
+
+        content = sorted(frame.content(),
+                         key = lambda patch: patch.pos().y())
+        
+        for patch in content:
+            rect = patch.boundingRect()
+
+            if rect.bottom() < header_bottom:
+                patch.setFlag(Patch.FLAG_HEADER)
+                # headerRect = QtCore.QRect(rects[0])
+                # i = 1
+                # while i < len(rects) and rects[i].top() < headerRect.bottom():
+                #     headerRect |= rects[i]
+                #     i += 1
+                # header.extend(rects[:i])
+                # del rects[:i]
+            else:
+                break
+
+        for patch in reversed(content):
+            rect = patch.boundingRect()
+
+            if rect.top() < footer_top:
+                break
+            patch.setFlag(Patch.FLAG_FOOTER)
+            
+            # footer = []
+            # while len(rects):
+            #     if rects[-1].top() < footer_top:
+            #         break
+            #     r = rects.pop()
+            #     footer.append(r)
+                # if r.height() < 10 and r.width() > frame_size.width() * .8:
+                #     # separator line detected
+                #     break
 
 
 def stack_frames(raw_pages):
