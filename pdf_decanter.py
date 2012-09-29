@@ -422,6 +422,23 @@ class PDFDecanter(QtCore.QObject):
         elif event.text() == 'Q':
             self._view.window().close()
             event.accept()
+        elif event.text() == 'P':
+            headerItems = sum((r.headerItems() for r in self._renderers), [])
+            footerItems = sum((r.footerItems() for r in self._renderers), [])
+            if headerItems and footerItems:
+                onoff = headerItems[0].isVisible() + 2*footerItems[0].isVisible()
+                onoff = (onoff + 1) % 4
+                for headerItem in headerItems:
+                    headerItem.setVisible(onoff % 2)
+                for footerItem in footerItems:
+                    footerItem.setVisible(onoff // 2)
+                event.accept()
+            elif headerItems or footerItems:
+                items = headerItems or footerItems
+                onoff = not items[0].isVisible()
+                for item in items:
+                    item.setVisible(onoff)
+                event.accept()
 
         if event.isAccepted():
             return

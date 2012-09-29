@@ -232,6 +232,14 @@ class FrameRenderer(QtGui.QGraphicsWidget):
     def _frameRect(self):
         return QtCore.QRectF(QtCore.QPointF(0, 0), self._frame.size())
 
+    def headerItems(self):
+        return [item for key, item in self._items.iteritems()
+                if isinstance(key, presentation.Patch) and key.flag(presentation.Patch.FLAG_HEADER)]
+
+    def footerItems(self):
+        return [item for key, item in self._items.iteritems()
+                if isinstance(key, presentation.Patch) and key.flag(presentation.Patch.FLAG_FOOTER)]
+
     def _contentItem(self, key = 'content'):
         """QGraphicsWidget container child, used for animations"""
         result = self._helperItems.get(key, None)
