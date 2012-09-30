@@ -426,25 +426,6 @@ def join_close_rects(rects):
     return result
 
 
-def changed_rects_skimage(a, b):
-    """Given two images, returns a list of QRects containing all
-    regions that changed."""
-    
-    import skimage.morphology, skimage.measure
-    
-    changed = (b != a).any(-1)
-    # FIXME: the following gives a
-    # ValueError: Does not understand character buffer dtype format string ('?')
-    lab = skimage.morphology.label(changed)
-    props = skimage.measure.regionprops(lab, properties = ['BoundingBox'])
-    
-    result = []
-    for p in props:
-        y1, x1, y2, x2 = p['BoundingBox']
-        result.append(QtCore.QRect(QtCore.QPoint(x1, y1), QtCore.QPoint(x2, y2)))
-    return join_close_rects(result)
-
-
 def changed_rects_ndimage(a, b):
     """Given two images, returns a list of QRects containing all
     regions that changed."""
