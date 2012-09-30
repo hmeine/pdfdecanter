@@ -9,16 +9,13 @@ def boundingRect(rects):
     return result
 
 
-class Patch(object):
-    __slots__ = ('_pos', '_image', '_pixmap', '_flags')
+class ObjectWithFlags(object):
+    """Mix-In class for objects that support bit flags."""
 
-    FLAG_HEADER = 1
-    FLAG_FOOTER = 2
+    __slots__ = ('_flags', )
 
-    def __init__(self, pos, image):
-        self._pos = pos
-        self._image = image
-        self._pixmap = None
+    def __init__(self):
+        super(ObjectWithFlags, self).__init__()
         self._flags = 0
 
     def setFlag(self, flag, onoff = True):
@@ -32,6 +29,19 @@ class Patch(object):
 
     def flag(self, flag):
         return self._flags & flag
+
+
+class Patch(ObjectWithFlags):
+    __slots__ = ('_pos', '_image', '_pixmap')
+
+    FLAG_HEADER = 1
+    FLAG_FOOTER = 2
+
+    def __init__(self, pos, image):
+        super(Patch, self).__init__()
+        self._pos = pos
+        self._image = image
+        self._pixmap = None
 
     def pos(self):
         return self._pos
@@ -362,6 +372,7 @@ class ChangedRect(object):
     __slots__ = ('_rect', '_labels', '_labelImage')
 
     def __init__(self, rect, labels, labelImage):
+        super(ChangedRect, self).__init__()
         self._rect = rect
         self._labels = labels
         self._labelImage = labelImage
