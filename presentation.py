@@ -357,28 +357,6 @@ class Presentation(list):
 # --------------------------------------------------------------------
 
 
-def changed_rects_numpy_only(a, b):
-    """Given two images, returns a list of QRects containing all
-    regions that changed."""
-    
-    changed = (b != a).any(-1)
-    changed_row = changed.any(-1)
-    toggle_rows = list(numpy.nonzero(numpy.diff(changed_row))[0] + 1)
-    if changed_row[0]:
-        toggle_rows.insert(0, 0)
-    if changed_row[-1]:
-        toggle_rows.append(len(changed_row))
-
-    result = []
-    assert len(toggle_rows) % 2 == 0
-    it = iter(toggle_rows)
-    for y1, y2 in zip(it, it):
-        changed_columns, = numpy.nonzero(changed[y1:y2].any(0))
-        x1, x2 = changed_columns[0], changed_columns[-1] + 1
-        result.append(QtCore.QRect(x1, y1, x2-x1, y2-y1))
-    return result
-
-
 def area(rect):
     return rect.width() * rect.height()
 
@@ -426,13 +404,33 @@ def join_close_rects(rects):
     return result
 
 
-def changed_rects_ndimage(a, b):
+def changed_rects_numpy_only(changed):
+    """Given two images, returns a list of QRects containing all
+    regions that changed."""
+    
+    changed_row = changed.any(-1)
+    toggle_rows = list(numpy.nonzero(numpy.diff(changed_row))[0] + 1)
+    if changed_row[0]:
+        toggle_rows.insert(0, 0)
+    if changed_row[-1]:
+        toggle_rows.append(len(changed_row))
+
+    result = []
+    assert len(toggle_rows) % 2 == 0
+    it = iter(toggle_rows)
+    for y1, y2 in zip(it, it):
+        changed_columns, = numpy.nonzero(changed[y1:y2].any(0))
+        x1, x2 = changed_columns[0], changed_columns[-1] + 1
+        result.append(QtCore.QRect(x1, y1, x2-x1, y2-y1))
+    return result
+
+
+def changed_rects_ndimage(changed):
     """Given two images, returns a list of QRects containing all
     regions that changed."""
     
     import scipy.ndimage
     
-    changed = (b != a).any(-1)
     lab, cnt = scipy.ndimage.measurements.label(changed)
     
     result = []
@@ -586,7 +584,8 @@ def stack_frames(raw_pages):
 
     prevFrame = None
     for page in raw_pages:
-        rects = changed_rects(canvas, page)
+        changed = (canvas != page).any(-1)
+        rects = changed_rects(changed)
 
         frame = Frame(Patches.extract(page, rects, cache))
 
