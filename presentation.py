@@ -61,9 +61,7 @@ class Patch(object):
 
     @classmethod
     def extract(cls, frame, rect):
-        x1, y1 = rect.x(), rect.y()
-        x2, y2 = rect.right() + 1, rect.bottom() + 1
-        return cls(rect.topLeft(), array2qimage(frame[y1:y2,x1:x2]))
+        return cls(rect.topLeft(), array2qimage(rect.subarray(frame)))
 
     def __iter__(self):
         yield self._pos
@@ -360,22 +358,54 @@ class Presentation(list):
 # --------------------------------------------------------------------
 
 
-def area(rect):
-    return rect.width() * rect.height()
+class ChangedRect(object):
+    __slots__ = ('_rect', '_labels', '_labelImage')
+
+    def __init__(self, rect, labels, labelImage):
+        self._rect = rect
+        self._labels = labels
+        self._labelImage = labelImage
+
+    def rect(self):
+        return self._rect
+
+    def area(self):
+        return self._rect.width() * self._rect.height()
+
+    def topLeft(self):
+        return self._rect.topLeft()
+
+    def subarray(self, array):
+        x1, y1 = self._rect.x(), self._rect.y()
+        x2, y2 = self._rect.right() + 1, self._rect.bottom() + 1
+        return array[y1:y2,x1:x2]
+
+    def labelROI(self):
+        return self.subarray(self._labelImage)
+
+    def adjusted_rect(self, *args):
+        return self._rect.adjusted(*args)
+
+    def __or__(self, other):
+        assert self._labelImage is other._labelImage
+        return ChangedRect(
+            self._rect | other._rect,
+            self._labels + other._labels,
+            self._labelImage)
 
 
 def join_close_rects(rects):
-    dx, dy = 3, 3
+    dx, dy = 10, 3
     # heuristic that penalizes the cost of extra rects/objects
     # (area of unchanged pixels included in joint rect):
-    pixel_threshold = 200
+    pixel_threshold = 800
 
     origCount = len(rects)
     
     result = []
     while rects:
         r = rects.pop()
-        bigger = r.adjusted(-dx, -dy, dx, dy)
+        bigger = r.adjusted_rect(-dx, -dy, dx, dy)
 
         # as long as rect changed (got united with other), we keep
         # looking for new intersecting rects:
@@ -385,14 +415,14 @@ def join_close_rects(rects):
             rest = []
             for other in rects:
                 joined = None
-                if bigger.intersects(other):
+                if bigger.intersects(other.rect()):
                     joined = r | other
-                    if area(joined) > area(r) + area(other) + pixel_threshold:
+                    if joined.area() > r.area() + other.area() + pixel_threshold:
                         joined = None
                     
                 if joined:
                     r = joined
-                    bigger = r.adjusted(0, 0, dx, dy)
+                    bigger = r.adjusted_rect(-dx, -dy, dx, dy)
                     changed = True
                 else:
                     rest.append(other)
@@ -408,8 +438,8 @@ def join_close_rects(rects):
 
 
 def changed_rects_numpy_only(changed):
-    """Given two images, returns a list of QRects containing all
-    regions that changed."""
+    """Given two images, returns a list of all regions that changed.
+    Every element is a (QPoint, label_list, label_image_roi) triple."""
     
     changed_row = changed.any(-1)
     toggle_rows = list(numpy.nonzero(numpy.diff(changed_row))[0] + 1)
@@ -417,34 +447,45 @@ def changed_rects_numpy_only(changed):
         toggle_rows.insert(0, 0)
     if changed_row[-1]:
         toggle_rows.append(len(changed_row))
+    assert len(toggle_rows) % 2 == 0
+
+    labelImage = changed.astype(numpy.uint32)
 
     result = []
-    assert len(toggle_rows) % 2 == 0
     it = iter(toggle_rows)
-    for y1, y2 in zip(it, it):
+    for i, (y1, y2) in enumerate(zip(it, it)):
         changed_columns, = numpy.nonzero(changed[y1:y2].any(0))
         x1, x2 = changed_columns[0], changed_columns[-1] + 1
-        result.append(QtCore.QRect(x1, y1, x2-x1, y2-y1))
+        rect = QtCore.QRect(x1, y1, x2-x1, y2-y1)
+        labels = [i + 1]
+        result.append(ChangedRect(rect, labels, labelImage))
+
     return result
 
 
 def changed_rects_ndimage(changed):
-    """Given two images, returns a list of QRects containing all
-    regions that changed."""
+    """Given two images, returns a list of all regions that changed.
+    Every element is a (QPoint, label_list, label_image_roi) triple."""
     
-    import scipy.ndimage
-    
-    lab, cnt = scipy.ndimage.measurements.label(changed)
+    labelImage, cnt = scipy.ndimage.measurements.label(changed)
     
     result = []
-    for y, x in scipy.ndimage.measurements.find_objects(lab, cnt):
-        result.append(QtCore.QRect(x.start, y.start,
-                                   x.stop - x.start, y.stop - y.start))
-    return join_close_rects(result)
+    for i, (y, x) in enumerate(scipy.ndimage.measurements.find_objects(labelImage, cnt)):
+        rect = QtCore.QRect(x.start, y.start,
+                            x.stop - x.start, y.stop - y.start)
+        labels = [i + 1]
+        result.append(ChangedRect(rect, labels, labelImage))
+
+    result = join_close_rects(result)
+    return result
 
 
-changed_rects = changed_rects_ndimage
-#changed_rects = changed_rects_numpy_only
+try:
+    import scipy.ndimage
+    changed_rects = changed_rects_ndimage
+except ImportError:
+    sys.stderr.write("WARNING: Could not import scipy.ndimage.  Falling back to suboptimal numpy-only code.")
+    changed_rects = changed_rects_numpy_only
 
 
 class BackgroundDetection(object):
