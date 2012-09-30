@@ -301,15 +301,15 @@ class PDFDecanter(QtCore.QObject):
                 self._animateOverviewGroup(self._overviewPosForCursor(r), pres.scale())
 
     def _adjustOverviewPos(self, pos, scale):
-        # adjust position in order to prevent ugly black margins:
-        if pos.y() > 0.0:
-            # overview smaller than scene?
-            if self._scene.sceneRect().height() > self.presentationBounds().height() * scale:
-                # yes, center overview (evenly distributing black margin):
-                pos.setY(0.5 * (self._scene.sceneRect().height() - self.presentationBounds().height() * scale))
-            else:
-                # no, prevent black margin at top:
-                pos.setY(0.0)
+        """adjust position in order to prevent ugly black margins"""
+
+        # overview smaller than scene?
+        if self._scene.sceneRect().height() > self.presentationBounds().height() * scale:
+            # yes, center overview (evenly distributing black margin):
+            pos.setY(0.5 * (self._scene.sceneRect().height() - self.presentationBounds().height() * scale))
+        elif pos.y() > 0.0:
+            # no, prevent black margin at top:
+            pos.setY(0.0)
         else:
             # prevent black margin at bottom:
             minY = self._scene.sceneRect().height() - self.presentationBounds().height() * scale
