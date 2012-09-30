@@ -396,6 +396,9 @@ class ChangedRect(ObjectWithFlags):
     def image(self):
         return array2qimage(self.subarray(self._originalImage))
 
+    def isSuccessorOf(self, other):
+        return self.rect() == other.rect()
+
     def adjusted_rect(self, *args):
         return self._rect.adjusted(*args)
 
@@ -587,10 +590,10 @@ def detect_navigation(frames):
         footer_top    = frame_size.height() * 0.75
 
         content = sorted(frame.content(),
-                         key = lambda patch: patch.pos().y())
+                         key = lambda patch: patch.topLeft().y())
         
         for patch in content:
-            rect = patch.boundingRect()
+            rect = patch.rect()
 
             if rect.bottom() < header_bottom:
                 patch.setFlag(Patch.FLAG_HEADER)
@@ -605,7 +608,7 @@ def detect_navigation(frames):
                 break
 
         for patch in reversed(content):
-            rect = patch.boundingRect()
+            rect = patch.rect()
 
             if rect.top() < footer_top:
                 break
@@ -627,22 +630,20 @@ def create_frames(raw_pages):
 
     canvas = numpy.ones_like(raw_pages[0]) * 255
 
-    cache = {}
-
     result = []
     for page in raw_pages:
         changed = (canvas != page).any(-1)
         rects = changed_rects(changed, page)
 
         h, w = page.shape[:2]
-        result.append(Frame(QtCore.QSizeF(w, h),
-                            Patches.extract(rects, cache)))
+        result.append(Frame(QtCore.QSizeF(w, h), rects))
 
-    print "Total number of distinct patches: %d" % len(cache)
     return result
 
 def stack_frames(frames):
 #    background = detectBackground(raw_pages)
+
+    cache = {}
 
     result = Presentation()
     #result.background = background
@@ -656,5 +657,10 @@ def stack_frames(frames):
         result[-1].addFrame(frame)
         prevFrame = frame
 
+    for frame in frames:
+        content = frame.content()
+        content[:] = Patches.extract(content, cache)
+
     result._slidesChanged()
+    print "Total number of distinct patches: %d" % len(cache)
     return result
