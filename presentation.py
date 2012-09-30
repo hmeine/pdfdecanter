@@ -69,10 +69,6 @@ class Patch(ObjectWithFlags):
     def isSuccessorOf(self, other):
         return self._pos == other._pos and self.size() == other.size()
 
-    @classmethod
-    def extract(cls, frame, rect):
-        return cls(rect.topLeft(), array2qimage(rect.subarray(frame)))
-
     def __iter__(self):
         yield self._pos
         yield self._image
@@ -99,14 +95,16 @@ class Patches(list):
         return boundingRect(patch.boundingRect() for patch in self)
 
     @classmethod
-    def extract(cls, frame, rects, cache = None):
+    def extract(cls, rects, cache = None):
         """Extract patches from a full frame and list of rects.
         Parameters are the frame image as ndarray, and a list of
         QRects."""
         
         patches = cls()
         for r in rects:
-            patch = Patch.extract(frame, r)
+            pos = r.topLeft()
+            image = r.image()
+            patch = Patch(pos, image)
             if cache is not None:
                 # reuse existing Patch if it has the same key:
                 key = patch.key()
@@ -368,14 +366,15 @@ class Presentation(list):
 # --------------------------------------------------------------------
 
 
-class ChangedRect(object):
-    __slots__ = ('_rect', '_labels', '_labelImage')
+class ChangedRect(ObjectWithFlags):
+    __slots__ = ('_rect', '_labels', '_labelImage', '_originalImage')
 
-    def __init__(self, rect, labels, labelImage):
+    def __init__(self, rect, labels, labelImage, originalImage):
         super(ChangedRect, self).__init__()
         self._rect = rect
         self._labels = labels
         self._labelImage = labelImage
+        self._originalImage = originalImage
 
     def rect(self):
         return self._rect
@@ -394,15 +393,20 @@ class ChangedRect(object):
     def labelROI(self):
         return self.subarray(self._labelImage)
 
+    def image(self):
+        return array2qimage(self.subarray(self._originalImage))
+
     def adjusted_rect(self, *args):
         return self._rect.adjusted(*args)
 
     def __or__(self, other):
         assert self._labelImage is other._labelImage
+        assert self._originalImage is other._originalImage
         return ChangedRect(
             self._rect | other._rect,
             self._labels + other._labels,
-            self._labelImage)
+            self._labelImage,
+            self._originalImage)
 
 
 def join_close_rects(rects):
@@ -448,10 +452,7 @@ def join_close_rects(rects):
     return result
 
 
-def changed_rects_numpy_only(changed):
-    """Given two images, returns a list of all regions that changed.
-    Every element is a (QPoint, label_list, label_image_roi) triple."""
-    
+def changed_rects_numpy_only(changed, original):
     changed_row = changed.any(-1)
     toggle_rows = list(numpy.nonzero(numpy.diff(changed_row))[0] + 1)
     if changed_row[0]:
@@ -469,15 +470,12 @@ def changed_rects_numpy_only(changed):
         x1, x2 = changed_columns[0], changed_columns[-1] + 1
         rect = QtCore.QRect(x1, y1, x2-x1, y2-y1)
         labels = [i + 1]
-        result.append(ChangedRect(rect, labels, labelImage))
+        result.append(ChangedRect(rect, labels, labelImage, original))
 
     return result
 
 
-def changed_rects_ndimage(changed):
-    """Given two images, returns a list of all regions that changed.
-    Every element is a (QPoint, label_list, label_image_roi) triple."""
-    
+def changed_rects_ndimage(changed, original):
     labelImage, cnt = scipy.ndimage.measurements.label(changed)
     
     result = []
@@ -485,7 +483,7 @@ def changed_rects_ndimage(changed):
         rect = QtCore.QRect(x.start, y.start,
                             x.stop - x.start, y.stop - y.start)
         labels = [i + 1]
-        result.append(ChangedRect(rect, labels, labelImage))
+        result.append(ChangedRect(rect, labels, labelImage, original))
 
     result = join_close_rects(result)
     return result
@@ -634,11 +632,11 @@ def create_frames(raw_pages):
     result = []
     for page in raw_pages:
         changed = (canvas != page).any(-1)
-        rects = changed_rects(changed)
+        rects = changed_rects(changed, page)
 
         h, w = page.shape[:2]
         result.append(Frame(QtCore.QSizeF(w, h),
-                            Patches.extract(page, rects, cache)))
+                            Patches.extract(rects, cache)))
 
     print "Total number of distinct patches: %d" % len(cache)
     return result
