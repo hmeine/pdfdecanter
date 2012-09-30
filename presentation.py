@@ -406,7 +406,7 @@ def join_close_rects(rects):
                 joined = None
                 if bigger.intersects(other):
                     joined = r | other
-                    if area(joined) - (area(r) + area(other)) > pixel_threshold:
+                    if area(joined) > area(r) + area(other) + pixel_threshold:
                         joined = None
                     
                 if joined:
@@ -597,7 +597,6 @@ def stack_frames(raw_pages):
     canvas = numpy.ones_like(raw_pages[0]) * 255
 
     background = detectBackground(raw_pages)
-    rects = changed_rects(canvas, background)
 
     result = Presentation()
     result.background = background
