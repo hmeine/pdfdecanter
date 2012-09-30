@@ -112,9 +112,10 @@ class Frame(object):
     """Single frame (PDF page) with content, header, footer.  Belongs
     to a parent Slide."""
 
-    __slots__ = ('_content', '_slide', '_pdfPageInfos')
+    __slots__ = ('_size', '_content', '_slide', '_pdfPageInfos')
 
-    def __init__(self, contentPatches, slide = None):
+    def __init__(self, size, contentPatches, slide = None):
+        self._size = size
         self._content = contentPatches
         self._slide = slide
         self._pdfPageInfos = None
@@ -137,7 +138,7 @@ class Frame(object):
         return self._slide.presentation()
 
     def size(self):
-        return self._slide._size
+        return self._size
 
     def backgroundColor(self):
         return QtGui.QColor(QtCore.Qt.white)
@@ -163,7 +164,7 @@ class Frame(object):
         if not self._pdfPageInfos:
             return
 
-        frameSize = self._slide.size()
+        frameSize = self.size()
 
         for rect, link in self._pdfPageInfos.relativeLinks():
             if onlyExternal and isinstance(link, int):
@@ -180,7 +181,7 @@ class Frame(object):
         if not self._pdfPageInfos:
             return None
         
-        frameSize = self._slide.size()
+        frameSize = self.size()
         relPos = (pos.x() / frameSize.width(),
                   (frameSize.height() - pos.y()) / frameSize.height())
         for rect, link in self._pdfPageInfos.relativeLinks():
@@ -209,10 +210,9 @@ class Slide(object):
     represent transition states of the same presentation slide.  It is
     assumed that all frames have the same size."""
     
-    __slots__ = ('_size', '_presentation', '_frames', '_currentSubIndex', '_seen')
+    __slots__ = ('_presentation', '_frames', '_currentSubIndex', '_seen')
     
-    def __init__(self, size, presentation):
-        self._size = size
+    def __init__(self, presentation):
         self._presentation = presentation
         self._frames = []
 
@@ -220,7 +220,7 @@ class Slide(object):
         self._seen = False
 
     def size(self):
-        return self._size
+        return self._frames[0].size()
 
     def presentation(self):
         return self._presentation
@@ -255,6 +255,9 @@ class Slide(object):
         return result
 
     def addFrame(self, frame):
+        if len(self._frames):
+            assert frame.size() == self.size()
+        
         self._frames.append(frame)
         frame.setSlide(self)
 
@@ -524,10 +527,10 @@ def detectBackground(raw_frames, useFrames = 15):
     return canvas
 
 
-def detect_navigation(presentation):
+def detect_navigation(frames):
     """Classify header and footer patches."""
 
-    for frame in presentation.frames():
+    for frame in frames:
         frame_size = frame.size()
 
         header_bottom = frame_size.height() * 11 / 48 # frame_size.height() / 3
@@ -569,33 +572,39 @@ def detect_navigation(presentation):
                 #     break
 
 
-def stack_frames(raw_pages):
+def create_frames(raw_pages):
     raw_pages = list(raw_pages)
-    frame_size = QtCore.QSizeF(raw_pages[0].shape[1], raw_pages[0].shape[0])
 
     canvas = numpy.ones_like(raw_pages[0]) * 255
 
-    background = detectBackground(raw_pages)
-
-    result = Presentation()
-    result.background = background
-
     cache = {}
 
-    prevFrame = None
+    result = []
     for page in raw_pages:
         changed = (canvas != page).any(-1)
         rects = changed_rects(changed)
 
-        frame = Frame(Patches.extract(page, rects, cache))
+        h, w = page.shape[:2]
+        result.append(Frame(QtCore.QSizeF(w, h),
+                            Patches.extract(page, rects, cache)))
 
+    print "Total number of distinct patches: %d" % len(cache)
+    return result
+
+def stack_frames(frames):
+#    background = detectBackground(raw_pages)
+
+    result = Presentation()
+    #result.background = background
+
+    prevFrame = None
+    for frame in frames:
         # new Slide?
         if not prevFrame or not frame.isSuccessorOf(prevFrame):
-            result.append(Slide(frame_size, result))
+            result.append(Slide(result))
 
         result[-1].addFrame(frame)
         prevFrame = frame
 
-    print len(cache)
     result._slidesChanged()
     return result

@@ -217,11 +217,12 @@ class PDFDecanter(QtCore.QObject):
             wallClockTime = time.time()
             cpuTime = time.clock()
 
-            raw_frames = renderer.renderAllPages(pdfFilename, sizePX = self.slideSize(),
-                                                 pageCount = infos and infos.pageCount())
+            pages = renderer.renderAllPages(pdfFilename, sizePX = self.slideSize(),
+                                            pageCount = infos and infos.pageCount())
 
-            slides = presentation.stack_frames(raw_frames)
-            presentation.detect_navigation(slides)
+            frames = presentation.create_frames(pages)
+            presentation.detect_navigation(frames)
+            slides = presentation.stack_frames(frames)
             slides.setPDFInfos(infos)
 
             print "complete rendering took %.3gs. (%.3gs. real time)" % (
