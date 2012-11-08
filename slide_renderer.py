@@ -44,7 +44,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
     def _frameItems(self, frame):
         result = {}
 
-        color = frame.backgroundColor() if not self.DEBUG else QtCore.Qt.red
+        color = frame.backgroundColor() if not self.DEBUG else QtGui.QColor(QtCore.Qt.red)
         key = 'bg_%d_%d_%d' % color.getRgb()[:3]
         bgItem = self._items.get(key, None)
         if bgItem is None:
