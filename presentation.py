@@ -208,7 +208,7 @@ class Frame(object):
         return True
 
     def __getnewargs__(self):
-        return self._content, self._slide
+        return (self._size.width(), self._size.height()), self._content, self._slide
 
 
 class Slide(object):
@@ -244,7 +244,7 @@ class Slide(object):
         return self._frames.index(frame)
 
     def contentRect(self, margin = 0):
-        result = QtCore.QRectF(0, 0, self._size.width(), self._size.height())
+        result = QtCore.QRectF(0, 0, self.size().width(), self.size().height())
 
         for frame in self:
             for patch in frame.header():
@@ -288,11 +288,10 @@ class Slide(object):
         # TODO: notification?
 
     def __getstate__(self):
-        return ((self._size.width(), self._size.height()), self._frames)
+        return (self._frames, )
 
     def __setstate__(self, state):
-        (w, h), frames = state
-        self._size = QtCore.QSizeF(w, h)
+        frames, = state
         self._presentation = None
         self._frames = frames
         # __init__ is not called:
