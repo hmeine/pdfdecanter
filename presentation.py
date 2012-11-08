@@ -96,9 +96,8 @@ class Patches(list):
 
     @classmethod
     def extract(cls, rects, cache = None):
-        """Extract patches from a full frame and list of rects.
-        Parameters are the frame image as ndarray, and a list of
-        QRects."""
+        """Extract patches from the page image.
+        Expects a list of ChangedRects and an optional cache dict."""
         
         patches = cls()
         for r in rects:
@@ -366,6 +365,8 @@ class Presentation(list):
 
 
 class ChangedRect(ObjectWithFlags):
+    """Represents changes, i.e. a bounding box (rect()) and a number of labels within that ROI."""
+    
     __slots__ = ('_rect', '_labels', '_labelImage', '_originalImage')
 
     def __init__(self, rect, labels, labelImage, originalImage):
@@ -392,8 +393,18 @@ class ChangedRect(ObjectWithFlags):
     def labelROI(self):
         return self.subarray(self._labelImage)
 
+    def changed(self):
+        """Return mask array with changed pixels set to True."""
+        result = numpy.zeros((self._rect.height(), self._rect.width()), dtype = bool)
+        labelROI = self.labelROI()
+        for l in self._labels:
+            result |= (labelROI == l)
+        return result
+
     def image(self):
-        return array2qimage(self.subarray(self._originalImage))
+        rgb = self.subarray(self._originalImage)
+        alpha = numpy.uint8(255) * self.changed()
+        return array2qimage(numpy.dstack((rgb, alpha)))
 
     def isSuccessorOf(self, other):
         return self.rect() == other.rect()
