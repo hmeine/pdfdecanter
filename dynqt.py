@@ -60,6 +60,6 @@ QtOpenGL = qt.QtOpenGL
 
 if qt.name() == 'PySide':
 	array2qimage = array2qimage_pure_python
-	rgb_view = None
+	raw_view = None
 else:
-	from qimage2ndarray import array2qimage, rgb_view
+	from qimage2ndarray import array2qimage, raw_view

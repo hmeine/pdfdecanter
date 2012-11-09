@@ -1,5 +1,5 @@
 import numpy, sys, time, hashlib
-from dynqt import QtCore, QtGui, array2qimage, rgb_view
+from dynqt import QtCore, QtGui, array2qimage, raw_view
 
 
 def boundingRect(rects):
@@ -56,7 +56,7 @@ class Patch(ObjectWithFlags):
         return self._pos.x(), self._pos.y()
 
     def ndarray(self):
-        return rgb_view(self._image)
+        return raw_view(self._image)
 
     def pixmap(self):
         if self._pixmap is None:
@@ -81,8 +81,10 @@ class Patch(ObjectWithFlags):
 
     def __setstate__(self, state):
         (x, y), patch, self._flags = state
+        h, w = patch.shape
         self._pos = QtCore.QPoint(x, y)
-        self._image = array2qimage(patch)
+        self._image = QtGui.QImage(w, h, QtGui.QImage.Format_ARGB32)
+        raw_view(self._image)[:] = patch
         self._pixmap = None
 
 
