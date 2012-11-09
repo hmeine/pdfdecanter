@@ -86,33 +86,6 @@ class Patch(ObjectWithFlags):
         self._pixmap = None
 
 
-class Patches(list):
-    """List of Patch instances, which are basically positioned QImage patches."""
-    
-    __slots__ = ()
-    
-    def boundingRect(self):
-        return boundingRect(patch.boundingRect() for patch in self)
-
-    @classmethod
-    def extract(cls, rects, cache = None):
-        """Extract patches from the page image.
-        Expects a list of ChangedRects and an optional cache dict."""
-        
-        patches = cls()
-        for r in rects:
-            pos = r.topLeft()
-            image = r.image()
-            patch = Patch(pos, image)
-            if cache is not None:
-                # reuse existing Patch if it has the same key:
-                key = patch.key()
-                patch = cache.get(key, patch)
-                cache[key] = patch
-            patches.append(patch)
-        return patches
-
-
 class Frame(object):
     """Single frame (PDF page) with content, header, footer.  Belongs
     to a parent Slide."""
@@ -650,6 +623,28 @@ def create_frames(raw_pages):
 
     return result
 
+
+def extract_patches(rects, cache = None):
+    """Extract patches from the page image.
+    Expects a list of ChangedRects and an optional cache dict."""
+    
+    patches = []
+    for r in rects:
+        pos = r.topLeft()
+        image = r.image()
+        patch = Patch(pos, image)
+
+        if cache is not None:
+            # reuse existing Patch if it has the same key:
+            key = patch.key()
+            patch = cache.get(key, patch)
+            cache[key] = patch
+
+        patches.append(patch)
+
+    return patches
+
+
 def stack_frames(frames):
 #    background = detectBackground(raw_pages)
 
@@ -669,7 +664,7 @@ def stack_frames(frames):
 
     for frame in frames:
         content = frame.content()
-        content[:] = Patches.extract(content, cache)
+        content[:] = extract_patches(content, cache)
 
     result._slidesChanged()
     print "Total number of distinct patches: %d" % len(cache)
