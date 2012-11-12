@@ -67,7 +67,7 @@ class Patch(ObjectWithFlags):
         return self._image.width() * self._image.height()
 
     def isSuccessorOf(self, other):
-        return self._pos == other._pos and self.size() == other.size()
+        return self.boundingRect() == other.boundingRect()
 
     def __iter__(self):
         yield self._pos
@@ -179,6 +179,7 @@ class Frame(object):
                         break
             if not found:
                 return False
+
         return True
 
     def __getnewargs__(self):
