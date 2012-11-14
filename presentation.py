@@ -170,6 +170,15 @@ class Frame(object):
         return None
 
     def isSuccessorOf(self, other):
+        """Return whether this Frame is likely to be the 'successor'
+        of the given other one.  This is assumed to be the case if
+        only new ChangedRects appear, or disappearing ChangedRects
+        have a corresponding successor
+        (cf. ChangedRect.isSuccessorOf()).
+        """
+        if self.size() != other.size():
+            return False
+
         for patch in other.content():
             found = patch in self._content
             if not found:
@@ -383,7 +392,10 @@ class ChangedRect(ObjectWithFlags):
         return array2qimage(numpy.dstack((rgb, alpha)))
 
     def isSuccessorOf(self, other):
-        return self.rect() == other.rect()
+        """Return whether this ChangedRect is likely to be the
+        'successor' of the given other one.  This is assumed to be the
+        case if both cover exactly the same pixels."""
+        return self.rect() == other.rect() and numpy.all(self.changed() == other.changed())
 
     def adjusted_rect(self, *args):
         return self._rect.adjusted(*args)
