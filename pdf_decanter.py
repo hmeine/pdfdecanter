@@ -46,14 +46,15 @@ class PDFDecanter(QtCore.QObject):
     the usual methods of a regular QWidget.
 
     The QGraphicsScene is set to the window size (and this relation is
-    maintained in resizeEvent).  The scene contains a viewport
+    maintained in resizeEvent).  The root item in the scene is a
+    QGraphicsWidget (_presentationItem) that indirectly contains a
+    grid (cf. _setupGrid) of SlideRenderer items (_renderers) with a
+    layout used for the overview mode.  The _presentationItem is used
+    for zooming out into the overview mode and back.  Between the
+    _presentationItem and the renderers, there is a viewport
     (cf. _slideViewport) that serves as a clipping rect, in order to
     hide neighboring slides in case of a larger window (e.g. 16:9
-    fullscreen with 4:3 slides).  Inside that item, there is a
-    QGraphicsWidget (_presentationItem) that contains a grid
-    (cf. _setupGrid) of SlideRenderer items (_renderers) with a layout
-    used for the overview mode.  The _presentationItem is used for
-    zooming out into the overview mode and back."""
+    fullscreen with 4:3 slides)."""
     
     def __init__(self, view = None):
         QtCore.QObject.__init__(self)
@@ -73,18 +74,18 @@ class PDFDecanter(QtCore.QObject):
 
         if view.scene() is not None:
             self._scene = view.scene()
-            self._scene.setSceneRect(0, 0, w, h)
+            self._scene.setSceneRect(0, 0, self._view.width(), self._view.height())
         else:
-            self._scene = QtGui.QGraphicsScene(0, 0, w, h)
+            self._scene = QtGui.QGraphicsScene(0, 0, self._view.width(), self._view.height())
             self._view.setScene(self._scene)
         self._scene.setBackgroundBrush(QtCore.Qt.black)
         self._scene.installEventFilter(self) # for MouseButtonRelease events
 
-        self._slideViewport = QtGui.QGraphicsRectItem(QtCore.QRectF(0, 0, w, h))
-        self._scene.addItem(self._slideViewport)
-        self._slideViewport.setFlag(QtGui.QGraphicsItem.ItemClipsChildrenToShape)
+        self._presentationItem = QtGui.QGraphicsWidget()
+        self._scene.addItem(self._presentationItem)
 
-        self._presentationItem = QtGui.QGraphicsWidget(self._slideViewport)
+        self._slideViewport = QtGui.QGraphicsRectItem(self._presentationItem)
+        self._slideViewport.setFlag(QtGui.QGraphicsItem.ItemClipsChildrenToShape)
 
         self._cursor = None
 
@@ -163,11 +164,20 @@ class PDFDecanter(QtCore.QObject):
         return False
 
     def resizeEvent(self, e):
-        w, h = self.slideSize()
-        factor = min(e.size().width() / w,
-                     e.size().height() / h)
-        self._view.resetMatrix()
-        self._view.scale(factor, factor)
+        self._scene.setSceneRect(0, 0, self._view.width(), self._view.height())
+        self._adjustViewport()
+
+    def _adjustViewport(self):
+        if self._currentFrameIndex is None:
+            return
+
+        if not self._inOverview:
+            viewportRect = QtCore.QRectF(self._currentRenderer().pos(),
+                                         self._currentRenderer().size())
+        else:
+            viewportRect = self.presentationBounds()
+
+        self._slideViewport.setRect(viewportRect)
 
     def wheelEvent(self, e):
         if self._inOverview:
@@ -256,7 +266,7 @@ class PDFDecanter(QtCore.QObject):
     def setSlides(self, slides):
         self._slides = slides
         assert not self._renderers, "FIXME: delete old renderers / graphics items"
-        self._renderers = [slide_renderer.SlideRenderer(s, self._presentationItem) for s in slides]
+        self._renderers = [slide_renderer.SlideRenderer(s, self._slideViewport) for s in slides]
         for r in self._renderers:
             r.setLinkHandler(self.followLink)
         self._setupGrid()
@@ -295,7 +305,7 @@ class PDFDecanter(QtCore.QObject):
 
     def _updateCursor(self, animated):
         if self._cursor is None:
-            self._cursor = QtGui.QGraphicsWidget(self._presentationItem)
+            self._cursor = QtGui.QGraphicsWidget(self._slideViewport)
             self._cursorRect = QtGui.QGraphicsRectItem(self._cursor)
             self._cursorRect.setPen(QtGui.QPen(QtCore.Qt.yellow, 25))
             self._cursorRect.setBrush(QtGui.QBrush(QtGui.QColor(255, 255, 0, 100)))
@@ -372,6 +382,8 @@ class PDFDecanter(QtCore.QObject):
         self._animateOverviewGroup(self._overviewPosForCursor(), self._overviewScale())
 
         self._inOverview = True
+        self._adjustViewport()
+
     def _currentFrame(self):
         if self._currentFrameIndex is None:
             return None
@@ -409,11 +421,20 @@ class PDFDecanter(QtCore.QObject):
 
         self._currentFrameIndex = frameIndex
 
+        windowSize = self._scene.sceneRect().size()
+        frameSize = targetFrame.size()
+        scale = min(windowSize.width() / frameSize.width(),
+                    windowSize.height() / frameSize.height())
+        margin = (windowSize - scale * frameSize) / 2.0
+        targetPresentationPos = QtCore.QPointF(margin.width(), margin.height()) - renderer.pos()
+        
         if not self._inOverview:
-            self._presentationItem.setPos(-renderer.pos())
+            self._presentationItem.setPos(targetPresentationPos)
+            self._adjustViewport()
         else:
             self._inOverview = False
-            self._animateOverviewGroup(-renderer.pos(), 1.0)
+            self._animateOverviewGroup(targetPresentationPos, 1.0)
+            self._adjustViewport()
 
     def _clearGotoSlide(self):
         self._gotoSlideIndex = None
