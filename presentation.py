@@ -101,23 +101,32 @@ class Frame(object):
         self._pdfPageInfos = None
 
     def setSlide(self, slide):
+        """Set parent slide; expected to be called by Slide.addFrame()."""
         self._slide = slide
 
     def slide(self):
+        """Return slide this frame belongs to (one level up in the
+        compositional hierarchy)."""
         return self._slide
 
     def header(self):
+        """Return list of content patches with the FLAG_HEADER flag set"""
         return [patch for patch in self._content
                 if patch.flag(Patch.FLAG_HEADER)]
 
     def footer(self):
+        """Return list of content patches with the FLAG_FOOTER flag set"""
         return [patch for patch in self._content
                 if patch.flag(Patch.FLAG_FOOTER)]
 
     def presentation(self):
+        """Return presentation this frame belongs to (two levels up in
+        the compositional hierarchy).  Equivalent to
+        .slide().presentation()."""
         return self._slide.presentation()
 
     def size(self):
+        """Return size (in pixels, as QSizeF) of this Frame"""
         return self._size
 
     def backgroundColor(self):
