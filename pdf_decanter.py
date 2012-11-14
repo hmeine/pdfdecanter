@@ -300,7 +300,7 @@ class PDFDecanter(QtCore.QObject):
 
             renderer.setPos(x, y)
 
-            x += (w + PADDING_X)
+            x += (renderer.frame().size().width() + PADDING_X) # TODO: use 1.03 * max(left_renderer_width, right_renderer_width)?
             col += 1
 
     def _updateCursor(self, animated):
