@@ -296,9 +296,9 @@ class PDFDecanter(QtCore.QObject):
     def _updateCursor(self, animated):
         if self._cursor is None:
             self._cursor = QtGui.QGraphicsWidget(self._presentationItem)
-            cursorRect = QtGui.QGraphicsRectItem(self._scene.sceneRect(), self._cursor)
-            cursorRect.setPen(QtGui.QPen(QtCore.Qt.yellow, 25))
-            cursorRect.setBrush(QtGui.QBrush(QtGui.QColor(255, 255, 0, 100)))
+            self._cursorRect = QtGui.QGraphicsRectItem(self._cursor)
+            self._cursorRect.setPen(QtGui.QPen(QtCore.Qt.yellow, 25))
+            self._cursorRect.setBrush(QtGui.QBrush(QtGui.QColor(255, 255, 0, 100)))
             self._cursor.setZValue(-10)
             self._cursorPos = None
 
@@ -307,6 +307,7 @@ class PDFDecanter(QtCore.QObject):
 
         if not animated:
             self._cursor.setPos(r.topLeft())
+            self._cursorRect.setRect(QtCore.QRectF(QtCore.QPointF(0, 0), r.size()))
         else:
             self._cursorAnimation = QtCore.QPropertyAnimation(self._cursor, "pos")
             self._cursorAnimation.setDuration(100)
