@@ -354,14 +354,22 @@ class PDFDecanter(QtCore.QObject):
                                                       self._presentationItem.scale()))
         targetGeometry = QtCore.QRectF(pos, QtCore.QSizeF(scale, scale))
 
-        # FIXME: clear up / reuse QObject:
         self._overviewAnimation = GeometryAnimation(self._presentationItem)
         self._overviewAnimation.setStartValue(currentGeometry)
         self._overviewAnimation.setEndValue(targetGeometry)
         self._overviewAnimation.setDuration(300)
         self._overviewAnimation.setEasingCurve(QtCore.QEasingCurve.InOutCubic)
+        self._overviewAnimation.finished.connect(self._resetOverviewAnimation)
 
         self._overviewAnimation.start()
+
+    def _resetOverviewAnimation(self):
+        if not self._overviewAnimation:
+            return
+
+        self._overviewAnimation.stop()
+        self._overviewAnimation = None
+        self._adjustViewport()
 
     def _overviewScale(self):
         return self._scene.sceneRect().width() / self.presentationBounds().width()
@@ -434,7 +442,6 @@ class PDFDecanter(QtCore.QObject):
         else:
             self._inOverview = False
             self._animateOverviewGroup(targetPresentationPos, 1.0)
-            self._adjustViewport()
 
     def _clearGotoSlide(self):
         self._gotoSlideIndex = None
