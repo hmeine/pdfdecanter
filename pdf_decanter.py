@@ -570,7 +570,7 @@ class PDFDecanter(QtCore.QObject):
             self._updateCursor(animated = True)
 
 
-def start(view = None):
+def start(view = None, show = True):
     global app
     hasApp = QtGui.QApplication.instance()
     if not hasApp:
@@ -583,6 +583,12 @@ def start(view = None):
 
     result = PDFDecanter(view)
     result.hadEventLoop = hasattr(app, '_in_event_loop') and app._in_event_loop # IPython support
+
+    if show and view is None:
+        result.view().show()
+        if sys.platform == "darwin":
+            result.view().raise_()
+
     return result
 
 
@@ -602,10 +608,6 @@ if __name__ == "__main__":
 
     g = start()
     
-    g.view().show()
-    if sys.platform == "darwin":
-        g.view().raise_()
-
     if options.use_opengl:
         g.enableGL()
 
