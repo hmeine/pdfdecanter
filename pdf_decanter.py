@@ -36,6 +36,25 @@ class GeometryAnimation(QtCore.QVariantAnimation):
 
 
 class PDFDecanter(QtCore.QObject):
+    """Main presentation program using the QGraphicsView framework for
+    rendering.
+
+    It is supported to use an existing view for the presentation, so
+    this class does not directly represent a window (or widget).
+    Instead, eventFilter() is used to catch events for the view (and
+    scene), and pass them on to methods like resizeEvent(), simulating
+    the usual methods of a regular QWidget.
+
+    The QGraphicsScene is set to the window size (and this relation is
+    maintained in resizeEvent).  The scene contains a viewport
+    (cf. _slideViewport) that serves as a clipping rect, in order to
+    hide neighboring slides in case of a larger window (e.g. 16:9
+    fullscreen with 4:3 slides).  Inside that item, there is a
+    QGraphicsWidget (_presentationItem) that contains a grid
+    (cf. _setupGrid) of SlideRenderer items (_renderers) with a layout
+    used for the overview mode.  The _presentationItem is used for
+    zooming out into the overview mode and back."""
+    
     def __init__(self, view = None):
         QtCore.QObject.__init__(self)
 
