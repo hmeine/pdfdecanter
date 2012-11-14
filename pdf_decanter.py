@@ -371,9 +371,21 @@ class PDFDecanter(QtCore.QObject):
         self._animateOverviewGroup(self._overviewPosForCursor(), self._overviewScale())
 
         self._inOverview = True
+    def _currentFrame(self):
+        if self._currentFrameIndex is None:
+            return None
+        return self._slides.frame(self._currentFrameIndex)
+
+    def _currentSlideIndex(self):
+        frame = self._currentFrame()
+        if frame is None:
+            return None
+        return frame.slide().slideIndex()
 
     def _currentRenderer(self):
-        slideIndex = self._slides.frame(self._currentFrameIndex).slide().slideIndex()
+        slideIndex = self._currentSlideIndex()
+        if slideIndex is None:
+            return None
         return self._renderers[slideIndex]
 
     def gotoFrame(self, frameIndex):
@@ -576,7 +588,7 @@ class PDFDecanter(QtCore.QObject):
             desiredSlideIndex = self._renderers.index(desiredSlide)
             setY(self._cursorPos, centerY)
         else:
-            currentSlideIndex = self._slides.frame(self._currentFrameIndex).slide().slideIndex()
+            currentSlideIndex = self._currentSlideIndex()
             if event.key() == QtCore.Qt.Key_Right:
                 if currentSlideIndex < len(self._slides)-1:
                     desiredSlideIndex = currentSlideIndex + 1
