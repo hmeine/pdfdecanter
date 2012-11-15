@@ -164,16 +164,27 @@ class PDFDecanter(QtCore.QObject):
         return False
 
     def resizeEvent(self, e):
+        assert self._view.size() == e.size()
         self._scene.setSceneRect(0, 0, self._view.width(), self._view.height())
         self._adjustViewport()
+        pres = self._presentationItem
+        if not self._inOverview:
+            renderer = self._currentRenderer()
+            if not renderer:
+                return
+            scale, margin = self._maxpectScaleAndMargin(renderer.frame().size())
+            pres.setPos(QtCore.QPointF(margin.width(), margin.height()) - renderer.pos())
+        else:
+            scale = self._overviewScale()
+        pres.setScale(scale)
 
     def _adjustViewport(self):
         if self._currentFrameIndex is None:
             return
 
         if not self._inOverview:
-            viewportRect = QtCore.QRectF(self._currentRenderer().pos(),
-                                         self._currentRenderer().size())
+            renderer = self._currentRenderer()
+            viewportRect = QtCore.QRectF(renderer.pos(), renderer.size())
         else:
             viewportRect = self.presentationBounds()
 
@@ -409,6 +420,13 @@ class PDFDecanter(QtCore.QObject):
             return None
         return self._renderers[slideIndex]
 
+    def _maxpectScaleAndMargin(self, frameSize):
+        windowSize = self._scene.sceneRect().size()
+        scale = min(windowSize.width() / frameSize.width(),
+                    windowSize.height() / frameSize.height())
+        margin = (windowSize - scale * frameSize) / 2.0
+        return scale, margin
+
     def gotoFrame(self, frameIndex):
         """Identifies renderer responsible for the given frame and
         lets it show that frame.  If we're in overview mode, the scene
@@ -429,11 +447,7 @@ class PDFDecanter(QtCore.QObject):
 
         self._currentFrameIndex = frameIndex
 
-        windowSize = self._scene.sceneRect().size()
-        frameSize = targetFrame.size()
-        scale = min(windowSize.width() / frameSize.width(),
-                    windowSize.height() / frameSize.height())
-        margin = (windowSize - scale * frameSize) / 2.0
+        scale, margin = self._maxpectScaleAndMargin(targetFrame.size())
         targetPresentationPos = QtCore.QPointF(margin.width(), margin.height()) - renderer.pos()
         
         if not self._inOverview:
@@ -441,7 +455,7 @@ class PDFDecanter(QtCore.QObject):
             self._adjustViewport()
         else:
             self._inOverview = False
-            self._animateOverviewGroup(targetPresentationPos, 1.0)
+            self._animateOverviewGroup(targetPresentationPos, scale)
 
     def _clearGotoSlide(self):
         self._gotoSlideIndex = None
