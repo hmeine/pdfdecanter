@@ -315,6 +315,12 @@ class PDFDecanter(QtCore.QObject):
             col += 1
 
     def _updateCursor(self, animated):
+        """Moves the cursor to the current renderer.  If animated is
+        True, a _cursorAnimation will be set up and started, and if
+        the cursor target is not fully visible, the overview will also
+        be scrolled (animatedly).  The overview pos will not be
+        changed if animated == False."""
+        
         if self._cursor is None:
             self._cursor = QtGui.QGraphicsWidget(self._slideViewport)
             self._cursorRect = QtGui.QGraphicsRectItem(self._cursor)
@@ -383,6 +389,7 @@ class PDFDecanter(QtCore.QObject):
         self._adjustViewport()
 
     def _overviewScale(self):
+        """Return presentation scale that fills the view width with the overview."""
         return self._scene.sceneRect().width() / self.presentationBounds().width()
 
     def _overviewPosForCursor(self, r = None):
@@ -404,23 +411,30 @@ class PDFDecanter(QtCore.QObject):
         self._adjustViewport()
 
     def _currentFrame(self):
+        """Returns current Frame object (or None, in initialization phase)."""
         if self._currentFrameIndex is None:
             return None
         return self._slides.frame(self._currentFrameIndex)
 
     def _currentSlideIndex(self):
+        """Returns current slide index (or None, in initialization phase)."""
         frame = self._currentFrame()
         if frame is None:
             return None
         return frame.slide().slideIndex()
 
     def _currentRenderer(self):
+        """Returns currently active SlideRenderer (or None, in initialization phase)."""
         slideIndex = self._currentSlideIndex()
         if slideIndex is None:
             return None
         return self._renderers[slideIndex]
 
     def _maxpectScaleAndMargin(self, frameSize):
+        """Returns presentation scale and margin (for one side,
+        i.e. half of the excessive space) for centering a frame of the
+        given size in the current view."""
+        
         windowSize = self._scene.sceneRect().size()
         scale = min(windowSize.width() / frameSize.width(),
                     windowSize.height() / frameSize.height())
