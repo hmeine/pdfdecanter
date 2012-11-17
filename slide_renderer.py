@@ -147,9 +147,8 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
         oldGeometry = QtCore.QRectF(p(self.pos), self._frame.size())
         newGeometry, addItems, removeItems = self._changeFrame(targetFrame)
-
         if oldGeometry != newGeometry:
-            self._geometryAnimation = QPropertyAnimation(self, 'geometry', self)
+            self._geometryAnimation = QtCore.QPropertyAnimation(self, 'geometry', self)
             self._geometryAnimation.setEndValue(newGeometry)
             self._geometryAnimation.setDuration(100)
 
