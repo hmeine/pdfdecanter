@@ -8,6 +8,8 @@ class QtDriver(object):
 		for drv in cls.DRIVERS:
 			if drv in sys.modules:
 				return drv
+		if '_PythonQt' in sys.modules:
+			return 'PythonQt'
 		return None
 
 	def name(self):
