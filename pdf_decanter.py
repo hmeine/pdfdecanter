@@ -99,7 +99,7 @@ class PDFDecanter(QtCore.QObject):
         self._gotoSlideTimer.timeout.connect(self._clearGotoSlide)
 
         self._hideMouseTimer = QtCore.QTimer(self)
-        self._hideMouseTimer.setSingleShot(False)
+        self._hideMouseTimer.setSingleShot(True)
         self._hideMouseTimer.setInterval(1000)
         self._hideMouseTimer.timeout.connect(self._hideMouse)
         self._hideMouseTimer.start()
