@@ -268,7 +268,8 @@ class SlideRenderer(FrameRenderer):
         self._slide = slide
         self._frameCallbacks = []
 
-        self.showFrame()
+        assert len(slide) > 0
+        self.showFrame(0)
         self._coverItem()
 
     def slide(self):
@@ -342,7 +343,7 @@ class SlideRenderer(FrameRenderer):
         self.uncover()
         self.showFrame(len(self.slide())-1)
 
-    def showFrame(self, frameIndex = 0):
+    def showFrame(self, frameIndex):
         self._slide.setCurrentSubIndex(frameIndex)
 
         self.setFrame(self._slide.currentFrame())
