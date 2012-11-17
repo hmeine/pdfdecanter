@@ -1,5 +1,24 @@
 import sys, os
 
+def getprop_PythonQt(prop):
+	"""getprop(property_or_getter)
+
+	Used on getters that have the same name as a corresponding
+	property.  For PythonQt, this version will just return the
+	argument, which is assumed to be (the value of) a python property
+	with which PythonQt exposes Qt properties."""
+	return prop
+
+def getprop_other(getter):
+	"""getprop(property_or_getter)
+
+	Used on getters that have the same name as a corresponding
+	property.  For Qt bindings other than PythonQt, this version will
+	return the result of calling the argument, which is assumed to be
+	a Qt getter function.  (With PythonQt, properties override getters
+	and no calling must be done.)"""
+	return getter()
+
 class QtDriver(object):
 	DRIVERS = ('PyQt4', 'PySide', 'PythonQt')
 	
@@ -14,6 +33,9 @@ class QtDriver(object):
 
 	def name(self):
 		return self._drv
+
+	def getprop(self):
+		return getprop_PythonQt if self._drv == 'PythonQt' else getprop_other
 
 	def __init__(self, drv = os.environ.get('QT_DRIVER')):
 		if drv is None:
@@ -63,6 +85,7 @@ qt = QtDriver()
 QtCore = qt.QtCore
 QtGui = qt.QtGui
 QtOpenGL = qt.QtOpenGL
+getprop = qt.getprop()
 
 if qt.name() == 'PySide':
 	array2qimage = array2qimage_pure_python

@@ -1,4 +1,4 @@
-from dynqt import QtCore, QtGui
+from dynqt import QtCore, QtGui, getprop as p
 import presentation
 
 UNSEEN_OPACITY = 0.5
@@ -105,7 +105,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
         self._resetAnimation()
         self._frame = frame
-        newGeometry = QtCore.QRectF(self.pos(), frame.size())
+        newGeometry = QtCore.QRectF(p(self.pos), frame.size())
 
         parentItem = self._contentItem()
 
@@ -145,7 +145,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         slide = cmp(targetFrame.slide().slideIndex(),
                     sourceFrame.slide().slideIndex())
 
-        oldGeometry = QtCore.QRectF(self.pos(), self._frame.size())
+        oldGeometry = QtCore.QRectF(p(self.pos), self._frame.size())
         newGeometry, addItems, removeItems = self._changeFrame(targetFrame)
 
         if oldGeometry != newGeometry:
@@ -222,7 +222,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         parentItem = self._contentItem()
         for i in range(self._animation.animationCount()):
             anim = self._animation.animationAt(i)
-            for item in anim.targetObject().childItems():
+            for item in p(anim.targetObject).childItems():
                 item.setParentItem(parentItem)
 
         self._removeItems(self._pendingRemove)

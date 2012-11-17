@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from __future__ import division
 
-from dynqt import QtCore, QtGui, QtOpenGL
+from dynqt import QtCore, QtGui, QtOpenGL, getprop as p
 
 import numpy, os, sys, time, tempfile, math, operator
 import pdftoppm_renderer, pdf_infos, bz2_pickle
@@ -74,9 +74,9 @@ class PDFDecanter(QtCore.QObject):
 
         if view.scene() is not None:
             self._scene = view.scene()
-            self._scene.setSceneRect(0, 0, self._view.width(), self._view.height())
+            self._scene.setSceneRect(0, 0, p(self._view.width), p(self._view.height))
         else:
-            self._scene = QtGui.QGraphicsScene(0, 0, self._view.width(), self._view.height())
+            self._scene = QtGui.QGraphicsScene(0, 0, p(self._view.width), p(self._view.height))
             self._view.setScene(self._scene)
         self._scene.setBackgroundBrush(QtCore.Qt.black)
         self._scene.installEventFilter(self) # for MouseButtonRelease events
@@ -135,9 +135,9 @@ class PDFDecanter(QtCore.QObject):
 
     def presentationBounds(self):
         result = QtCore.QRectF()
-        for r in self._renderers:
-            br = r.boundingRect()
-            br.translate(r.pos())
+        for renderer in self._renderers:
+            br = renderer.boundingRect()
+            br.translate(p(renderer.pos))
             result |= br
         return result
 
@@ -164,8 +164,8 @@ class PDFDecanter(QtCore.QObject):
         return False
 
     def resizeEvent(self, e):
-        assert self._view.size() == e.size()
-        self._scene.setSceneRect(0, 0, self._view.width(), self._view.height())
+        assert p(self._view.size) == e.size()
+        self._scene.setSceneRect(0, 0, p(self._view.width), p(self._view.height))
         self._adjustViewport()
         pres = self._presentationItem
         if not self._inOverview:
@@ -173,7 +173,7 @@ class PDFDecanter(QtCore.QObject):
             if not renderer:
                 return
             scale, margin = self._maxpectScaleAndMargin(renderer.frame().size())
-            pres.setPos(QtCore.QPointF(margin.width(), margin.height()) - renderer.pos())
+            pres.setPos(QtCore.QPointF(margin.width(), margin.height()) - p(renderer.pos))
         else:
             scale = self._overviewScale()
         pres.setScale(scale)
@@ -184,7 +184,7 @@ class PDFDecanter(QtCore.QObject):
 
         if not self._inOverview:
             renderer = self._currentRenderer()
-            viewportRect = QtCore.QRectF(renderer.pos(), renderer.size())
+            viewportRect = QtCore.QRectF(p(renderer.pos), p(renderer.size))
         else:
             viewportRect = self.presentationBounds()
 
@@ -329,7 +329,7 @@ class PDFDecanter(QtCore.QObject):
             self._cursor.setZValue(-10)
             self._cursorPos = None
 
-        r = QtCore.QRectF(self._currentRenderer().pos(),
+        r = QtCore.QRectF(p(self._currentRenderer().pos),
                           self._currentRenderer().slide().size())
 
         if not animated:
@@ -338,37 +338,37 @@ class PDFDecanter(QtCore.QObject):
         else:
             self._cursorAnimation = QtCore.QPropertyAnimation(self._cursor, "pos")
             self._cursorAnimation.setDuration(100)
-            self._cursorAnimation.setStartValue(self._cursor.pos())
+            self._cursorAnimation.setStartValue(p(self._cursor.pos))
             self._cursorAnimation.setEndValue(r.topLeft())
             self._cursorAnimation.start()
 
             pres = self._presentationItem
-            if not self._scene.sceneRect().contains(
-                    r.center() * pres.scale() + pres.pos()):
-                self._animateOverviewGroup(self._overviewPosForCursor(r), pres.scale())
+            if not p(self._scene.sceneRect).contains(
+                    r.center() * p(pres.scale) + p(pres.pos)):
+                self._animateOverviewGroup(self._overviewPosForCursor(r), p(pres.scale))
 
     def _adjustOverviewPos(self, pos, scale):
         """adjust position in order to prevent ugly black margins"""
 
         # overview smaller than scene?
-        if self._scene.sceneRect().height() > self.presentationBounds().height() * scale:
+        if p(self._scene.sceneRect).height() > self.presentationBounds().height() * scale:
             # yes, center overview (evenly distributing black margin):
-            pos.setY(0.5 * (self._scene.sceneRect().height() - self.presentationBounds().height() * scale))
+            pos.setY(0.5 * (p(self._scene.sceneRect).height() - self.presentationBounds().height() * scale))
         elif pos.y() > 0.0:
             # no, prevent black margin at top:
             pos.setY(0.0)
         else:
             # prevent black margin at bottom:
-            minY = self._scene.sceneRect().height() - self.presentationBounds().height() * scale
+            minY = p(self._scene.sceneRect).height() - self.presentationBounds().height() * scale
             if pos.y() < minY:
                 pos.setY(minY)
 
     def _animateOverviewGroup(self, pos, scale):
         self._adjustOverviewPos(pos, scale)
 
-        currentGeometry = QtCore.QRectF(self._presentationItem.pos(),
-                                        QtCore.QSizeF(self._presentationItem.scale(),
-                                                      self._presentationItem.scale()))
+        currentGeometry = QtCore.QRectF(p(self._presentationItem.pos),
+                                        QtCore.QSizeF(p(self._presentationItem.scale),
+                                                      p(self._presentationItem.scale)))
         targetGeometry = QtCore.QRectF(pos, QtCore.QSizeF(scale, scale))
 
         self._overviewAnimation = GeometryAnimation(self._presentationItem)
@@ -390,14 +390,14 @@ class PDFDecanter(QtCore.QObject):
 
     def _overviewScale(self):
         """Return presentation scale that fills the view width with the overview."""
-        return self._scene.sceneRect().width() / self.presentationBounds().width()
+        return p(self._scene.sceneRect).width() / self.presentationBounds().width()
 
     def _overviewPosForCursor(self, r = None):
         if r is None:
             r = self._cursor.childItems()[0].boundingRect()
-            r.translate(self._cursor.pos())
+            r.translate(p(self._cursor.pos))
         s = self._overviewScale()
-        y = (0.5 * self._scene.sceneRect().height() - r.center().y() * s)
+        y = (0.5 * p(self._scene.sceneRect).height() - r.center().y() * s)
 
         return QtCore.QPointF(0, y)
 
@@ -435,7 +435,7 @@ class PDFDecanter(QtCore.QObject):
         i.e. half of the excessive space) for centering a frame of the
         given size in the current view."""
         
-        windowSize = self._scene.sceneRect().size()
+        windowSize = p(self._scene.sceneRect).size()
         scale = min(windowSize.width() / frameSize.width(),
                     windowSize.height() / frameSize.height())
         margin = (windowSize - scale * frameSize) / 2.0
@@ -462,7 +462,7 @@ class PDFDecanter(QtCore.QObject):
         self._currentFrameIndex = frameIndex
 
         scale, margin = self._maxpectScaleAndMargin(targetFrame.size())
-        targetPresentationPos = QtCore.QPointF(margin.width(), margin.height()) - renderer.pos()
+        targetPresentationPos = QtCore.QPointF(margin.width(), margin.height()) - p(renderer.pos)
         
         if not self._inOverview:
             self._presentationItem.setPos(targetPresentationPos)
