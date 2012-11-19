@@ -480,6 +480,7 @@ def changed_rects_numpy_only(changed, original):
         x1, x2 = changed_columns[0], changed_columns[-1] + 1
         rect = QtCore.QRect(x1, y1, x2-x1, y2-y1)
         labels = [i + 1]
+        labelImage[y1:y2] *= (i + 1)
         result.append(ChangedRect(rect, labels, labelImage, original))
 
     return result
