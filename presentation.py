@@ -200,8 +200,15 @@ class Frame(object):
 
         return True
 
-    def __getnewargs__(self):
+    def __getstate__(self):
         return (self._size.width(), self._size.height()), self._content, self._slide
+
+    def __setstate__(self, state):
+        (w, h), content, slide = state
+        self._size = QtCore.QSizeF(w, h)
+        self._content = content
+        self._slide = slide
+        self._pdfPageInfos = None
 
 
 class Slide(object):
