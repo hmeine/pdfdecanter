@@ -58,9 +58,15 @@ class QtDriver(object):
 			sip.setapi("QString", 2)
 			sip.setapi("QVariant", 2)
 
+	@staticmethod
+	def _initPythonQt():
+		import pythonqt_workarounds
+
 	def importMod(self, mod):
 		if self._drv == 'PyQt4':
 			self._initPyQt4()
+		if self._drv == 'PythonQt':
+			self._initPythonQt()
 		qt = __import__('%s.%s' % (self._drv, mod))
 		return getattr(qt, mod)
 
