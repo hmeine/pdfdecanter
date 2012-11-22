@@ -173,7 +173,7 @@ class PDFDecanter(QtCore.QObject):
             if not renderer:
                 return
             scale, margin = self._maxpectScaleAndMargin(renderer.frame().size())
-            pres.setPos(QtCore.QPointF(margin.width(), margin.height()) - p(renderer.pos))
+            pres.setPos(QtCore.QPointF(margin.width(), margin.height()) - p(renderer.pos) * scale)
         else:
             scale = self._overviewScale()
         pres.setScale(scale)
@@ -463,7 +463,7 @@ class PDFDecanter(QtCore.QObject):
         self._currentFrameIndex = frameIndex
 
         scale, margin = self._maxpectScaleAndMargin(targetFrame.size())
-        targetPresentationPos = QtCore.QPointF(margin.width(), margin.height()) - p(renderer.pos)
+        targetPresentationPos = QtCore.QPointF(margin.width(), margin.height()) - p(renderer.pos) * scale
         
         if not self._inOverview:
             self._presentationItem.setPos(targetPresentationPos)
