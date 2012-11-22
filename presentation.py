@@ -127,7 +127,7 @@ class Frame(object):
 
     def size(self):
         """Return size (in pixels, as QSizeF) of this Frame"""
-        return self._size
+        return QtCore.QSizeF(self._size)
 
     def backgroundColor(self):
         return QtGui.QColor(QtCore.Qt.white)

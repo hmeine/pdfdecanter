@@ -193,7 +193,7 @@ class PDFDecanter(QtCore.QObject):
     def wheelEvent(self, e):
         if self._inOverview:
             overview = self._presentationItem
-            overviewPos = overview.pos()
+            overviewPos = p(overview.pos)
             overviewPos.setY(overviewPos.y() + e.delta())
             self._adjustOverviewPos(overviewPos, self._overviewScale())
             overview.setPos(overviewPos)
@@ -224,7 +224,8 @@ class PDFDecanter(QtCore.QObject):
         else:
             # find frame clicked on in overview and jump to it:
             for item in self._scene.items(e.scenePos()):
-                if isinstance(item, slide_renderer.SlideRenderer):
+                #if isinstance(item, slide_renderer.SlideRenderer):
+                if item in self._renderers:
                     slideIndex = self._renderers.index(item)
                     self.gotoFrame(self._slides[slideIndex].currentFrame().frameIndex())
                     break
