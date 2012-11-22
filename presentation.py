@@ -511,7 +511,7 @@ try:
     import scipy.ndimage
     changed_rects = changed_rects_ndimage
 except ImportError:
-    sys.stderr.write("WARNING: Could not import scipy.ndimage.  Falling back to suboptimal numpy-only code.")
+    sys.stderr.write("WARNING: Could not import scipy.ndimage.  Falling back to suboptimal numpy-only code.\n")
     changed_rects = changed_rects_numpy_only
 
 
