@@ -166,7 +166,7 @@ class PDFDecanter(QtCore.QObject):
     def resizeEvent(self, e):
         assert p(self._view.size) == e.size()
         self._scene.setSceneRect(0, 0, p(self._view.width), p(self._view.height))
-        self._adjustViewport()
+        self._adjustSlideViewport()
         pres = self._presentationItem
         if not self._inOverview:
             renderer = self._currentRenderer()
@@ -178,7 +178,7 @@ class PDFDecanter(QtCore.QObject):
             scale = self._overviewScale()
         pres.setScale(scale)
 
-    def _adjustViewport(self):
+    def _adjustSlideViewport(self):
         if self._currentFrameIndex is None:
             return
 
@@ -216,7 +216,7 @@ class PDFDecanter(QtCore.QObject):
         self._mousePressPos = None
         if not wasClick:
             return
-        
+
         if not self._inOverview:
             # advance one frame (if not at end):
             if self._currentFrameIndex < self._slides.frameCount() - 1:
@@ -386,7 +386,7 @@ class PDFDecanter(QtCore.QObject):
 
         self._overviewAnimation.stop()
         self._overviewAnimation = None
-        self._adjustViewport()
+        self._adjustSlideViewport()
 
     def _overviewScale(self):
         """Return presentation scale that fills the view width with the overview."""
@@ -408,7 +408,7 @@ class PDFDecanter(QtCore.QObject):
         self._animateOverviewGroup(self._overviewPosForCursor(), self._overviewScale())
 
         self._inOverview = True
-        self._adjustViewport()
+        self._adjustSlideViewport()
 
     def _currentFrame(self):
         """Returns current Frame object (or None, in initialization phase)."""
@@ -466,7 +466,7 @@ class PDFDecanter(QtCore.QObject):
         
         if not self._inOverview:
             self._presentationItem.setPos(targetPresentationPos)
-            self._adjustViewport()
+            self._adjustSlideViewport()
         else:
             self._inOverview = False
             self._animateOverviewGroup(targetPresentationPos, scale)
@@ -662,7 +662,6 @@ def start(view = None, show = True):
     global app
     hasApp = QtGui.QApplication.instance()
     if not hasApp:
-        import sys
         app = QtGui.QApplication(sys.argv)
     else:
         app = hasApp
