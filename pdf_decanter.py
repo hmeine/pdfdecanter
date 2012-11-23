@@ -284,6 +284,9 @@ class PDFDecanter(QtCore.QObject):
         self._setupGrid()
         self.gotoFrame(0)
 
+    def slides(self):
+        return self._slides
+
     def _setupGrid(self):
         self._overviewColumnCount = min(5, int(math.ceil(math.sqrt(len(self._slides)))))
 

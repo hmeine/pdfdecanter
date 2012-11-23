@@ -1,3 +1,4 @@
+import collections
 from dynqt import QtCore, QtGui, getprop as p
 import presentation
 
@@ -34,7 +35,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         # - links (as string)
         # - 'DEBUG_[somelink]' (link rects in debug mode)
         # - 'bg_<red>_<green>_<blue>'
-        # - 'custom' (LIST of items!)
+        # - QGraphicsViewItems (custom content, key == value b/c source unknown)
 
         self._animation = None
 
@@ -162,12 +163,16 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
         # decide which items to slide and which to fade out/in:
         if not slide:
+            # within-Slide animation, no sliding here:
             fadeOut = removeItems
             fadeIn = addItems
         else:
             slideOut.update(removeItems)
             for newKey, newItem in addItems.iteritems():
                 changed = False
+                if newKey is newItem: # custom item?
+                    slideIn[newKey] = newItem
+                    continue
                 if not isinstance(newKey, presentation.Patch):
                     fadeIn[newKey] = newItem
                     continue
@@ -265,6 +270,8 @@ class SlideRenderer(FrameRenderer):
         FrameRenderer.__init__(self, parentItem)
 
         self._slide = slide
+        self._customItems = collections.defaultdict(list)
+        self._customReferences = {}
         self._frameCallbacks = []
 
         assert len(slide) > 0
@@ -289,34 +296,37 @@ class SlideRenderer(FrameRenderer):
         result.setVisible(not self._slide.seen())
         return result
 
-    def addCustomContent(self, items, frameIndex = 0):
+    def addCustomContent(self, items, subIndex, references = None):
         """Add given custom items to the SlideRenderer, for the given
-        frameIndex.  If frameIndex is larger than the currently
-        largest valid index, new frames will be added accordingly.  If
-        frameIndex is None, it defaults to len(slide()),
-        i.e. appending one new frame."""
+        frame subIndex."""
 
-        assert False, "FIXME: not implemented (add CustomItem to Frame contents, alongside Patches?)"
+        targetFrame = self._slide[subIndex]
 
         # add items:
-        customItems = self.customItems()
-        customItems.extend(items)
-        self._items['custom'] = customItems
+        self._customItems[subIndex].extend(items)
+        if references:
+            self._customReferences.update(references)
 
-        # add (empty) frames to corresponding Slide class if necessary:
-        if frameIndex is None:
-            frameIndex = len(self._slide)
-        while frameIndex >= len(self._slide):
-            self._slide.addFrame([])
-
-        # set parent of custom items:
-        parent = self.frameItem(frameIndex)
-        parent.setVisible(frameIndex <= self._slide.currentSubIndex())
+        # adjust visibility of custom items:
         for item in items:
-            item.setParentItem(parent)
+            item.setVisible(item in self._customItems[self._frame])
 
-    def customItems(self):
-        return self._items.get('custom', [])
+    def _frameItems(self, frame):
+        result = FrameRenderer._frameItems(self, frame)
+        for item in self._customItems[frame.subIndex()]:
+            result[item] = item
+            item.show()
+        return result
+
+    def _removeItems(self, items):
+        rest = dict(items)
+        for key, item in items.iteritems():
+            # we must not remove custom items from the scene:
+            if key is item:
+                item.hide() # just hide them
+                del self._items[key]
+                del rest[key]
+        return FrameRenderer._removeItems(self, rest)
 
     def addCustomCallback(self, cb):
         """Register callback for frame changes.  Expects callable that
@@ -342,12 +352,12 @@ class SlideRenderer(FrameRenderer):
         self.uncover()
         self.showFrame(len(self.slide())-1)
 
-    def showFrame(self, frameIndex):
-        self._slide.setCurrentSubIndex(frameIndex)
+    def showFrame(self, subIndex):
+        self._slide.setCurrentSubIndex(subIndex)
 
         self.setFrame(self._slide.currentFrame())
 
         for cb in self._frameCallbacks:
-            cb(self, frameIndex)
+            cb(self, subIndex)
 
         return self
