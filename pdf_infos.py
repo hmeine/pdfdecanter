@@ -24,6 +24,16 @@ class PDFPageInfos(object):
 
 
 class PDFInfos(object):
+    """Manages interesting meta-information about PDF files,
+    i.e. total number of pages, hyperlinks, outline etc.
+
+    Using the create() factory, this is extracted rather efficiently
+    from a PDF file using one of possibly several backends.  However,
+    at the moment only pdfminer is supported.  One should not rely on
+    any information to be non-empty: the amount of information depends
+    on the availability of the information within the PDF file plus
+    the ability of the available backend(s) to extract it."""
+    
     __slots__ = ('_metaInfo', '_pageCount', '_outline', '_pageInfos', '_names')
     
     def __init__(self):
@@ -45,7 +55,8 @@ class PDFInfos(object):
         return self._outline
 
     def names(self):
-        """Return dictionary of named (link) destinations"""
+        """Return dictionary of named (link) destinations.
+        (key = name, value = 0-based page index)"""
         return self._names
 
     def __len__(self):
@@ -196,4 +207,6 @@ def labeledBeamerFrames(pdfInfos):
             pages.append(page)
         if pages:
             result.append((name, pages))
+    print "%d pages out of %d belong to labeled beamer slides." % (
+        sum(len(pages) for name, pages in result), pdfInfos.pageCount())
     return sorted(result, key = lambda (name, pages): pages[0])
