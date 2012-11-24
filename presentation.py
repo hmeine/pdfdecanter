@@ -219,6 +219,7 @@ class Slide(object):
     __slots__ = ('_presentation', '_frames', '_currentSubIndex', '_seen')
     
     def __init__(self, presentation):
+        assert presentation is not None
         self._presentation = presentation
         self._frames = []
 
@@ -304,9 +305,11 @@ class Presentation(list):
 
     def __init__(self, infos = None):
         self._pdfInfos = infos
-        self._slidesChanged()
+        self.structureChanged()
 
-    def _slidesChanged(self):
+    def structureChanged(self):
+        """Update internal structures after Slides or Frames have been
+        added, removed, or reordered.  This function is not automatically called, but must be called for several functions to work, e.g. frameCount() or frame(idx)."""
         self._frame2Slide = []
         self._slide2Frame = []
         for i, s in enumerate(self):
@@ -316,6 +319,27 @@ class Presentation(list):
 
     def pdfInfos(self):
         return self._pdfInfos
+
+    def addFrames(self, frames):
+        cache = {}
+
+        prevFrame = None
+        for i, frame in enumerate(frames):
+            # new Slide?
+            if not prevFrame or not frame.isSuccessorOf(prevFrame):
+                self.append(Slide(self))
+
+            self[-1].addFrame(frame)
+            prevFrame = frame
+
+        for frame in frames:
+            content = frame.content()
+            content[:] = extract_patches(content, cache)
+
+        self.structureChanged()
+        print "Total number of distinct patches extracted: %d" % len(cache)
+
+        self.setPDFInfos(self._pdfInfos) # call Frame.setPDFPageInfos()
 
     def frameCount(self):
         return len(self._frame2Slide)
@@ -359,7 +383,7 @@ class Presentation(list):
     def __setstate__(self, state):
         pdfInfos, = state
         self.setPDFInfos(pdfInfos)
-        self._slidesChanged()
+        self.structureChanged()
 
 
 # --------------------------------------------------------------------
@@ -675,29 +699,3 @@ def extract_patches(rects, cache = None):
         patches.append(patch)
 
     return patches
-
-
-def stack_frames(frames):
-#    background = detectBackground(raw_pages)
-
-    cache = {}
-
-    result = Presentation()
-    #result.background = background
-
-    prevFrame = None
-    for frame in frames:
-        # new Slide?
-        if not prevFrame or not frame.isSuccessorOf(prevFrame):
-            result.append(Slide(result))
-
-        result[-1].addFrame(frame)
-        prevFrame = frame
-
-    for frame in frames:
-        content = frame.content()
-        content[:] = extract_patches(content, cache)
-
-    result._slidesChanged()
-    print "Total number of distinct patches: %d" % len(cache)
-    return result

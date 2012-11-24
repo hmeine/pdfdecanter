@@ -263,8 +263,8 @@ class PDFDecanter(QtCore.QObject):
 
             frames = presentation.create_frames(pages)
             presentation.detect_navigation(frames)
-            slides = presentation.stack_frames(frames)
-            slides.setPDFInfos(infos)
+            slides = presentation.Presentation(infos)
+            slides.addFrames(frames)
 
             print "complete rendering took %.3gs. (%.3gs. real time)" % (
                 time.clock() - cpuTime, time.time() - wallClockTime)
