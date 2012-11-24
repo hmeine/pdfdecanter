@@ -1,5 +1,6 @@
-import numpy, sys, time, hashlib
+import numpy, sys, time, hashlib, itertools
 from dynqt import QtCore, QtGui, array2qimage, raw_view
+import pdf_infos
 
 
 def boundingRect(rects):
@@ -320,13 +321,31 @@ class Presentation(list):
     def pdfInfos(self):
         return self._pdfInfos
 
+    def _beamerSubIndices(self):
+        if self._pdfInfos:
+            try:
+                it = iter(pdf_infos.labeledBeamerFrames(self._pdfInfos))
+                name, pages = it.next()
+                for pageNumber in itertools.count():
+                    if pageNumber > pages[-1]:
+                        name, pages = it.next()
+                    if pageNumber in pages:
+                        yield pages.index(pageNumber)
+                    else:
+                        yield None
+            except StopIteration:
+                pass
+        while True:
+            yield None
+
     def addFrames(self, frames):
         cache = {}
 
         prevFrame = None
-        for i, frame in enumerate(frames):
+        for frame, subIndex in zip(frames, self._beamerSubIndices()):
             # new Slide?
-            if not prevFrame or not frame.isSuccessorOf(prevFrame):
+            if not prevFrame or subIndex == 0 or (
+                    subIndex is None and not frame.isSuccessorOf(prevFrame)):
                 self.append(Slide(self))
 
             self[-1].addFrame(frame)
@@ -337,9 +356,13 @@ class Presentation(list):
             content[:] = extract_patches(content, cache)
 
         self.structureChanged()
-        print "Total number of distinct patches extracted: %d" % len(cache)
+        print "%d slides, %d frames, %d distinct patches" % (
+            self.slideCount(), self.frameCount(), len(cache))
 
         self.setPDFInfos(self._pdfInfos) # call Frame.setPDFPageInfos()
+
+    def slideCount(self):
+        return len(self)
 
     def frameCount(self):
         return len(self._frame2Slide)
