@@ -1,4 +1,4 @@
-import numpy, os.path
+import numpy, os.path, itertools
 
 # TODO:
 # - let Presentation store copy of outline, with page indices replaced by Frame references
@@ -114,6 +114,7 @@ class PDFInfos(object):
             return destToPageIndex(dest)
 
         def destToPageIndex(dest):
+            dest = get(dest)
             if isinstance(dest, dict):
                 assert dest.keys() == ['D'], repr(dest)
                 dest = get(dest, 'D')
@@ -176,3 +177,23 @@ class PDFInfos(object):
 
     def __setstate__(self, state):
         self._metaInfo, self._pageCount, self._outline, self._pageInfos, self._names = state
+
+
+def labeledBeamerFrames(pdfInfos):
+    """Given a PDFInfos object, detect whether the PDF contains beamer
+    \frame{}s with [label=name]s.  For every named frame, return a
+    pair (name, list_of_pages) in a list.  If the PDF does not contain
+    corresponding named link targets (with names like 'name',
+    'name<1>', 'name<2>' etc.), returns an empty list."""
+    result = []
+    names = pdfInfos.names()
+    for name in names:
+        pages = []
+        for subframe in itertools.count(1):
+            page = names.get(name + '<%d>' % subframe)
+            if page is None:
+                break
+            pages.append(page)
+        if pages:
+            result.append((name, pages))
+    return sorted(result, key = lambda (name, pages): pages[0])
