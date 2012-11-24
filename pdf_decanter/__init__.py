@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 from __future__ import division
 
 from dynqt import QtCore, QtGui, QtOpenGL, getprop as p
@@ -681,36 +680,3 @@ def start(view = None, show = True):
             result.view().raise_()
 
     return result
-
-
-if __name__ == "__main__":
-    import sys
-
-    from optparse import OptionParser
-
-    op = OptionParser(usage = "%prog [options] <filename.pdf>")
-    op.add_option("--no-opengl", action = "store_false",
-                  dest = "use_opengl", default = True,
-                  help = "disable OpenGL for rendering (default: use OpenGL)")
-    op.add_option("--cache", action = "store_true",
-                  dest = "use_cache", default = False,
-                  help = "use caching in system-wide temp folder")
-    options, args = op.parse_args()
-
-    g = start()
-    
-    if options.use_opengl:
-        g.enableGL()
-
-    pdfFilename, = args
-
-    if not 'slides' in globals():
-        g.loadPDF(pdfFilename, cacheFilename = options.use_cache)
-
-        pixelCount = g._slides.pixelCount()
-        ss = g._slides[0].size()
-        rawCount = g._slides.frameCount() * ss.width() * ss.height()
-        print "%d pixels out of %d retained. (%.1f%%)" % (pixelCount, rawCount, 100.0 * pixelCount / rawCount)
-
-    if not g.hadEventLoop:
-        sys.exit(QtGui.qApp.exec_())
