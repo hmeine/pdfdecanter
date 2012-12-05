@@ -541,6 +541,8 @@ class PDFDecanter(QtCore.QObject):
                 for item in items:
                     item.setVisible(onoff)
                 event.accept()
+            else:
+                sys.stderr.write('DEBUG: no header/footer items found.\n')
 
         if event.isAccepted():
             return
