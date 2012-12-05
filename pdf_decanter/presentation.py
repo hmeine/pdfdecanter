@@ -101,6 +101,10 @@ class Frame(object):
         self._slide = slide
         self._pdfPageInfos = None
 
+    def __repr__(self):
+        return "<Frame %d, size %sx%s, %d patches>" % (
+            self.frameIndex(), self.size().width(), self.size().height(), len(self.content()))
+
     def setSlide(self, slide):
         """Set parent slide; expected to be called by Slide.addFrame()."""
         self._slide = slide
@@ -138,6 +142,11 @@ class Frame(object):
 
     def patchSet(self):
         return set(self._content)
+
+    def patchesAt(self, pos):
+        for patch in self._content:
+            if patch.boundingRect().contains(pos):
+                yield patch
 
     def frameIndex(self):
         """Return frameIndex() into whole presentation()."""
@@ -289,6 +298,12 @@ class Slide(object):
         self._seen = seen
         # TODO: notification?
 
+    def __delitem__(self, index):
+        del self._frames[index]
+
+    def __delslice__(self, start, end):
+        del self._frames[start:end]
+
     def __getstate__(self):
         return (self._frames, )
 
@@ -371,6 +386,9 @@ class Presentation(list):
         for slide in self:
             for frame in slide:
                 yield frame
+
+    def slide(self, slideIndex):
+        return self[slideIndex]
 
     def frame(self, frameIndex):
         slideIndex, subIndex = self._frame2Slide[frameIndex]
