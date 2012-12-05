@@ -217,9 +217,17 @@ class PDFDecanter(QtCore.QObject):
             return
 
         if not self._inOverview:
-            # advance one frame (if not at end):
-            if self._currentFrameIndex < self._slides.frameCount() - 1:
-                self.gotoFrame(self._currentFrameIndex + 1)
+            # RMB: overview
+            if e.button() == QtCore.Qt.RightButton:
+                self.showOverview()
+            # MMB: go back one frame (if not at beginning):
+            elif e.button() == QtCore.Qt.MiddleButton:
+                if self._currentFrameIndex > 0:
+                    self.gotoFrame(self._currentFrameIndex - 1)
+            # LMB: advance one frame (if not at end):
+            else:
+                if self._currentFrameIndex < self._slides.frameCount() - 1:
+                    self.gotoFrame(self._currentFrameIndex + 1)
         else:
             # find frame clicked on in overview and jump to it:
             for item in self._scene.items(e.scenePos()):

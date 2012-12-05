@@ -89,6 +89,12 @@ Shift-U           [U]ncover all slides
 Shift-R           [R]eset all slides to covered state (and go home)
 ================= =================================================
 
+Using the mouse or touchpad is also possible and mostly
+self-explaining.  It is worth noting that in presentation mode, all
+three mouse buttons (if available) are bound; normal left clicks
+advance frames, and middle button clicks go back (if available).
+Using the right mouse button, the overview can be brought up.
+
 Bugs and Limitations
 ====================
 
@@ -101,15 +107,6 @@ right now:
 * Presentations with non-white background may not work as well.
 
 * The header transition is buggy (if one looks closely).
-
-* Overall, the current model of a frame as "previous frame + overlaid
-  patches" does not lend to an optimal transition implementation.  It
-  would be better to
-
-  * have an explicit representation of all stuff that appears on one
-    page and to
-
-  * base each transition on computed differences between frames.
 
 * The cache location is system-wide; it should be per-user for
   security reasons! (unpickling is dangerous.)  I added a warning to
