@@ -41,7 +41,7 @@ class PDFInfos(object):
         self._pageCount = None
         self._outline = None
         self._pageInfos = None
-        self._names = None
+        self._names = {}
 
     def metaInfo(self):
         """Return dict with meta information about PDF document, e.g. keys like Title, Author, Creator, ..."""
