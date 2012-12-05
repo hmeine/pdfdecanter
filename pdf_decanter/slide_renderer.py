@@ -23,6 +23,11 @@ class FrameRenderer(QtGui.QGraphicsWidget):
     
     DEBUG = False # True
 
+    # dictionary indexed by QGraphicsScene, containing
+    # dictionary indexed by Frame instances, contanining
+    # lists of custom items for that frame in that scene
+    _customItems = collections.defaultdict(lambda: collections.defaultdict(list))
+
     def __init__(self, parentItem):
         QtGui.QGraphicsWidget.__init__(self, parentItem)
 
@@ -92,6 +97,20 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                     linkFrame.setAcceptedMouseButtons(QtCore.Qt.NoButton)
                     linkFrame.setPen(QtGui.QPen(QtCore.Qt.yellow))
                 result[key] = linkFrame
+
+        customItems = self._customItems[self._contentItem().scene()]
+        for item in customItems[frame]:
+            for key, staticItem in result.items():
+                # remove items covered by custom content:
+                if item.sceneBoundingRect().contains(staticItem.sceneBoundingRect()):
+                    # print "%s covers %s, del'ing %s..." % (
+                    #     item.sceneBoundingRect(), staticItem.sceneBoundingRect(), key)
+                    del result[key]
+                    if not staticItem in self._items.values():
+                        # we have just created this item:
+                        self.scene().removeItem(staticItem)
+            result[item] = item
+            item.show()
 
         return result
 
@@ -169,13 +188,15 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         else:
             slideOut.update(removeItems)
             for newKey, newItem in addItems.iteritems():
-                changed = False
                 if newKey is newItem: # custom item?
                     slideIn[newKey] = newItem
                     continue
+
                 if not isinstance(newKey, presentation.Patch):
                     fadeIn[newKey] = newItem
                     continue
+
+                changed = False
                 for oldKey, oldItem in removeItems.iteritems():
                     if not isinstance(oldKey, presentation.Patch):
                         continue
@@ -270,7 +291,7 @@ class SlideRenderer(FrameRenderer):
         FrameRenderer.__init__(self, parentItem)
 
         self._slide = slide
-        self._customItems = collections.defaultdict(list)
+        # for preventing GC destroying custom items (PythonQt):
         self._customReferences = {}
         self._frameCallbacks = []
 
@@ -300,23 +321,26 @@ class SlideRenderer(FrameRenderer):
         """Add given custom items to the SlideRenderer, for the given
         frame subIndex."""
 
+        if not items:
+            return
+
         targetFrame = self._slide[subIndex]
 
+        scene = items[0].scene()
+
+        # TODO: move core part into classmethod of FrameRenderer:
+        customItems = self._customItems[scene]
+
         # add items:
-        self._customItems[subIndex].extend(items)
+        customItems[targetFrame].extend(items)
         if references:
             self._customReferences.update(references)
 
         # adjust visibility of custom items:
+        parentItem = self._contentItem()
         for item in items:
-            item.setVisible(item in self._customItems[self._frame])
-
-    def _frameItems(self, frame):
-        result = FrameRenderer._frameItems(self, frame)
-        for item in self._customItems[frame.subIndex()]:
-            result[item] = item
-            item.show()
-        return result
+            item.setParentItem(parentItem)
+            #            item.setVisible(item in customItems[self._frame])
 
     def _removeItems(self, items):
         rest = dict(items)
