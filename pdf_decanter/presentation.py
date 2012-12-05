@@ -712,6 +712,7 @@ def extract_patches(rects, cache = None):
         pos = r.topLeft()
         image = r.image()
         patch = Patch(pos, image)
+        patch._flags = r._flags
 
         if cache is not None:
             # reuse existing Patch if it has the same key:
