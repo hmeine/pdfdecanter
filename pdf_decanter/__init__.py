@@ -307,6 +307,8 @@ class PDFDecanter(QtCore.QObject):
             # prevent too many linebreaks (very fine-grained PDF outline):
             while numpy.diff(numpy.nonzero(slideLevel)[0]).mean() < self._overviewColumnCount-0.5:
                 slideLevel[slideLevel == slideLevel.max()] = 0
+                if slideLevel.max() == 0:
+                    break # prenvent mean() of empty array (-> nan)
 
         x = y = col = 0
         lastLineBreak = 0
