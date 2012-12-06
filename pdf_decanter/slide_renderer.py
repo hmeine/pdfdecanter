@@ -256,6 +256,9 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
         self._removeItems(self._pendingRemove)
 
+        for cb in self._frameCallbacks:
+            cb(self, self._frame.subIndex())
+
         self._animation = None
 
     def _frameRect(self):
