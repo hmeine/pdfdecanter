@@ -154,7 +154,11 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
     def _removeItems(self, items):
         for key, item in items.iteritems():
-            self.scene().removeItem(item)
+            # we must not remove custom items from the scene:
+            if key is item:
+                item.hide() # just hide them
+            else:
+                self.scene().removeItem(item)
             del self._items[key]
 
     def animatedTransition(self, sourceFrame, targetFrame):
@@ -340,17 +344,7 @@ class SlideRenderer(FrameRenderer):
         parentItem = self._contentItem()
         for item in items:
             item.setParentItem(parentItem)
-            #            item.setVisible(item in customItems[self._frame])
-
-    def _removeItems(self, items):
-        rest = dict(items)
-        for key, item in items.iteritems():
-            # we must not remove custom items from the scene:
-            if key is item:
-                item.hide() # just hide them
-                del self._items[key]
-                del rest[key]
-        return FrameRenderer._removeItems(self, rest)
+            item.setVisible(item in customItems[self._frame])
 
     def addCustomCallback(self, cb):
         """Register callback for frame changes.  Expects callable that
