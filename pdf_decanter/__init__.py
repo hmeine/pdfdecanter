@@ -16,12 +16,11 @@ else:
 
 __version__ = "0.1"
 
-w, h = 1024, 768
 
-PADDING_X = int(w * 0.03)
-PADDING_Y = int(h * 0.03)
-LINEBREAK_PADDING = int(2.5 * PADDING_Y)
-INDENT_X = 0 # w / 8
+PADDING_X = 0.03 # 3% of frame width
+PADDING_Y = 0.03 # 3% of frame height
+LINEBREAK_PADDING = 2.5 * PADDING_Y
+INDENT_X = 0 # 0.125
 
 
 class GeometryAnimation(QtCore.QVariantAnimation):
@@ -60,6 +59,7 @@ class PDFDecanter(QtCore.QObject):
 
         if view is None:
             view = QtGui.QGraphicsView()
+            w, h = self.slideSize()
             view.resize(w, h)
         self._view = view
 
@@ -130,7 +130,8 @@ class PDFDecanter(QtCore.QObject):
         return self._view
 
     def slideSize(self):
-        return w, h
+        """Return size at which to render PDFs"""
+        return 1024, 768 # TODO: make this an option
 
     def presentationBounds(self):
         result = QtCore.QRectF()
@@ -310,21 +311,26 @@ class PDFDecanter(QtCore.QObject):
                 if slideLevel.max() == 0:
                     break # prenvent mean() of empty array (-> nan)
 
-        x = y = col = 0
-        lastLineBreak = 0
+        x = y = col = rowHeight = 0
+        lastLineBreak = previousWidth = 0
         for i, renderer in enumerate(self._renderers):
+            if col > 0:
+                x += PADDING_X * max(previousWidth, renderer.slide().size().width())
+            
             if slideLevel[i] and lastLineBreak < i - 1:
-                y += (h + PADDING_Y + LINEBREAK_PADDING / slideLevel[i])
-                x = col = 0
+                y += (1.0 + PADDING_Y + LINEBREAK_PADDING / slideLevel[i]) * rowHeight
+                x = col = rowHeight = 0
                 lastLineBreak = i
             elif col >= self._overviewColumnCount:
-                y += (h + PADDING_Y)
-                x = INDENT_X if lastLineBreak else 0
-                col = 0
+                y += (1.0 + PADDING_Y) * rowHeight
+                x = INDENT_X * renderer.slide().size().width() if lastLineBreak else 0
+                col = rowHeight = 0
 
             renderer.setPos(x, y)
 
-            x += (renderer.frame().size().width() + PADDING_X) # TODO: use 1.03 * max(left_renderer_width, right_renderer_width)?
+            x += renderer.slide().size().width()
+            previousWidth = renderer.slide().size().width()
+            rowHeight = max(rowHeight, renderer.slide().size().height())
             col += 1
 
     def _updateCursor(self, animated):
