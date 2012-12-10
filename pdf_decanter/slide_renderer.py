@@ -100,11 +100,14 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
         customItems = self._customItems[self._contentItem().scene()]
         for item in customItems[frame]:
+            # add 1px border for partial volume effects:
+            coveredRect = item.sceneBoundingRect().adjusted(-1, -1, 1, 1)
+
             for key, staticItem in result.items():
                 # remove items covered by custom content:
-                if item.sceneBoundingRect().contains(staticItem.sceneBoundingRect()):
                     # print "%s covers %s, del'ing %s..." % (
                     #     item.sceneBoundingRect(), staticItem.sceneBoundingRect(), key)
+                if coveredRect.contains(staticItem.sceneBoundingRect()):
                     del result[key]
                     if not staticItem in self._items.values():
                         # we have just created this item:
