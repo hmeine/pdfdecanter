@@ -383,5 +383,3 @@ class SlideRenderer(FrameRenderer):
 
         for cb in self._frameCallbacks:
             cb(self, subIndex)
-
-        return self
