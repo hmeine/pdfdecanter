@@ -256,9 +256,6 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
         self._removeItems(self._pendingRemove)
 
-        for cb in self._frameCallbacks:
-            cb(self, self._frame.subIndex())
-
         self._animation = None
 
     def _frameRect(self):
@@ -373,10 +370,13 @@ class SlideRenderer(FrameRenderer):
         self.uncover()
         self.showFrame(len(self.slide())-1)
 
-    def showFrame(self, subIndex):
+    def showFrame(self, subIndex, animateFrom = None):
         self._slide.setCurrentSubIndex(subIndex)
 
-        self.setFrame(self._slide.currentFrame())
+        if animateFrom is None:
+            self.setFrame(self._slide.currentFrame())
+        else:
+            self.animatedTransition(animateFrom, self._slide.currentFrame())
 
         for cb in self._frameCallbacks:
             cb(self, subIndex)

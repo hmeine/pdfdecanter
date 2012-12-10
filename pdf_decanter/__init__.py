@@ -472,11 +472,9 @@ class PDFDecanter(QtCore.QObject):
         animated = (not self._inOverview) \
             and self._currentFrameIndex is not None
 
-        if animated:
-            sourceFrame = self._currentRenderer().frame()
-            renderer.animatedTransition(sourceFrame, targetFrame)
-        else:
-            renderer.showFrame(targetFrame.subIndex())
+        sourceFrame = self._currentRenderer().frame() if animated else None
+            
+        renderer.showFrame(targetFrame.subIndex(), animateFrom = sourceFrame)
 
         self._currentFrameIndex = frameIndex
 
