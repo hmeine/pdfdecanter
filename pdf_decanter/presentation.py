@@ -666,7 +666,7 @@ def detect_navigation(frames):
     for frame in frames:
         frame_size = frame.size()
 
-        header_bottom = frame_size.height() * 11 / 48 # frame_size.height() / 3
+        header_bottom = frame_size.height() * 0.16 # frame_size.height() / 3
         footer_top    = frame_size.height() * 0.75
 
         content = sorted(frame.content(),
