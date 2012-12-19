@@ -190,7 +190,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         # decide which items to slide and which to fade out/in:
         if not slide:
             # within-Slide animation, no sliding here:
-            fadeOut = removeItems
+            fadeOut = dict(removeItems)
             fadeIn = addItems
         else:
             slideOut.update(removeItems)
@@ -215,6 +215,12 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                         break
                 if not changed:
                     slideIn[newKey] = newItem
+
+        for newKey, newItem in fadeIn.iteritems():
+            coveredRect = newItem.sceneBoundingRect()
+            for oldKey, oldItem in fadeOut.items():
+                if coveredRect.contains(oldItem.sceneBoundingRect()):
+                    del fadeOut[oldKey]
 
         offset = self._frame.size().width() * slide
 
