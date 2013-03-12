@@ -82,7 +82,7 @@ Shift-Q        [Q]uit
 In the **overview mode**, these are the keybindings:
 
 ================= =================================================
-Enter, Tab        Back to presentation mode
+Enter, Tab, Space Back to presentation mode
 Cursor keys       Move yellow slide cursor
 Home              First Slide
 Shift-U           [U]ncover all slides

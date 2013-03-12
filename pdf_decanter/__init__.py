@@ -573,7 +573,7 @@ class PDFDecanter(QtCore.QObject):
                     self._currentFrameIndex = 0
                     self._updateCursor(animated = True)
                 event.accept()
-            elif event.key() in (QtCore.Qt.Key_Tab, QtCore.Qt.Key_Return):
+            elif event.key() in (QtCore.Qt.Key_Tab, QtCore.Qt.Key_Return, QtCore.Qt.Key_Space):
                 self.gotoFrame(self._currentFrameIndex)
                 event.accept()
         else:
