@@ -106,12 +106,10 @@ right now:
 
 * Presentations with non-white background may not work as well.
 
-* The header transition is buggy (if one looks closely).
-
 * The cache location is system-wide; it should be per-user for
   security reasons! (unpickling is dangerous.)  I added a warning to
-  make this more obvious; don't use the current code on a shared,
-  untrusted computer!
+  make this more obvious; don't use the current --cache implementation
+  on a shared, untrusted computer!
 
 Unfinished / planned features:
 
