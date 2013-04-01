@@ -37,11 +37,13 @@ class QtDriver(object):
 	def getprop(self):
 		return getprop_PythonQt if self._drv == 'PythonQt' else getprop_other
 
-	def __init__(self, drv = os.environ.get('QT_DRIVER')):
+	def __init__(self, drv = os.environ.get('QT_DRIVER') or os.environ.get('QT_API')):
+		"""Supports QT_API (used by ETS and ipython)"""
 		if drv is None:
 			drv = self.detect_qt()
 		if drv is None:
 			drv = 'PyQt4' # default to PyQt4
+		drv = {'pyside' : 'PySide', 'pyqt' : 'PyQt4'}.get(drv, drv) # map ETS syntax
 		assert drv in self.DRIVERS
 		self._drv = drv
 
