@@ -243,10 +243,10 @@ class PDFDecanter(QtCore.QObject):
 
         if cacheFilename:
             if cacheFilename is True:
+                pdfFilename = os.path.abspath(pdfFilename)
+                dirname, basename = os.path.split(pdfFilename)
                 cacheFilename = os.path.join(
-                    tempfile.gettempdir(),
-                    "pdf_decanter_cache_%s.bz2" % (os.path.abspath(pdfFilename).replace("/", "!"), ))
-                sys.stderr.write('ATTENTION! unpickling from system-wide tempdir is a security risk!\n')
+                    dirname, "pdf_decanter_cache_%s.bz2" % os.path.splitext(basename)[0])
 
             if os.path.exists(cacheFilename):
                 if os.path.getmtime(cacheFilename) >= os.path.getmtime(pdfFilename):
