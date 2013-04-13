@@ -388,6 +388,13 @@ class Presentation(list):
                 yield frame
 
     def slide(self, slideIndex):
+        if isinstance(slideIndex, basestring):
+            if not self._pdfInfos:
+                raise RuntimeError, "accessing slides by name is not possible without PDFInfos"
+            frameIndex = self._pdfInfos.names().get(slideIndex)
+            if frameIndex is None:
+                raise RuntimeError, "no PDF anchor named %r found" % slideIndex
+            slideIndex, subIndex = self._frame2Slide[frameIndex]
         return self[slideIndex]
 
     def frame(self, frameIndex):
