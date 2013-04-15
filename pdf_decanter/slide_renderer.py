@@ -222,14 +222,18 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         else:
             slideOut.update(removeItems)
             for newKey, newItem in addItems.iteritems():
-                if newKey is newItem: # custom item?
+                # always slide custom items:
+                if newKey is newItem:
                     slideIn[newKey] = newItem
                     continue
 
+                # always fade non-Patches (e.g. backgrounds, movies, ...)
                 if not isinstance(newKey, presentation.Patch):
                     fadeIn[newKey] = newItem
                     continue
 
+                # look for pairs (oldItem, newItem) of Patches where
+                # newKey.isSuccessorOf(oldKey) => fade out/in
                 changed = False
                 for oldKey, oldItem in removeItems.iteritems():
                     if not isinstance(oldKey, presentation.Patch):
@@ -243,6 +247,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                 if not changed:
                     slideIn[newKey] = newItem
 
+        # don't fade out items that are completely covered by items that fade in:
         for newKey, newItem in fadeIn.iteritems():
             coveredRect = _frameBoundingRect(newItem)
             for oldKey, oldItem in fadeOut.items():
