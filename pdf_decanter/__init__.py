@@ -2,7 +2,7 @@ from __future__ import division
 
 from dynqt import QtCore, QtGui, QtOpenGL, getprop as p
 
-import numpy, os, sys, time, tempfile, math, operator
+import numpy, os, sys, time, math, operator
 import pdftoppm_renderer, pdf_infos, bz2_pickle
 import presentation, slide_renderer
 
@@ -423,6 +423,9 @@ class PDFDecanter(QtCore.QObject):
     def showOverview(self):
         self._updateCursor(animated = False)
         self._cursorPos = None
+
+        for r in self._renderers:
+            r.showCustomContent()
 
         self._animateOverviewGroup(self._overviewPosForCursor(), self._overviewScale())
 

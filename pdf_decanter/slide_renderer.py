@@ -6,6 +6,13 @@ UNSEEN_OPACITY = 0.5
 FADE_DURATION = 150
 SLIDE_DURATION = 250
 
+def _slideBoundingRect(item):
+    result = QtCore.QRectF(item.boundingRect())
+    pos = item.pos
+    if not isinstance(pos, QtCore.QPointF):
+        pos = pos()
+    result.translate(pos)
+    return result
 
 class FrameRenderer(QtGui.QGraphicsWidget):
     """QGraphicsWidget that renders a Frame instance.
@@ -18,15 +25,18 @@ class FrameRenderer(QtGui.QGraphicsWidget):
     * one QGraphicsPixmapItem per Patch
     * one QGraphicsProxyWidget per .mng link (movie player)
     * one QGraphicsRectItem for implementing the 'covered' state
-    * custom items (TODO)
+    * custom items
     * optionally, QGraphicsRectItems for debugging link rects"""
     
     DEBUG = False # True
 
     # dictionary indexed by QGraphicsScene, containing
-    # dictionary indexed by Frame instances, contanining
+    # dictionary indexed by Frame instances, containing
     # lists of custom items for that frame in that scene
     _customItems = collections.defaultdict(lambda: collections.defaultdict(list))
+    # dictionary indexed by custom items, containing
+    # parents for resetting states after animations
+    _originalCustomItemState = {}
 
     def __init__(self, parentItem):
         QtGui.QGraphicsWidget.__init__(self, parentItem)
@@ -46,6 +56,23 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
     def setLinkHandler(self, linkHandler):
         self._linkHandler = linkHandler
+
+    @classmethod
+    def addCustomFrameContent(cls, items, frame):
+        """Add given custom items for the given frame."""
+
+        if not items:
+            return
+
+        scene = items[0].scene()
+
+        customItems = cls._customItems[scene]
+
+        # add items:
+        customItems[frame].extend(items)
+
+        for item in items:
+            cls._originalCustomItemState[item] = item.parentItem()
 
     def _frameItems(self, frame):
         result = {}
@@ -98,20 +125,19 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                     linkFrame.setPen(QtGui.QPen(QtCore.Qt.yellow))
                 result[key] = linkFrame
 
+        staticItems = result.items()
+
         customItems = self._customItems[self._contentItem().scene()]
         for item in customItems[frame]:
             # add 1px border for partial volume effects:
-            coveredRect = item.sceneBoundingRect().adjusted(-1, -1, 1, 1)
+            coveredRect = _slideBoundingRect(item).adjusted(-1, -1, 1, 1)
 
-            for key, staticItem in result.items():
+            for key, staticItem in staticItems:
                 # remove items covered by custom content:
-                    # print "%s covers %s, del'ing %s..." % (
-                    #     item.sceneBoundingRect(), staticItem.sceneBoundingRect(), key)
-                if coveredRect.contains(staticItem.sceneBoundingRect()):
+                if coveredRect.contains(_slideBoundingRect(staticItem)):
+                    # print "%s covers %s, del'ing %s -> %s..." % (
+                    #     _slideBoundingRect(item), _slideBoundingRect(staticItem), key, staticItem)
                     del result[key]
-                    if not staticItem in self._items.values():
-                        # we have just created this item:
-                        self.scene().removeItem(staticItem)
             result[item] = item
             item.show()
 
@@ -169,6 +195,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         if targetFrame is sourceFrame:
             return # raise?
 
+        # sliding transition (left/right) if Slide changes:
         slide = cmp(targetFrame.slide().slideIndex(),
                     sourceFrame.slide().slideIndex())
 
@@ -217,9 +244,9 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                     slideIn[newKey] = newItem
 
         for newKey, newItem in fadeIn.iteritems():
-            coveredRect = newItem.sceneBoundingRect()
+            coveredRect = _slideBoundingRect(newItem)
             for oldKey, oldItem in fadeOut.items():
-                if coveredRect.contains(oldItem.sceneBoundingRect()):
+                if coveredRect.contains(_slideBoundingRect(oldItem)):
                     del fadeOut[oldKey]
 
         offset = self._frame.size().width() * slide
@@ -262,6 +289,11 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             anim = self._animation.animationAt(i)
             for item in p(anim.targetObject).childItems():
                 item.setParentItem(parentItem)
+                # custom items are special, because they're just
+                # moved/reparented/hidden, but not created on the fly:
+                origParent = self._originalCustomItemState.get(item)
+                if origParent:
+                    item.setParentItem(origParent)
 
         self._removeItems(self._pendingRemove)
 
@@ -299,7 +331,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         QtGui.QGraphicsWidget.mousePressEvent(self, event)
 
 
-class SlideRenderer(FrameRenderer):
+class SlideRenderer(FrameRenderer):    
     def __init__(self, slide, parentItem):
         FrameRenderer.__init__(self, parentItem)
 
@@ -332,28 +364,29 @@ class SlideRenderer(FrameRenderer):
 
     def addCustomContent(self, items, subIndex, references = None):
         """Add given custom items to the SlideRenderer, for the given
-        frame subIndex."""
+        frame subIndex.  Optionally, pass references for preventing stuff to be garbage-collected
+        (necessary for PythonQt)."""
 
         if not items:
             return
 
-        targetFrame = self._slide[subIndex]
+        parentItem = self._contentItem()
+        for item in items:
+            item.setParentItem(parentItem)
 
-        scene = items[0].scene()
+        self.addCustomFrameContent(items, self._slide[subIndex])
 
-        # TODO: move core part into classmethod of FrameRenderer:
-        customItems = self._customItems[scene]
-
-        # add items:
-        customItems[targetFrame].extend(items)
         if references:
             self._customReferences.update(references)
 
         # adjust visibility of custom items:
-        parentItem = self._contentItem()
+        customItems = self._customItems[items[0].scene()]
         for item in items:
-            item.setParentItem(parentItem)
             item.setVisible(item in customItems[self._frame])
+
+    def showCustomContent(self):
+        for item in self._customItems[self.scene()][self._frame]:
+            item.show()
 
     def addCustomCallback(self, cb):
         """Register callback for frame changes.  Expects callable that
