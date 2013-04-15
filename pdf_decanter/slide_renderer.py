@@ -380,12 +380,15 @@ class SlideRenderer(FrameRenderer):
             self._customReferences.update(references)
 
         # adjust visibility of custom items:
-        customItems = self._customItems[items[0].scene()]
+        customItems = self._customContent()
         for item in items:
-            item.setVisible(item in customItems[self._frame])
+            item.setVisible(item in customItems)
+
+    def _customContent(self):
+        return self._customItems[self.scene()][self._frame]
 
     def showCustomContent(self):
-        for item in self._customItems[self.scene()][self._frame]:
+        for item in self._customContent():
             item.show()
 
     def addCustomCallback(self, cb):
