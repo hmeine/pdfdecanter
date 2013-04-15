@@ -6,7 +6,7 @@ UNSEEN_OPACITY = 0.5
 FADE_DURATION = 150
 SLIDE_DURATION = 250
 
-def _slideBoundingRect(item):
+def _frameBoundingRect(item):
     result = QtCore.QRectF(item.boundingRect())
     pos = item.pos
     if not isinstance(pos, QtCore.QPointF):
@@ -130,13 +130,13 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         customItems = self._customItems[self._contentItem().scene()]
         for item in customItems[frame]:
             # add 1px border for partial volume effects:
-            coveredRect = _slideBoundingRect(item).adjusted(-1, -1, 1, 1)
+            coveredRect = _frameBoundingRect(item).adjusted(-1, -1, 1, 1)
 
             for key, staticItem in staticItems:
                 # remove items covered by custom content:
-                if coveredRect.contains(_slideBoundingRect(staticItem)):
+                if coveredRect.contains(_frameBoundingRect(staticItem)):
                     # print "%s covers %s, del'ing %s -> %s..." % (
-                    #     _slideBoundingRect(item), _slideBoundingRect(staticItem), key, staticItem)
+                    #     _frameBoundingRect(item), _frameBoundingRect(staticItem), key, staticItem)
                     del result[key]
             result[item] = item
             item.show()
@@ -244,9 +244,9 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                     slideIn[newKey] = newItem
 
         for newKey, newItem in fadeIn.iteritems():
-            coveredRect = _slideBoundingRect(newItem)
+            coveredRect = _frameBoundingRect(newItem)
             for oldKey, oldItem in fadeOut.items():
-                if coveredRect.contains(_slideBoundingRect(oldItem)):
+                if coveredRect.contains(_frameBoundingRect(oldItem)):
                     del fadeOut[oldKey]
 
         offset = self._frame.size().width() * slide
