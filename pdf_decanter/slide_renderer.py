@@ -77,7 +77,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
     def _frameItems(self, frame):
         result = {}
 
-        color = frame.backgroundColor() if not self.DEBUG else QtGui.QColor(QtCore.Qt.red)
+        color = frame.backgroundColor() if not self.DEBUG else QtGui.QColor(230, 200, 200)
         key = 'bg_%d_%d_%d' % color.getRgb()[:3]
         bgItem = self._items.get(key, None)
         if bgItem is None:
@@ -97,6 +97,15 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                 pmItem.setPixmap(patch.pixmap())
                 pmItem.setTransformationMode(QtCore.Qt.SmoothTransformation)
             result[patch] = pmItem
+
+            if self.DEBUG:
+                key = 'DEBUG_%s' % patch
+                borderItem = self._items.get(key, None)
+                if borderItem is None:
+                    borderItem = QtGui.QGraphicsRectItem(_frameBoundingRect(pmItem))
+                    borderItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
+                    borderItem.setPen(QtGui.QPen(QtCore.Qt.magenta))
+                result[key] = borderItem
 
         for rect, link in frame.linkRects():
             if link.startswith('file:') and link.endswith('.mng'):
@@ -140,6 +149,15 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                     del result[key]
             result[item] = item
             item.show()
+
+            if self.DEBUG:
+                key = 'DEBUG_%s' % patch
+                borderItem = self._items.get(key, None)
+                if borderItem is None:
+                    borderItem = QtGui.QGraphicsRectItem(_frameBoundingRect(item))
+                    borderItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
+                    borderItem.setPen(QtGui.QPen(QtCore.Qt.cyan))
+                result[key] = borderItem
 
         return result
 
