@@ -88,6 +88,8 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             bgItem.setZValue(-1)
         result[key] = bgItem
 
+        debugRects = []
+
         for patch in frame.content():
             pmItem = self._items.get(patch, None)
             if pmItem is None:
@@ -98,14 +100,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                 pmItem.setTransformationMode(QtCore.Qt.SmoothTransformation)
             result[patch] = pmItem
 
-            if self.DEBUG:
-                key = 'DEBUG_%s' % patch
-                borderItem = self._items.get(key, None)
-                if borderItem is None:
-                    borderItem = QtGui.QGraphicsRectItem(_frameBoundingRect(pmItem))
-                    borderItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-                    borderItem.setPen(QtGui.QPen(QtCore.Qt.magenta))
-                result[key] = borderItem
+            debugRects.append(('DEBUG_%s' % patch, _frameBoundingRect(pmItem), QtCore.Qt.magenta))
 
         for rect, link in frame.linkRects():
             if link.startswith('file:') and link.endswith('.mng'):
@@ -124,16 +119,6 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                     movie.start()
                 result[link] = item
 
-        if self.DEBUG:
-            for rect, link in frame.linkRects(onlyExternal = False):
-                key = 'DEBUG_%s' % link
-                linkFrame = self._items.get(key, None)
-                if linkFrame is None:
-                    linkFrame = QtGui.QGraphicsRectItem(rect)
-                    linkFrame.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-                    linkFrame.setPen(QtGui.QPen(QtCore.Qt.yellow))
-                result[key] = linkFrame
-
         staticItems = result.items()
 
         customItems = self._customItems[self._contentItem().scene()]
@@ -150,13 +135,18 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             result[item] = item
             item.show()
 
-            if self.DEBUG:
-                key = 'DEBUG_%s' % patch
+            debugRects.append(('DEBUG_%s' % item, _frameBoundingRect(item), QtCore.Qt.cyan))
+
+        if self.DEBUG:
+            for rect, link in frame.linkRects(onlyExternal = False):
+                debugRects.append(('DEBUG_%s' % link, rect, QtCore.Qt.yellow))
+
+            for key, rect, color in debugRects:
                 borderItem = self._items.get(key, None)
                 if borderItem is None:
-                    borderItem = QtGui.QGraphicsRectItem(_frameBoundingRect(item))
+                    borderItem = QtGui.QGraphicsRectItem(rect)
                     borderItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-                    borderItem.setPen(QtGui.QPen(QtCore.Qt.cyan))
+                    borderItem.setPen(QtGui.QPen(color))
                 result[key] = borderItem
 
         return result
