@@ -65,6 +65,7 @@ class Patch(ObjectWithFlags):
         return self._pixmap
 
     def pixelCount(self):
+        """Return number of pixels as some kind of measurement of memory usage."""
         return self._image.width() * self._image.height()
 
     def isSuccessorOf(self, other):
@@ -87,6 +88,10 @@ class Patch(ObjectWithFlags):
         self._image = QtGui.QImage(w, h, QtGui.QImage.Format_ARGB32)
         raw_view(self._image)[:] = patch
         self._pixmap = None
+
+    def __repr__(self):
+        return "<Patch at %d, %d, %dx%d>" % (
+            self.xy() + (self._image.width(), self._image.height()))
 
 
 class Frame(object):
@@ -475,6 +480,7 @@ class ChangedRect(ObjectWithFlags):
         return result
 
     def image(self):
+        """Returns RGBA QImage with only the changed pixels non-transparent."""
         rgb = self.subarray(self._originalImage)
         alpha = numpy.uint8(255) * self.changed()
         return array2qimage(numpy.dstack((rgb, alpha)))
@@ -489,6 +495,7 @@ class ChangedRect(ObjectWithFlags):
         return self._rect.adjusted(*args)
 
     def __or__(self, other):
+        """Return union of this and other ChangedRect.  (Both must belong to the same image & labelImage.)"""
         assert self._labelImage is other._labelImage
         assert self._originalImage is other._originalImage
         return ChangedRect(
