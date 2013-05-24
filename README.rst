@@ -106,11 +106,6 @@ right now:
 
 * Presentations with non-white background may not work as well.
 
-* The cache location is system-wide; it should be per-user for
-  security reasons! (unpickling is dangerous.)  I added a warning to
-  make this more obvious; don't use the current --cache implementation
-  on a shared, untrusted computer!
-
 Unfinished / planned features:
 
 * Opacity animations should be recognized (leading to smaller file
