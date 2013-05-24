@@ -491,9 +491,6 @@ class ChangedRect(ObjectWithFlags):
         case if both cover exactly the same pixels."""
         return self.rect() == other.rect() and numpy.all(self.changed() == other.changed())
 
-    def adjusted_rect(self, *args):
-        return self._rect.adjusted(*args)
-
     def __or__(self, other):
         """Return union of this and other ChangedRect.  (Both must belong to the same image & labelImage.)"""
         assert self._labelImage is other._labelImage
@@ -516,7 +513,7 @@ def join_close_rects(rects):
     result = []
     while rects:
         r = rects.pop()
-        bigger = r.adjusted_rect(-dx, -dy, dx, dy)
+        bigger = r.rect().adjusted(-dx, -dy, dx, dy)
 
         # as long as rect changed (got united with other), we keep
         # looking for new intersecting rects:
@@ -533,7 +530,7 @@ def join_close_rects(rects):
                     
                 if joined:
                     r = joined
-                    bigger = r.adjusted_rect(-dx, -dy, dx, dy)
+                    bigger = r.rect().adjusted(-dx, -dy, dx, dy)
                     changed = True
                 else:
                     rest.append(other)
