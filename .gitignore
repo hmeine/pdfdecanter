@@ -1,2 +1,4 @@
 *~
 *.py[oc]
+.DS_Store
+experiments
