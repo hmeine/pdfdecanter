@@ -5,8 +5,8 @@ import qimage2ndarray, numpy
 def unblend_alpha_1d(rgb, bg, c):
     rgb = numpy.require(rgb, dtype = numpy.float64)
     bg  = numpy.require(bg,  dtype = numpy.float64)
-    alpha = (numpy.sum(numpy.abs(rgb + 0.5 - bg), 0) /
-             numpy.sum(numpy.abs(c[:,None] - bg), 0))
+    alpha = (numpy.sum(numpy.abs(rgb + 0.5 - bg), 1) /
+             numpy.sum(numpy.abs(c         - bg), 1))
     alpha *= 255
     alpha = numpy.floor(alpha).clip(0, 255)
     return alpha
@@ -17,8 +17,8 @@ def unblend_alpha(rgb, bg, c):
     diff = rgb - bg
     changed_y, changed_x = numpy.nonzero(diff.any(-1))
 
-    rgb_i = rgb[changed_y, changed_x].T
-    bg_i  = bg [changed_y, changed_x].T
+    rgb_i = rgb[changed_y, changed_x]
+    bg_i  = bg [changed_y, changed_x]
 
     alpha_i = unblend_alpha_1d(rgb_i, bg_i, c)
 
