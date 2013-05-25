@@ -6,7 +6,7 @@ def imread(filename):
     return qimage2ndarray.rgb_view(QtGui.QImage(filename))
 
 def color(r, g, b):
-    return numpy.array([r, g, b])
+    return numpy.array([r, g, b], numpy.uint8)
 
 # --------------------------------------------------------------------
 
