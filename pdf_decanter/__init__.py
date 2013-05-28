@@ -238,18 +238,18 @@ class PDFDecanter(QtCore.QObject):
                     self.gotoFrame(self._slides[slideIndex].currentFrame().frameIndex())
                     break
 
-    def loadPDF(self, pdfFilename, cacheFilename = None):
+    def loadPDF(self, pdfFilename, cacheFilename = None, useCache = None, createCache = False):
         slides = None
 
-        if cacheFilename:
-            if cacheFilename is True:
-                pdfFilename = os.path.abspath(pdfFilename)
-                dirname, basename = os.path.split(pdfFilename)
-                cacheFilename = os.path.join(
-                    dirname, "pdf_decanter_cache_%s.bz2" % os.path.splitext(basename)[0])
+        if cacheFilename is None:
+            pdfFilename = os.path.abspath(pdfFilename)
+            dirname, basename = os.path.split(pdfFilename)
+            cacheFilename = os.path.join(
+                dirname, "pdf_decanter_cache_%s.bz2" % os.path.splitext(basename)[0])
 
+        if useCache is not False:
             if os.path.exists(cacheFilename):
-                if os.path.getmtime(cacheFilename) >= os.path.getmtime(pdfFilename):
+                if os.path.getmtime(cacheFilename) >= os.path.getmtime(pdfFilename) or useCache:
                     sys.stdout.write("reading cache '%s'...\n" % cacheFilename)
                     try:
                         slides = bz2_pickle.unpickle(cacheFilename)
@@ -277,7 +277,7 @@ class PDFDecanter(QtCore.QObject):
             print "complete rendering took %.3gs. (%.3gs. real time)" % (
                 time.clock() - cpuTime, time.time() - wallClockTime)
 
-            if cacheFilename:
+            if createCache:
                 sys.stdout.write("caching in '%s'...\n" % cacheFilename)
                 bz2_pickle.pickle(cacheFilename, slides)
 
