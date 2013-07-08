@@ -1,5 +1,4 @@
-from PyQt4.QtGui import QImage, QPainter
-import qimage2ndarray, numpy
+from dynqt import QtGui, qimage2ndarray
 
 
 def unblend_alpha_1d(rgb, bg, c):
@@ -32,12 +31,12 @@ def blend_images(bg, alpha, c):
     composedImg = qimage2ndarray.array2qimage(bg)
 
     # build fg image:
-    fgImg = QImage(composedImg.size(), QImage.Format_ARGB32)
+    fgImg = QtGui.QImage(composedImg.size(), QtGui.QImage.Format_ARGB32)
     qimage2ndarray.rgb_view(fgImg)[:] = c
     qimage2ndarray.alpha_view(fgImg)[:] = alpha
 
     # compose:
-    p = QPainter(composedImg)
+    p = QtGui.QPainter(composedImg)
     p.drawImage(0, 0, fgImg)
     p.end()
 

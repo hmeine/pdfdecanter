@@ -101,4 +101,5 @@ if qt.name() == 'PySide':
 	array2qimage = array2qimage_pure_python
 	raw_view = None
 else:
+	import qimage2ndarray
 	from qimage2ndarray import array2qimage, raw_view
