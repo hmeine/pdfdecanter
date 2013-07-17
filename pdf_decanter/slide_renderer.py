@@ -473,3 +473,16 @@ class SlideRenderer(FrameRenderer):
 
         for cb in self._frameCallbacks:
             cb(self, subIndex)
+
+def toggleDebug():
+    global FADE_DURATION, SLIDE_DURATION
+    
+    FrameRenderer.DEBUG = not FrameRenderer.DEBUG
+
+    factor = 4
+    if FrameRenderer.DEBUG:
+        FADE_DURATION *= factor
+        SLIDE_DURATION *= factor
+    else:
+        FADE_DURATION /= factor
+        SLIDE_DURATION /= factor
