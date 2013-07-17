@@ -505,6 +505,10 @@ class PDFDecanter(QtCore.QObject):
         return False
 
     def keyPressEvent(self, event):
+        if event.text() == 'D':
+            slide_renderer.FrameRenderer.DEBUG = not slide_renderer.FrameRenderer.DEBUG
+            for r in self._renderers:
+                r.resetItems()
         if event.text() == 'F':
             win = self._view.window()
             if win.isFullScreen():

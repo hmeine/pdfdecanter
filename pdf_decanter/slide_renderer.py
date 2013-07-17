@@ -182,6 +182,13 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         
         return newGeometry, addItems, removeItems
 
+    def resetItems(self):
+        """Re-setup items for the current frame.  Mostly makes sense
+        if the DEBUG flag was toggled.  Similar to
+        setFrame(self.frame()), but that would be a no-op."""
+        
+        self._setFrame(self._frame)
+    
     def setFrame(self, frame):
         """Set rendered frame() to the given frame.  Immediately set
         up child items for the given frame."""
