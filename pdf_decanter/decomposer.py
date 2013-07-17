@@ -326,14 +326,16 @@ def decompose_pages(pages, infos = None):
     detect_navigation(frames)
     result = Presentation(infos)
 
+    rawPatchCount = 0
     cache = {}
-
     for frame in frames:
         content = frame.content()
+        rawPatchCount += len(content)
         content[:] = extract_patches(content, cache)
 
-    print "%d slides, %d frames, %d distinct patches" % (
-        result.slideCount(), result.frameCount(), len(cache))
-
+    # could alternatively be done before filtering duplicates, but this is faster:
     result.addFrames(frames)
+        
+    print "%d slides, %d frames, %d distinct patches (of %d)" % (
+        result.slideCount(), result.frameCount(), len(cache), rawPatchCount)
     return result
