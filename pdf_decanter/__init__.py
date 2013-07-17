@@ -4,7 +4,7 @@ from dynqt import QtCore, QtGui, QtOpenGL, getprop as p
 
 import numpy, os, sys, time, math, operator
 import pdftoppm_renderer, pdf_infos, bz2_pickle
-import presentation, slide_renderer
+import decomposer, slide_renderer
 
 try:
     import poppler_renderer
@@ -269,11 +269,8 @@ class PDFDecanter(QtCore.QObject):
             pages = renderer.renderAllPages(pdfFilename, sizePX = self.slideSize(),
                                             pageCount = infos and infos.pageCount())
 
-            frames = presentation.create_frames(pages)
-            presentation.detect_navigation(frames)
-            slides = presentation.Presentation(infos)
-            slides.addFrames(frames)
-
+            slides = decomposer.decompose_pages(pages, infos)
+            
             print "complete rendering took %.3gs. (%.3gs. real time)" % (
                 time.clock() - cpuTime, time.time() - wallClockTime)
 

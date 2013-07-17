@@ -1,3 +1,4 @@
+import numpy
 from dynqt import QtGui, qimage2ndarray
 
 
