@@ -101,11 +101,12 @@ class Frame(object):
     """Single frame (PDF page) with content, header, footer.  Belongs
     to a parent Slide."""
 
-    __slots__ = ('_size', '_content', '_slide', '_pdfPageInfos')
+    __slots__ = ('_size', '_content', '_backgroundColor', '_slide', '_pdfPageInfos')
 
-    def __init__(self, size, contentPatches, slide = None):
+    def __init__(self, size, contentPatches, background = (255, 255, 255), slide = None):
         self._size = size
         self._content = contentPatches
+        self._backgroundColor = QtGui.QColor(*background)
         self._slide = slide
         self._pdfPageInfos = None
 
@@ -143,7 +144,7 @@ class Frame(object):
         return QtCore.QSizeF(self._size)
 
     def backgroundColor(self):
-        return QtGui.QColor(QtCore.Qt.white)
+        return self._backgroundColor
 
     def content(self):
         return self._content
@@ -219,12 +220,16 @@ class Frame(object):
         return True
 
     def __getstate__(self):
-        return (self._size.width(), self._size.height()), self._content, self._slide
+        return ((self._size.width(), self._size.height()),
+                self._content,
+                self._backgroundColor.rgb(),
+                self._slide)
 
     def __setstate__(self, state):
-        (w, h), content, slide = state
+        (w, h), content, bgColor, slide = state
         self._size = QtCore.QSizeF(w, h)
         self._content = content
+        self._backgroundColor = bgColor
         self._slide = slide
         self._pdfPageInfos = None
 

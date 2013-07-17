@@ -280,21 +280,78 @@ def detect_navigation(frames):
                 #     break
 
 
+def uint32_array(rgb_or_rgba):
+    """Return uint32 array representing the color values of
+    `rgb_or_rgba`.  Similar to rgb_or_rgba.view(numpy.uint32), but
+    will pad RGB arrays to RGBA arrays (with zeros) and reduces the
+    number of dimensions by one (i.e. will compress the last
+    dimension).  `rgb_or_rgba` must be an array of uint8 values, with
+    RGB or RGBA values in the last dimension
+    (i.e. rgb_or_rgba.shape[-1] must be 3 or 4)."""
+    
+    if rgb_or_rgba.shape[-1] == 3:
+        rgb_or_rgba = numpy.concatenate(
+            (rgb_or_rgba,
+             numpy.zeros_like(rgb_or_rgba[...,0])[...,None]), -1)
+    assert rgb_or_rgba.shape[-1] == 4
+    result = rgb_or_rgba.view(numpy.uint32)
+    assert result.shape[-1] == 1
+    return result[...,0]
+
+
+def most_common_color(rgb_or_rgba, inplace_ok = False):
+    """Return the most common color of the input array.  `rgb_or_rgba`
+    must be an array of uint8 values, with RGB or RGBA values in the
+    last dimension (i.e. rgb_or_rgba.shape[-1] must be 3 or 4)."""
+
+    raw_colors = uint32_array(rgb_or_rgba).ravel()
+
+    if numpy.may_share_memory(raw_colors, rgb_or_rgba) and not inplace_ok:
+        raw_colors = raw_colors.copy()
+    raw_colors.sort()
+
+    # numpy.nonzero(numpy.diff(raw_colors)) returns the indices of the
+    # last items of each sequence, which are the indices of the
+    # sequence starts minus 1, so we would have to add one. Instead,
+    # we also subtract one from the outermost indices we pad with:
+    counts = numpy.diff(numpy.concatenate((
+        [-1], numpy.nonzero(numpy.diff(raw_colors))[0], [len(raw_colors)-1])))
+
+    maxPos = counts.argmax()
+
+    color_uint32 = raw_colors[counts[:maxPos].sum()]
+
+    return numpy.array([color_uint32]).view(numpy.uint8)[:rgb_or_rgba.shape[-1]]
+
+
+def detect_background_color(rgb_or_rgba, border_width = 2):
+    borders = (
+        rgb_or_rgba[:border_width], # top rows
+        rgb_or_rgba[-border_width:], # bottom rows (excluding top)
+        rgb_or_rgba[border_width:-border_width,:border_width], # left columns
+        rgb_or_rgba[border_width:-border_width,-border_width:], # right columns
+        )
+    return most_common_color(
+        numpy.concatenate([
+            pixels.reshape((-1, pixels.shape[-1])) for pixels in borders]))
+
+
 def create_frames(raw_pages):
     raw_pages = list(raw_pages)
 
-    canvas = numpy.ones_like(raw_pages[0]) * 255
-
     result = []
     for page in raw_pages:
-        changed = (canvas != page).any(-1)
+        bgColor = detect_background_color(page)
+
+        changed = (page != bgColor).any(-1)
         rects = changed_rects(changed, page)
 
         #occurences = collect_occurences(rects)
         rects = join_close_rects(rects)
 
         h, w = page.shape[:2]
-        result.append(Frame(QtCore.QSizeF(w, h), rects))
+        frame = Frame(QtCore.QSizeF(w, h), rects, background = bgColor)
+        result.append(frame)
 
     return result
 
