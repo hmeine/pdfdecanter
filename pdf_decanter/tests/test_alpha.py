@@ -1,8 +1,9 @@
 from PyQt4 import QtGui
-import qimage2ndarray, numpy
+import qimage2ndarray, numpy, os
 from ..alpha import verified_unblend
 
 def imread(filename):
+    filename = os.path.join(os.path.dirname(__file__), filename)
     return qimage2ndarray.rgb_view(QtGui.QImage(filename))
 
 def color(r, g, b):
