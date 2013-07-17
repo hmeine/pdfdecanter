@@ -324,6 +324,16 @@ def extract_patches(rects, cache = None):
 def decompose_pages(pages, infos = None):
     frames = create_frames(pages)
     detect_navigation(frames)
-    slides = Presentation(infos)
-    slides.addFrames(frames)
-    return slides
+    result = Presentation(infos)
+
+    cache = {}
+
+    for frame in frames:
+        content = frame.content()
+        content[:] = extract_patches(content, cache)
+
+    print "%d slides, %d frames, %d distinct patches" % (
+        result.slideCount(), result.frameCount(), len(cache))
+
+    result.addFrames(frames)
+    return result

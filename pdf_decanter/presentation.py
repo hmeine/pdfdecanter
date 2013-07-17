@@ -362,8 +362,6 @@ class Presentation(list):
             yield None
 
     def addFrames(self, frames):
-        cache = {}
-
         prevFrame = None
         for frame, subIndex in zip(frames, self._beamerSubIndices()):
             # new Slide?
@@ -374,14 +372,7 @@ class Presentation(list):
             self[-1].addFrame(frame)
             prevFrame = frame
 
-        import decomposer # FIXME (temp. code / refactoring)
-        for frame in frames:
-            content = frame.content()
-            content[:] = decomposer.extract_patches(content, cache)
-
         self.structureChanged()
-        print "%d slides, %d frames, %d distinct patches" % (
-            self.slideCount(), self.frameCount(), len(cache))
 
         self.setPDFInfos(self._pdfInfos) # call Frame.setPDFPageInfos()
 
