@@ -33,6 +33,9 @@ class ObjectWithFlags(object):
 
 
 class Patch(ObjectWithFlags):
+    """Positioned image representing a visual patch of a presentation.
+    May appear on multiple frames / slides."""
+    
     __slots__ = ('_pos', '_image', '_pixmap')
 
     FLAG_HEADER = 1

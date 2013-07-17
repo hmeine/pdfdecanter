@@ -9,6 +9,9 @@ SLIDE_DURATION = 250
 def _frameBoundingRect(item):
     result = QtCore.QRectF(item.boundingRect())
     pos = item.pos
+    # in PythonQt, depending on whether the item is a QGraphicsWidget
+    # or just a QGraphicsItem, pos may be a property (must not call)
+    # or a method (needs call):
     if not isinstance(pos, QtCore.QPointF):
         pos = pos()
     result.translate(pos)
@@ -159,7 +162,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         change self._frame and returns the differences between the
         current items and the new ones as (newGeometry, addItems,
         removeItems) tuple."""
-
+        
         self._resetAnimation()
         self._frame = frame
         newGeometry = QtCore.QRectF(p(self.pos), frame.size())
@@ -180,9 +183,13 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         return newGeometry, addItems, removeItems
 
     def setFrame(self, frame):
-        if self._frame is frame:
-            return
+        """Set rendered frame() to the given frame.  Immediately set
+        up child items for the given frame."""
+        
+        if self._frame is not frame:
+            self._setFrame(frame)
 
+    def _setFrame(self, frame):
         newGeometry, addItems, removeItems = self._changeFrame(frame)
 
         self.setGeometry(newGeometry)
@@ -199,9 +206,13 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             del self._items[key]
 
     def animatedTransition(self, sourceFrame, targetFrame):
+        """Set up child items for an animated transition from
+        sourceFrame to targetFrame.  Set rendered frame() to the
+        targetFrame.  Return animation (QAnimation instance)."""
+        
         self.setFrame(sourceFrame)
         if targetFrame is sourceFrame:
-            return # raise?
+            return None # raise?
 
         # sliding transition (left/right) if Slide changes:
         slide = cmp(targetFrame.slide().slideIndex(),
@@ -302,6 +313,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         self._pendingRemove = removeItems
 
         self._animation.start()
+        return self._animation
 
     def _resetAnimation(self):
         if not self._animation:
