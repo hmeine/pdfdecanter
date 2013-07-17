@@ -103,7 +103,10 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                 pmItem.setTransformationMode(QtCore.Qt.SmoothTransformation)
             result[patch] = pmItem
 
-            debugRects.append(('DEBUG_%s' % patch, _frameBoundingRect(pmItem), QtCore.Qt.magenta))
+            debugRects.append(('DEBUG_%s' % patch, _frameBoundingRect(pmItem),
+                               QtCore.Qt.magenta
+                               if not patch.flags() else
+                               QtCore.Qt.green))
 
         for rect, link in frame.linkRects():
             if link.startswith('file:') and link.endswith('.mng'):
