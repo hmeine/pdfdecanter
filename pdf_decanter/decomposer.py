@@ -19,13 +19,13 @@ class ChangedRect(ObjectWithFlags):
         self._labelImage = labelImage
         self._originalImage = originalImage
 
-    def rect(self):
+    def boundingRect(self):
         return self._rect
 
     def area(self):
         return self._rect.width() * self._rect.height()
 
-    def topLeft(self):
+    def pos(self):
         return self._rect.topLeft()
 
     def subarray(self, array):
@@ -54,7 +54,7 @@ class ChangedRect(ObjectWithFlags):
         """Return whether this ChangedRect is likely to be the
         'successor' of the given other one.  This is assumed to be the
         case if both cover exactly the same pixels."""
-        return self.rect() == other.rect() and numpy.all(self.changed() == other.changed())
+        return self.boundingRect() == other.boundingRect() and numpy.all(self.changed() == other.changed())
 
     def __or__(self, other):
         """Return union of this and other ChangedRect.  (Both must belong to the same image & labelImage.)"""
@@ -78,7 +78,7 @@ def join_close_rects(rects):
     result = []
     while rects:
         r = rects.pop()
-        bigger = r.rect().adjusted(-dx, -dy, dx, dy)
+        bigger = r.boundingRect().adjusted(-dx, -dy, dx, dy)
 
         # as long as rect changed (got united with other), we keep
         # looking for new intersecting rects:
@@ -88,14 +88,14 @@ def join_close_rects(rects):
             rest = []
             for other in rects:
                 joined = None
-                if bigger.intersects(other.rect()):
+                if bigger.intersects(other.boundingRect()):
                     joined = r | other
                     if joined.area() > r.area() + other.area() + pixel_threshold:
                         joined = None
                     
                 if joined:
                     r = joined
-                    bigger = r.rect().adjusted(-dx, -dy, dx, dy)
+                    bigger = r.boundingRect().adjusted(-dx, -dy, dx, dy)
                     changed = True
                 else:
                     rest.append(other)
@@ -245,10 +245,10 @@ def detect_navigation(frames):
         footer_top    = frame_size.height() * 0.75
 
         content = sorted(frame.content(),
-                         key = lambda patch: patch.topLeft().y())
+                         key = lambda patch: patch.pos().y())
         
         for patch in content:
-            rect = patch.rect()
+            rect = patch.boundingRect()
 
             if rect.bottom() < header_bottom:
                 patch.setFlag(Patch.FLAG_HEADER)
@@ -263,7 +263,7 @@ def detect_navigation(frames):
                 break
 
         for patch in reversed(content):
-            rect = patch.rect()
+            rect = patch.boundingRect()
 
             if rect.top() < footer_top:
                 break
@@ -362,7 +362,7 @@ def extract_patches(rects, cache = None):
     
     patches = []
     for r in rects:
-        pos = r.topLeft()
+        pos = r.pos()
         image = r.image()
         patch = Patch(pos, image)
         patch._flags = r._flags
