@@ -3,6 +3,7 @@ i.e. creating a Presentation instance from a sequence of images."""
 
 import numpy, sys, time
 from dynqt import QtCore, array2qimage
+import pdf_infos, pdf_renderer
 #import alpha
 
 from presentation import ObjectWithFlags, Patch, Frame, Presentation
@@ -397,3 +398,16 @@ def decompose_pages(pages, infos = None):
     print "%d slides, %d frames, %d distinct patches (of %d)" % (
         result.slideCount(), result.frameCount(), len(cache), rawPatchCount)
     return result
+
+
+def load_presentation(pdfFilename, sizePX):
+    infos = pdf_infos.PDFInfos.create(pdfFilename)
+
+    # if infos:
+    #     pageWidthInches = numpy.diff(infos.pageBoxes()[0], axis = 0)[0,0] / 72
+    #     dpi = self.slideSize()[0] / pageWidthInches
+
+    pages = pdf_renderer.renderAllPages(pdfFilename, sizePX = sizePX,
+                                        pageCount = infos and infos.pageCount())
+    
+    return decompose_pages(pages, infos)

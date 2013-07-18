@@ -3,19 +3,10 @@ from __future__ import division
 from dynqt import QtCore, QtGui, QtOpenGL, getprop as p
 
 import numpy, os, sys, time, math, operator
-import pdftoppm_renderer, pdf_infos, bz2_pickle
+import bz2_pickle
 import decomposer, slide_renderer
 
-try:
-    import poppler_renderer
-except ImportError, e:
-    print 'QtPoppler not found, falling back to pdftoppm...'
-    renderer = pdftoppm_renderer
-else:
-    renderer = poppler_renderer
-
 __version__ = "0.1"
-
 
 PADDING_X = 0.03 # 3% of frame width
 PADDING_Y = 0.03 # 3% of frame height
@@ -257,19 +248,10 @@ class PDFDecanter(QtCore.QObject):
                         sys.stderr.write("FAILED to load cache (%s), re-rendering...\n" % (e, ))
         
         if slides is None:
-            infos = pdf_infos.PDFInfos.create(pdfFilename)
-
-            # if infos:
-            #     pageWidthInches = numpy.diff(infos.pageBoxes()[0], axis = 0)[0,0] / 72
-            #     dpi = self.slideSize()[0] / pageWidthInches
-
             wallClockTime = time.time()
             cpuTime = time.clock()
 
-            pages = renderer.renderAllPages(pdfFilename, sizePX = self.slideSize(),
-                                            pageCount = infos and infos.pageCount())
-
-            slides = decomposer.decompose_pages(pages, infos)
+            slides = decomposer.load_presentation(pdfFilename, sizePX = self.slideSize())
             
             print "complete rendering took %.3gs. (%.3gs. real time)" % (
                 time.clock() - cpuTime, time.time() - wallClockTime)
