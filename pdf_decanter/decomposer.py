@@ -380,7 +380,6 @@ def extract_patches(rects, cache = None):
 
 def decompose_pages(pages, infos = None):
     frames = create_frames(pages)
-    detect_navigation(frames)
     result = Presentation(infos)
 
     rawPatchCount = 0
@@ -390,6 +389,8 @@ def decompose_pages(pages, infos = None):
         rawPatchCount += len(content)
         content[:] = extract_patches(content, cache)
 
+    detect_navigation(frames)
+    
     # could alternatively be done before filtering duplicates, but this is faster:
     result.addFrames(frames)
         
