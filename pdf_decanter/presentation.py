@@ -229,7 +229,7 @@ class Frame(object):
         (w, h), content, bgColor, slide = state
         self._size = QtCore.QSizeF(w, h)
         self._content = content
-        self._backgroundColor = bgColor
+        self._backgroundColor = QtGui.QColor(bgColor)
         self._slide = slide
         self._pdfPageInfos = None
 
