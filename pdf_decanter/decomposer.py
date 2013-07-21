@@ -312,32 +312,6 @@ def create_frames(raw_pages):
     return result
 
 
-def extract_patches(rects, cache = None):
-    """Extract patches from the page image.
-    Expects a list of ChangedRects and an optional cache dict."""
-    
-    patches = []
-    for r in rects:
-        pos = r.pos()
-        image = r.image()
-        patch = Patch(pos, image)
-        patch._flags = r._flags
-
-        if cache is not None:
-            # reuse existing Patch if it has the same key:
-            key = patch.key()
-            existing = cache.get(key)
-            if existing is not None:
-                patch = existing
-                existing.addOccurrence()
-            else:
-                cache[key] = patch
-
-        patches.append(patch)
-
-    return patches
-
-
 def decompose_pages(pages, infos = None):
     frames = create_frames(pages)
     result = Presentation(infos)
@@ -347,7 +321,23 @@ def decompose_pages(pages, infos = None):
     for frame in frames:
         content = frame.content()
         rawPatchCount += len(content)
-        content[:] = extract_patches(content, cache)
+
+        # extract patches from the page image:
+        patches = []
+        for r in content:
+            pos = r.pos()
+            image = r.image()
+            patch = Patch(pos, image)
+            patch._flags = r._flags
+
+            # reuse existing Patch if it has the same key:
+            key = patch.key()
+            patch = cache.get(key, patch)
+            patch.addOccurrence(frame)
+
+            patches.append(patch)
+
+        content[:] = patches
 
     classify_navigation(frames)
     
@@ -446,3 +436,5 @@ def _classify_navigation_fallback(frames):
             if rect.top() < footer_top:
                 break
             patch.setFlag(Patch.FLAG_FOOTER)
+
+#def _save_classified_examples(filename):

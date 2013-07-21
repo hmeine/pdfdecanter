@@ -36,7 +36,7 @@ class Patch(ObjectWithFlags):
     """Positioned image representing a visual patch of a presentation.
     May appear on multiple frames / slides."""
     
-    __slots__ = ('_pos', '_image', '_pixmap', '_occurenceCount')
+    __slots__ = ('_pos', '_image', '_pixmap', '_occurrences')
 
     FLAG_HEADER = 1
     FLAG_FOOTER = 2
@@ -46,7 +46,7 @@ class Patch(ObjectWithFlags):
         self._pos = pos
         self._image = image
         self._pixmap = None
-        self._occurenceCount = 1
+        self._occurrences = []
 
     def pos(self):
         return self._pos
@@ -73,10 +73,13 @@ class Patch(ObjectWithFlags):
         return self._image.width() * self._image.height()
 
     def occurrenceCount(self):
-        return self._occurenceCount
+        # self._occurrences may be either a list or just an integer count
+        if hasattr(self._occurrences, '__getitem__'):
+            return len(self._occurrences)
+        return self._occurrences
 
-    def addOccurrence(self):
-        self._occurenceCount += 1
+    def addOccurrence(self, frame):
+        self._occurrences.append(frame)
     
     def isSuccessorOf(self, other):
         return self.boundingRect() == other.boundingRect()
@@ -89,10 +92,10 @@ class Patch(ObjectWithFlags):
         return (self.xy(), hashlib.md5(self.ndarray()).digest())
 
     def __getstate__(self):
-        return (self.xy(), self.ndarray().copy(), self._flags, self._occurenceCount)
+        return (self.xy(), self.ndarray().copy(), self._flags, self.occurrenceCount())
 
     def __setstate__(self, state):
-        (x, y), patch, self._flags, self._occurenceCount = state
+        (x, y), patch, self._flags, self._occurrences = state
         h, w = patch.shape
         self._pos = QtCore.QPoint(x, y)
         self._image = QtGui.QImage(w, h, QtGui.QImage.Format_ARGB32)
