@@ -236,51 +236,6 @@ def detectBackground(raw_frames, useFrames = 15):
     return canvas
 
 
-def detect_navigation(frames):
-    """Classify header and footer patches."""
-
-    for frame in frames:
-        frame_size = frame.size()
-
-        header_bottom = frame_size.height() * 0.16 # frame_size.height() / 3
-        footer_top    = frame_size.height() * 0.75
-
-        content = sorted(frame.content(),
-                         key = lambda patch: patch.pos().y())
-        
-        for patch in content:
-            rect = patch.boundingRect()
-
-            if rect.bottom() < header_bottom:
-                patch.setFlag(Patch.FLAG_HEADER)
-                # headerRect = QtCore.QRect(rects[0])
-                # i = 1
-                # while i < len(rects) and rects[i].top() < headerRect.bottom():
-                #     headerRect |= rects[i]
-                #     i += 1
-                # header.extend(rects[:i])
-                # del rects[:i]
-            else:
-                break
-
-        for patch in reversed(content):
-            rect = patch.boundingRect()
-
-            if rect.top() < footer_top:
-                break
-            patch.setFlag(Patch.FLAG_FOOTER)
-            
-            # footer = []
-            # while len(rects):
-            #     if rects[-1].top() < footer_top:
-            #         break
-            #     r = rects.pop()
-            #     footer.append(r)
-                # if r.height() < 10 and r.width() > frame_size.width() * .8:
-                #     # separator line detected
-                #     break
-
-
 def uint32_array(rgb_or_rgba):
     """Return uint32 array representing the color values of
     `rgb_or_rgba`.  Similar to rgb_or_rgba.view(numpy.uint32), but
@@ -390,7 +345,7 @@ def decompose_pages(pages, infos = None):
         rawPatchCount += len(content)
         content[:] = extract_patches(content, cache)
 
-    detect_navigation(frames)
+    classify_navigation(frames)
     
     # could alternatively be done before filtering duplicates, but this is faster:
     result.addFrames(frames)
@@ -411,3 +366,78 @@ def load_presentation(pdfFilename, sizePX):
                                         pageCount = infos and infos.pageCount())
     
     return decompose_pages(pages, infos)
+
+# --------------------------------------------------------------------
+
+navigation_examples = dict()
+
+def _classificationKey(patch):
+    r = patch.boundingRect()
+    return (r.left(), r.right(),
+            r.top(), r.bottom())
+
+
+def add_navigation_example(patch):
+    navigation_examples[_classificationKey(patch)] = (
+      patch.flags() & (patch.FLAG_HEADER | patch.FLAG_FOOTER))
+
+    train_navigation_classifier()
+
+
+classifier = None
+
+def train_navigation_classifier():
+    global classifier
+
+    from sklearn.ensemble import RandomForestClassifier
+    rf = RandomForestClassifier()
+
+    rf.fit(navigation_examples.keys(), navigation_examples.values())
+    
+    classifier = rf
+
+
+def classify_navigation(frames):
+    if classifier is None:
+        return _classify_navigation_fallback(frames)
+
+    for frame in frames:
+        for patch in frame.content():
+            key = _classificationKey(patch)
+
+            klass = classifier.predict([key])
+            patch.setFlag(Patch.FLAG_HEADER, klass == Patch.FLAG_HEADER)
+            patch.setFlag(Patch.FLAG_FOOTER, klass == Patch.FLAG_FOOTER)
+            
+
+def _classify_navigation_fallback(frames):
+    """Classify header and footer patches just by vertical position."""
+
+    #         for r in self._renderers:
+    #             r.resetItems()
+
+    # if classifier 
+    
+    for frame in frames:
+        frame_size = frame.size()
+
+        header_bottom = frame_size.height() * 0.16 # frame_size.height() / 3
+        footer_top    = frame_size.height() * 0.75
+
+        content = sorted(frame.content(),
+                         key = lambda patch: patch.pos().y())
+        
+        for patch in content:
+            rect = patch.boundingRect()
+
+            if rect.bottom() < header_bottom:
+                patch.setFlag(Patch.FLAG_HEADER)
+            else:
+                break
+
+        for patch in reversed(content):
+            rect = patch.boundingRect()
+
+            if rect.top() < footer_top:
+                break
+            patch.setFlag(Patch.FLAG_FOOTER)

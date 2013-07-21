@@ -358,6 +358,18 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         return [item for key, item in self._items.iteritems()
                 if isinstance(key, presentation.Patch) and key.flag(presentation.Patch.FLAG_FOOTER)]
 
+    def patchOf(self, item):
+        """Return corresponding Patch instance which is rendered by
+        the given item.  Return None if the item does not represent a
+        Patch, or if the item does not belong to this renderer."""
+        for key, thisItem in self._items.iteritems():
+            if thisItem is item:
+                if isinstance(key, presentation.Patch):
+                    return key
+                else:
+                    return None
+        return None
+    
     def _contentItem(self, key = 'content'):
         """QGraphicsWidget container child, used for animations"""
         result = self._helperItems.get(key, None)

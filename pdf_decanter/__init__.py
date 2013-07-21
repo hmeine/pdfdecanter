@@ -208,6 +208,21 @@ class PDFDecanter(QtCore.QObject):
         if not wasClick:
             return
 
+        if e.modifiers() & QtCore.Qt.ShiftModifier:
+            renderer = None
+            for item in self._scene.items(e.scenePos()):
+                if item in self._renderers:
+                    renderer = item
+                    break
+            if renderer is not None:
+                for item in self._scene.items(e.scenePos()):
+                    patch = renderer.patchOf(item)
+                    if patch is not None:
+                        if self.toggleNavigationFlag(patch):
+                            return
+            QtGui.qApp.beep() # no valid item found
+            return
+        
         if not self._inOverview:
             # RMB: overview
             if e.button() == QtCore.Qt.RightButton:
@@ -274,6 +289,25 @@ class PDFDecanter(QtCore.QObject):
     def slides(self):
         return self._slides
 
+    def toggleNavigationFlag(self, patch):
+        w, h = self.slideSize()
+        if patch.flag(patch.FLAG_HEADER):
+            patch.setFlag(patch.FLAG_HEADER, False)
+        elif patch.flag(patch.FLAG_FOOTER):
+            patch.setFlag(patch.FLAG_FOOTER, False)
+        elif patch.boundingRect().bottom() < h/2:
+            patch.setFlag(patch.FLAG_HEADER, True)
+        elif patch.boundingRect().top() > h/2:
+            patch.setFlag(patch.FLAG_FOOTER, True)
+        else:
+            return False # cannot decide which flag it it
+
+        decomposer.add_navigation_example(patch)
+
+        decomposer.classify_navigation(self._slides.frames())
+        
+        return True
+        
     def _setupGrid(self):
         self._overviewColumnCount = min(5, int(math.ceil(math.sqrt(len(self._slides)))))
 
