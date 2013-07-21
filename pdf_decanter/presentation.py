@@ -36,7 +36,7 @@ class Patch(ObjectWithFlags):
     """Positioned image representing a visual patch of a presentation.
     May appear on multiple frames / slides."""
     
-    __slots__ = ('_pos', '_image', '_pixmap')
+    __slots__ = ('_pos', '_image', '_pixmap', '_occurenceCount')
 
     FLAG_HEADER = 1
     FLAG_FOOTER = 2
@@ -46,6 +46,7 @@ class Patch(ObjectWithFlags):
         self._pos = pos
         self._image = image
         self._pixmap = None
+        self._occurenceCount = 1
 
     def pos(self):
         return self._pos
@@ -71,6 +72,12 @@ class Patch(ObjectWithFlags):
         """Return number of pixels as some kind of measurement of memory usage."""
         return self._image.width() * self._image.height()
 
+    def occurrenceCount(self):
+        return self._occurenceCount
+
+    def addOccurrence(self):
+        self._occurenceCount += 1
+    
     def isSuccessorOf(self, other):
         return self.boundingRect() == other.boundingRect()
 
@@ -82,10 +89,10 @@ class Patch(ObjectWithFlags):
         return (self.xy(), hashlib.md5(self.ndarray()).digest())
 
     def __getstate__(self):
-        return (self.xy(), self.ndarray().copy(), self._flags)
+        return (self.xy(), self.ndarray().copy(), self._flags, self._occurenceCount)
 
     def __setstate__(self, state):
-        (x, y), patch, self._flags = state
+        (x, y), patch, self._flags, self._occurenceCount = state
         h, w = patch.shape
         self._pos = QtCore.QPoint(x, y)
         self._image = QtGui.QImage(w, h, QtGui.QImage.Format_ARGB32)

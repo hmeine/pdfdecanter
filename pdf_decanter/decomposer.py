@@ -326,8 +326,12 @@ def extract_patches(rects, cache = None):
         if cache is not None:
             # reuse existing Patch if it has the same key:
             key = patch.key()
-            patch = cache.get(key, patch)
-            cache[key] = patch
+            existing = cache.get(key)
+            if existing is not None:
+                patch = existing
+                existing.addOccurrence()
+            else:
+                cache[key] = patch
 
         patches.append(patch)
 
@@ -374,7 +378,8 @@ navigation_examples = dict()
 def _classificationKey(patch):
     r = patch.boundingRect()
     return (r.left(), r.right(),
-            r.top(), r.bottom())
+            r.top(), r.bottom(),
+            patch.occurrenceCount())
 
 
 def add_navigation_example(patch):
