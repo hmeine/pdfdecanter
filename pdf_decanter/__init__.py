@@ -305,6 +305,10 @@ class PDFDecanter(QtCore.QObject):
         decomposer.add_navigation_example(patch)
 
         decomposer.classify_navigation(self._slides.frames())
+
+        if slide_renderer.FrameRenderer.DEBUG:
+            for r in self._renderers:
+                r.resetItems()
         
         return True
         
