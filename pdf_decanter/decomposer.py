@@ -312,10 +312,7 @@ def create_frames(raw_pages):
     return result
 
 
-def decompose_pages(pages, infos = None):
-    frames = create_frames(pages)
-    result = Presentation(infos)
-
+def extract_patches(frames):
     rawPatchCount = 0
     cache = {}
     for frame in frames:
@@ -339,13 +336,22 @@ def decompose_pages(pages, infos = None):
 
         content[:] = patches
 
+    return rawPatchCount, len(cache)
+
+
+def decompose_pages(pages, infos = None):
+    frames = create_frames(pages)
+
+    rawPatchCount, uniquePatchCount = extract_patches(frames)
+
     classify_navigation(frames)
     
     # could alternatively be done before filtering duplicates, but this is faster:
+    result = Presentation(infos)
     result.addFrames(frames)
         
     print "%d slides, %d frames, %d distinct patches (of %d)" % (
-        result.slideCount(), result.frameCount(), len(cache), rawPatchCount)
+        result.slideCount(), result.frameCount(), uniquePatchCount, rawPatchCount)
     return result
 
 
