@@ -99,6 +99,13 @@ class PDFDecanter(QtCore.QObject):
 
         self._inOverview = False
 
+        self._loadConfig()
+
+    def _loadConfig(self):
+        self._configDirectory = os.path.expanduser('~/.pdf_decanter')
+        self._classifierFilename = os.path.join(self._configDirectory, 'classifier')
+        decomposer.load_classifier(self._classifierFilename)
+
     def enableGL(self):
         try:
             from OpenGL import GL
@@ -304,12 +311,16 @@ class PDFDecanter(QtCore.QObject):
 
         decomposer.add_navigation_example(patch)
 
+        if not os.path.exists(self._configDirectory):
+            os.mkdir(self._configDirectory)
+        decomposer.save_classifier(self._classifierFilename)
+
         decomposer.classify_navigation(self._slides.frames())
 
         if slide_renderer.FrameRenderer.DEBUG:
             for r in self._renderers:
                 r.resetItems()
-        
+
         return True
         
     def _setupGrid(self):

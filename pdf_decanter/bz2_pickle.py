@@ -1,8 +1,8 @@
 import bz2, cPickle as pkl
 
-def pickle(filename, slides):
+def pickle(filename, obj):
     with bz2.BZ2File(filename, "w") as f:
-        pkl.dump(slides, f, pkl.HIGHEST_PROTOCOL)
+        pkl.dump(obj, f, pkl.HIGHEST_PROTOCOL)
         
 def unpickle(filename):
     with bz2.BZ2File(filename) as f:

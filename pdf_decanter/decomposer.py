@@ -1,9 +1,9 @@
 """Module containing code for decomposing frames into page components,
 i.e. creating a Presentation instance from a sequence of images."""
 
-import numpy, sys, time
+import numpy, os, sys, time
 from dynqt import QtCore, array2qimage
-import pdf_infos, pdf_renderer
+import pdf_infos, pdf_renderer, bz2_pickle
 #import alpha
 
 from presentation import ObjectWithFlags, Patch, Frame, Presentation
@@ -444,4 +444,14 @@ def _classify_navigation_fallback(frames):
                 break
             patch.setFlag(Patch.FLAG_FOOTER)
 
-#def _save_classified_examples(filename):
+            
+def save_classifier(basename):
+    filename = basename + '.pkl.bz2'
+    return bz2_pickle.pickle(
+        filename, (classifier, navigation_examples))
+
+def load_classifier(basename):
+    global classifier, navigation_examples
+    filename = basename + '.pkl.bz2'
+    if os.path.exists(filename):
+        classifier, navigation_examples = bz2_pickle.unpickle(filename)
