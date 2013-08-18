@@ -280,7 +280,7 @@ def most_common_color(rgb_or_rgba, inplace_ok = False):
     return numpy.array([color_uint32]).view(numpy.uint8)[:rgb_or_rgba.shape[-1]]
 
 
-def detect_background_color(rgb_or_rgba, border_width = 2):
+def detect_background_color_four_borders(rgb_or_rgba, border_width = 2):
     borders = (
         rgb_or_rgba[:border_width], # top rows
         rgb_or_rgba[-border_width:], # bottom rows (excluding top)
@@ -290,6 +290,26 @@ def detect_background_color(rgb_or_rgba, border_width = 2):
     return most_common_color(
         numpy.concatenate([
             pixels.reshape((-1, pixels.shape[-1])) for pixels in borders]))
+
+
+def detect_background_color(rgb_or_rgba, rect = None, outer_color = None):
+    h, w, channelCount = rgb_or_rgba.shape
+    
+    if rect is None:
+        rect = QtCore.QRect(0, 0, w, h)
+
+    x1, x2 = rect.left(), rect.right()
+    if outer_color is not None:
+        # skip potentially antialiased / partially covered pixels
+        x1 += 1
+        x2 -= 1
+    horizontal_lines = (rgb_or_rgba[:,x1] == rgb_or_rgba[:,x2]).all(-1)
+
+    # disregard lines that contain outer color
+    if outer_color is not None:
+        horizontal_lines[(rgb_or_rgba[:,x1] == outer_color).all(-1)] = False
+
+    return most_common_color(rgb_or_rgba[horizontal_lines,x1])
 
 
 def create_frames(raw_pages):
