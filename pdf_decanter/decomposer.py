@@ -111,30 +111,6 @@ def join_close_rects(rects):
     return result
 
 
-def changed_rects_numpy_only(changed, original):
-    changed_row = changed.any(-1)
-    toggle_rows = list(numpy.nonzero(numpy.diff(changed_row))[0] + 1)
-    if changed_row[0]:
-        toggle_rows.insert(0, 0)
-    if changed_row[-1]:
-        toggle_rows.append(len(changed_row))
-    assert len(toggle_rows) % 2 == 0
-
-    labelImage = changed.astype(numpy.uint32)
-
-    result = []
-    it = iter(toggle_rows)
-    for i, (y1, y2) in enumerate(zip(it, it)):
-        changed_columns, = numpy.nonzero(changed[y1:y2].any(0))
-        x1, x2 = changed_columns[0], changed_columns[-1] + 1
-        rect = QtCore.QRect(x1, y1, x2-x1, y2-y1)
-        labels = [i + 1]
-        labelImage[y1:y2] *= (i + 1)
-        result.append(ChangedRect(rect, labels, labelImage, original))
-
-    return result
-
-
 def changed_rects_ndimage(changed, original):
     labelImage, cnt = scipy.ndimage.measurements.label(changed)
     
@@ -152,8 +128,9 @@ try:
     import scipy.ndimage
     changed_rects = changed_rects_ndimage
 except ImportError:
-    sys.stderr.write("WARNING: Could not import scipy.ndimage.  Falling back to suboptimal numpy-only code.\n")
-    changed_rects = changed_rects_numpy_only
+    def changed_rects_not_possible(changed, original):
+        raise RuntimeError, "Could not import scipy.ndimage; frame decomposition not possible."
+    changed_rects = changed_rects_not_possible
 
 
 class BackgroundDetection(object):
