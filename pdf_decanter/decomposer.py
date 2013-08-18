@@ -305,7 +305,7 @@ def create_frames(raw_pages):
         rects = join_close_rects(rects)
 
         h, w = page.shape[:2]
-        frame = Frame(QtCore.QSizeF(w, h), rects, background = bgColor)
+        frame = Frame(QtCore.QSizeF(w, h), rects)
         result.append(frame)
 
     return result

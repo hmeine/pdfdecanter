@@ -115,15 +115,6 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         
         result = ResultItems(self._items)
 
-        color = frame.backgroundColor() if not self.DEBUG else QtGui.QColor(230, 200, 200)
-        item = result.get_existing_item(key = 'bg_%d_%d_%d' % color.getRgb()[:3])
-        if item is None:
-            item = QtGui.QGraphicsRectItem(self._frameRect(), self)
-            item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-            item.setBrush(color)
-            item.setPen(QtGui.QPen(QtCore.Qt.NoPen))
-        result.add(item, layer = 'bg')
-
         debugRects = []
 
         for patch in frame.content():
