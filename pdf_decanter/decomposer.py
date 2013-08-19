@@ -9,16 +9,19 @@ import pdf_infos, pdf_renderer, bz2_pickle
 from presentation import ObjectWithFlags, Patch, Frame, Presentation
 
 class ChangedRect(ObjectWithFlags):
-    """Represents changes, i.e. a bounding box (rect()) and a number of labels within that ROI."""
+    """Represents changes, i.e. a bounding box (rect()) and a number
+    of labels within that ROI.  Plain rectangles are represented with
+    an empty list of labels and a float QRectF."""
     
-    __slots__ = ('_rect', '_labels', '_labelImage', '_originalImage')
+    __slots__ = ('_rect', '_labels', '_labelImage', '_originalImage', '_color')
 
-    def __init__(self, rect, labels, labelImage, originalImage):
+    def __init__(self, rect, labels, labelImage, originalImage, color = None):
         super(ChangedRect, self).__init__()
         self._rect = rect
         self._labels = labels
         self._labelImage = labelImage
         self._originalImage = originalImage
+        self._color = color
 
     def boundingRect(self):
         return self._rect
@@ -29,6 +32,9 @@ class ChangedRect(ObjectWithFlags):
     def pos(self):
         return self._rect.topLeft()
 
+    def color(self):
+        return self._color
+    
     def subarray(self, array):
         x1, y1 = self._rect.x(), self._rect.y()
         x2, y2 = self._rect.right() + 1, self._rect.bottom() + 1
@@ -39,16 +45,21 @@ class ChangedRect(ObjectWithFlags):
 
     def changed(self):
         """Return mask array with changed pixels set to True."""
-        result = numpy.zeros((self._rect.height(), self._rect.width()), dtype = bool)
+        if not self._labels:
+            return None
         labelROI = self.labelROI()
-        for l in self._labels:
+        result = (labelROI == self._labels[0])
+        for l in self._labels[1:]:
             result |= (labelROI == l)
         return result
 
     def image(self):
         """Returns RGBA QImage with only the changed pixels non-transparent."""
+        changed = self.changed()
+        if changed is None:
+            return None
         rgb = self.subarray(self._originalImage)
-        alpha_channel = numpy.uint8(255) * self.changed()
+        alpha_channel = numpy.uint8(255) * changed
         return qimage2ndarray.array2qimage(numpy.dstack((rgb, alpha_channel)))
 
     def isSuccessorOf(self, other):
@@ -109,28 +120,6 @@ def join_close_rects(rects):
         return join_close_rects(result)
 
     return result
-
-
-def changed_rects_ndimage(changed, original):
-    labelImage, cnt = scipy.ndimage.measurements.label(changed)
-    
-    result = []
-    for i, (y, x) in enumerate(scipy.ndimage.measurements.find_objects(labelImage, cnt)):
-        rect = QtCore.QRect(x.start, y.start,
-                            x.stop - x.start, y.stop - y.start)
-        labels = [i + 1]
-        result.append(ChangedRect(rect, labels, labelImage, original))
-
-    return result
-
-
-try:
-    import scipy.ndimage
-    changed_rects = changed_rects_ndimage
-except ImportError:
-    def changed_rects_not_possible(changed, original):
-        raise RuntimeError, "Could not import scipy.ndimage; frame decomposition not possible."
-    changed_rects = changed_rects_not_possible
 
 
 class BackgroundDetection(object):
@@ -288,6 +277,19 @@ def detect_background_color(rgb_or_rgba, rect = None, outer_color = None):
     return most_common_color(rgb_or_rgba[horizontal_lines,x1])
 
 
+def changed_rects_ndimage(changed, original):
+    labelImage, cnt = scipy.ndimage.measurements.label(changed)
+    
+    result = []
+    for i, (y, x) in enumerate(scipy.ndimage.measurements.find_objects(labelImage, cnt)):
+        rect = QtCore.QRect(x.start, y.start,
+                            x.stop - x.start, y.stop - y.start)
+        labels = [i + 1]
+        result.append(ChangedRect(rect, labels, labelImage, original))
+
+    return result
+
+
 def create_frames(raw_pages):
     """Create preliminary Frames from raw pages.  The Frame contents
     will not be Patch instances yet, but ChangedRects."""
@@ -299,16 +301,27 @@ def create_frames(raw_pages):
         bgColor = detect_background_color(page)
 
         changed = (page != bgColor).any(-1)
-        rects = changed_rects(changed, page)
+        rects = changed_rects_ndimage(changed, page)
 
         #occurences = collect_occurences(rects)
         rects = join_close_rects(rects)
 
         h, w = page.shape[:2]
-        frame = Frame(QtCore.QSizeF(w, h), rects)
+        r, g, b = bgColor
+        bgColor = QtGui.QColor(r, g, b)
+        bg = ChangedRect(QtCore.QRectF(0, 0, w, h), (), None, None, bgColor)
+        frame = Frame(QtCore.QSizeF(w, h), [bg] + rects)
         result.append(frame)
 
     return result
+
+
+try:
+    import scipy.ndimage
+except ImportError:
+    def create_frames_not_possible(raw_pages):
+        raise RuntimeError, "Could not import scipy.ndimage; frame decomposition not possible."
+    create_frames = create_frames_not_possible
 
 
 def extract_patches(frames):
@@ -326,8 +339,14 @@ def extract_patches(frames):
         for r in content:
             pos = r.pos()
             image = r.image()
-            patch = Patch(pos, image)
-            patch._flags = r._flags
+            if image is not None:
+                patch = Patch(pos, image)
+                patch._flags = r._flags
+            else:
+                assert r.color() is not None
+                patch = Patch(pos, r.boundingRect().size(), r.color())
+                assert patch.color() is not None
+                patch._flags = r._flags | Patch.FLAG_RECT
 
             # reuse existing Patch if it has the same key:
             key = patch.key()

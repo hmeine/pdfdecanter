@@ -120,15 +120,24 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         for patch in frame.content():
             item = result.get_existing_item(key = patch)
             if item is None:
-                item = QtGui.QGraphicsPixmapItem()
-                item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-                item.setPos(QtCore.QPointF(patch.pos()))
-                item.setPixmap(patch.pixmap())
-                item.setTransformationMode(QtCore.Qt.SmoothTransformation)
+                if patch.flag(presentation.Patch.FLAG_RECT):
+                    item = QtGui.QGraphicsRectItem()
+                    item.setRect(patch.boundingRect())
+                    item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
+                    item.setBrush(patch.color())
+                    item.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+                else:
+                    item = QtGui.QGraphicsPixmapItem()
+                    item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
+                    item.setPos(QtCore.QPointF(patch.pos()))
+                    item.setPixmap(patch.pixmap())
+                    item.setTransformationMode(QtCore.Qt.SmoothTransformation)
             if patch.flag(presentation.Patch.FLAG_HEADER):
                 layer = 'header'
             elif patch.flag(presentation.Patch.FLAG_FOOTER):
                 layer = 'footer'
+            elif patch.flag(presentation.Patch.FLAG_RECT):
+                layer = 'bg'
             else:
                 layer = 'content'
             result.add(item, layer)

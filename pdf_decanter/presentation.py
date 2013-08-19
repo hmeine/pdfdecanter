@@ -34,42 +34,55 @@ class ObjectWithFlags(object):
 
 class Patch(ObjectWithFlags):
     """Positioned image representing a visual patch of a presentation.
+    If FLAG_RECT is set, this is a patch of color() without image
+    data; image() then contains the size (QSizeF) of the patch (and
+    pos() will be a QPointF instead of an integer QPoint).
     May appear on multiple frames / slides."""
     
-    __slots__ = ('_pos', '_image', '_pixmap', '_occurrences')
+    __slots__ = ('_pos', '_image', '_pixmap', '_occurrences', '_color')
 
-    FLAG_HEADER = 1
-    FLAG_FOOTER = 2
+    FLAG_HEADER     = 1
+    FLAG_FOOTER     = 2
+    MASK_NAVIGATION = (FLAG_HEADER | FLAG_FOOTER)
+    FLAG_RECT       = 4
+    MASK_TYPE       = (FLAG_RECT)
 
-    def __init__(self, pos, image):
+    def __init__(self, pos, image, color = None):
         super(Patch, self).__init__()
         self._pos = pos
         self._image = image
         self._pixmap = None
         self._occurrences = []
+        self._color = color
 
     def pos(self):
         return self._pos
 
-    def size(self):
-        return self._image.size()
-
     def boundingRect(self):
-        return QtCore.QRect(self.pos(), self.size())
+        if self.flag(self.FLAG_RECT):
+            return QtCore.QRectF(self._pos, self._image)
+        return QtCore.QRect(self._pos, self._image.size())
 
     def xy(self):
         return self._pos.x(), self._pos.y()
 
+    def sizePair(self):
+        return (self._image.width(), self._image.height())
+
     def ndarray(self):
+        assert not self.flag(self.FLAG_RECT)
         return qimage2ndarray.raw_view(self._image)
 
     def pixmap(self):
+        assert not self.flag(self.FLAG_RECT)
         if self._pixmap is None:
             self._pixmap = QtGui.QPixmap.fromImage(self._image)
         return self._pixmap
 
     def pixelCount(self):
         """Return number of pixels as some kind of measurement of memory usage."""
+        if self.flag(self.FLAG_RECT):
+            return 0
         return self._image.width() * self._image.height()
 
     def occurrenceCount(self):
@@ -89,22 +102,46 @@ class Patch(ObjectWithFlags):
         yield self._image
 
     def key(self):
-        return (self.xy(), hashlib.md5(self.ndarray()).digest())
+        if self.flag(self.FLAG_RECT):
+            return (self.xy(), self.sizePair(), self._color and self._color.rgb())
+        return (self.xy(), hashlib.md5(self.ndarray()).digest(), self._color and self._color.rgb())
+
+    def color(self):
+        return self._color
 
     def __getstate__(self):
-        return (self.xy(), self.ndarray().copy(), self._flags, self.occurrenceCount())
+        return (self.xy(), self.ndarray().copy()
+                if not self.flag(self.FLAG_RECT) else self.sizePair(),
+                self._flags, self.occurrenceCount(),
+                self._color and self._color.rgb())
 
     def __setstate__(self, state):
-        (x, y), patch, self._flags, self._occurrences = state
-        h, w = patch.shape
-        self._pos = QtCore.QPoint(x, y)
-        self._image = QtGui.QImage(w, h, QtGui.QImage.Format_ARGB32)
-        qimage2ndarray.raw_view(self._image)[:] = patch
+        (x, y), patch, self._flags, self._occurrences, color = state
+        if self.flag(self.FLAG_RECT):
+            self._pos = QtCore.QPointF(x, y) # (float pos)
+            w, h = patch
+            self._image = QtCore.QSizeF(w, h)
+        else:
+            self._pos = QtCore.QPoint(x, y) # (integer pos)
+            h, w = patch.shape
+            self._image = QtGui.QImage(w, h, QtGui.QImage.Format_ARGB32)
+            qimage2ndarray.raw_view(self._image)[:] = patch
         self._pixmap = None
+        self._color = QtGui.QColor(color)
 
     def __repr__(self):
-        return "<Patch at %d, %d, %dx%d>" % (
-            self.xy() + (self._image.width(), self._image.height()))
+        flags = []
+        for flag, desc in ((self.FLAG_HEADER, 'HEADER'),
+                           (self.FLAG_FOOTER, 'FOOTER'),
+                           (self.FLAG_RECT,   'RECT')):
+            if self.flag(flag):
+                flags.append(desc)
+        if flags:
+            flags = " (%s)" % ", ".join(flags)
+        else:
+            flags = ""
+        return "<Patch at %s, %s, %sx%s%s>" % (
+            self.xy() + self.sizePair() + (flags, ))
 
 
 class Frame(object):
