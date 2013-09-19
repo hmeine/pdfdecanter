@@ -473,4 +473,7 @@ def load_classifier(basename):
     global classifier, navigation_examples
     filename = basename + '.pkl.bz2'
     if os.path.exists(filename):
-        classifier, navigation_examples = bz2_pickle.unpickle(filename)
+        try:
+            classifier, navigation_examples = bz2_pickle.unpickle(filename)
+        except ImportError, e:
+            sys.stderr.write("%s\n")
