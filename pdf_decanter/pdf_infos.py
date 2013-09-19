@@ -1,4 +1,4 @@
-import numpy, os.path, itertools
+import numpy, os.path, itertools, sys
 
 # TODO:
 # - let Presentation store copy of outline, with page indices replaced by Frame references
@@ -84,7 +84,8 @@ class PDFInfos(object):
     def create(cls, filename):
         try:
             return cls.createFromPdfminer(filename)
-        except:
+        except Exception, e:
+            sys.stderr.write("%s\n" % e)
             pass
         return None
 
