@@ -250,9 +250,8 @@ def uint32_array(rgb_or_rgba):
             (rgb_or_rgba,
              numpy.zeros_like(rgb_or_rgba[...,0])[...,None]), -1)
     assert rgb_or_rgba.shape[-1] == 4
-    result = rgb_or_rgba.view(numpy.uint32)
-    assert result.shape[-1] == 1
-    return result[...,0]
+    result = rgb_or_rgba.view(numpy.uint32).reshape(rgb_or_rgba.shape[:-1])
+    return result
 
 
 def most_common_color(rgb_or_rgba, inplace_ok = False):
