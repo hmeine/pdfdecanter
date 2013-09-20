@@ -110,6 +110,11 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
         for rect, link in frame.linkRects():
             if link.startswith('file:') and link.endswith('.mng'):
+                if rect.width() < 1 and rect.height() < 1:
+                    # bug in XeLaTeX w.r.t. images used in hyperlinks?
+                    for patch in frame.patchesAt(QtCore.QPoint(rect.left() + 4, rect.top() - 4)):
+                        rect = rect.united(QtCore.QRectF(patch.boundingRect()))
+                    
                 item = self._items.get(link, None)
                 if item is None:
                     movie = QtGui.QMovie(link[5:])
