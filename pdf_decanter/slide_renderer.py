@@ -94,7 +94,8 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             item.setBrush(color)
             item.setPen(QtGui.QPen(QtCore.Qt.NoPen))
             item.setZValue(self.BACKGROUND_LAYER)
-        result[key] = item
+        layer = 'bg'
+        result[key] = (layer, item)
 
         debugRects = []
 
@@ -107,12 +108,15 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                 item.setPos(QtCore.QPointF(patch.pos()))
                 item.setPixmap(patch.pixmap())
                 item.setTransformationMode(QtCore.Qt.SmoothTransformation)
-            result[key] = item
+            if patch.flag(presentation.Patch.FLAG_HEADER):
+                layer = 'header'
+            elif patch.flag(presentation.Patch.FLAG_FOOTER):
+                layer = 'footer'
+            else:
+                layer = 'content'
+            result[key] = (layer, item)
 
-            debugRects.append(('DEBUG_%s' % patch, _frameBoundingRect(item),
-                               QtCore.Qt.magenta
-                               if not patch.flags() else
-                               QtCore.Qt.green))
+            debugRects.append(('DEBUG_%s' % patch, _frameBoundingRect(item), layer))
 
         for rect, link in frame.linkRects():
             if link.startswith('file:') and link.endswith('.mng'):
@@ -135,7 +139,8 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                     item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
                     item.setPos(rect.topLeft())
                     movie.start()
-                result[key] = item
+                layer = 'content'
+                result[key] = (layer, item)
 
         staticItems = result.items()
 
@@ -144,28 +149,32 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             # add 1px border for partial volume effects:
             coveredRect = _frameBoundingRect(item).adjusted(-1, -1, 1, 1)
 
-            for okey, staticItem in staticItems:
-                # remove items covered by custom content:
-                if coveredRect.contains(_frameBoundingRect(staticItem)):
+            for okey, (olayer, staticItem) in staticItems:
+                # remove static content covered by custom content:
+                if olayer == 'content' and coveredRect.contains(_frameBoundingRect(staticItem)):
                     # print "%s covers %s, del'ing %s -> %s..." % (
                     #     _frameBoundingRect(item), _frameBoundingRect(staticItem), key, staticItem)
                     del result[okey]
-            result[item] = item
+            layer = 'content'
+            result[key] = (layer, item)
             item.show()
 
-            debugRects.append(('DEBUG_%s' % item, _frameBoundingRect(item), QtCore.Qt.cyan))
+            debugRects.append(('DEBUG_%s' % item, _frameBoundingRect(item), layer))
 
         if self.DEBUG:
             for rect, link in frame.linkRects(onlyExternal = False):
                 debugRects.append(('DEBUG_%s' % link, rect, QtCore.Qt.yellow))
 
-            for key, rect, color in debugRects:
+            for key, rect, layer in debugRects:
                 item = self._items.get(key, None)
                 if item is None:
+                    color = (QtCore.Qt.magenta
+                             if layer == 'content' else
+                             QtCore.Qt.green)
                     item = QtGui.QGraphicsRectItem(rect)
                     item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
                     item.setPen(QtGui.QPen(color))
-                result[key] = item
+                result[key] = (layer, item)
 
         return result
 
@@ -187,8 +196,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         addItems = {}
         removeItems = dict(self._items)
         
-        items = self._frameItems(frame)
-        for key, item in items.iteritems():
+        for key, (layer, item) in self._frameItems(frame).iteritems():
             try:
                 del removeItems[key]
             except KeyError:
