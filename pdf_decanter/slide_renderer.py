@@ -157,7 +157,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                 if borderItem is None:
                     borderItem = QtGui.QGraphicsRectItem(rect)
                     borderItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-                borderItem.setPen(QtGui.QPen(color))
+                    borderItem.setPen(QtGui.QPen(color))
                 result[key] = borderItem
 
         return result
