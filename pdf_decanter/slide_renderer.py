@@ -255,12 +255,23 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             fadeIn = addItems
         else:
             for oldKey, oldItem in removeItems.iteritems():
+                # always slide custom items:
+                if oldKey is oldItem:
+                    slideOut[oldKey] = oldItem
+                    continue
+
+                # always fade non-Patches (e.g. backgrounds, movies, ...)
+                if not isinstance(oldKey, presentation.Patch):
+                    fadeOut[oldKey] = oldItem
+                    continue
+
                 # always fade header & footer:
                 if (isinstance(oldKey, presentation.Patch) and
                     oldKey.flag(presentation.Patch.FLAG_HEADER | presentation.Patch.FLAG_FOOTER)):
                     fadeOut[oldKey] = oldItem
-                else:
-                    slideOut[oldKey] = oldItem
+                    continue
+
+                slideOut[oldKey] = oldItem
 
             for newKey, newItem in addItems.iteritems():
                 # always slide custom items:
