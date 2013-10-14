@@ -61,6 +61,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         # - QGraphicsViewItems (custom content, key == value b/c source unknown)
 
         self._animation = None
+        self._staticParents = {}
 
     def setLinkHandler(self, linkHandler):
         self._linkHandler = linkHandler
@@ -351,6 +352,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
                 for key, (layer, item) in items.iteritems():
                     parentItem = self._contentItem("%s-%s" % (layer, contentName))
+                    self._staticParents[item] = item.parentItem()
                     item.setParentItem(parentItem)
                     parentItems.add(parentItem)
 
@@ -372,22 +374,23 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
         self._animation.stop()
 
+        self._removeItems(self._pendingRemove)
+
         # reset parent of all animated contents:
-        parentItem = self._contentItem()
         for i in range(self._animation.animationCount()):
             anim = self._animation.animationAt(i)
             for item in p(anim.targetObject).childItems():
+                parentItem = self._staticParents[item]
                 # custom items are special, because they're just
                 # moved/reparented/hidden, but not created on the fly:
                 origParent = self._originalCustomItemState.get(item)
                 if origParent:
-                    item.setParentItem(origParent)
-                else:
-                    item.setParentItem(parentItem)
-
-        self._removeItems(self._pendingRemove)
+                    #item.setParentItem(origParent)
+                    assert origParent is parentItem
+                item.setParentItem(parentItem)
 
         self._animation = None
+        self._staticParents = {}
 
     def _frameRect(self):
         return QtCore.QRectF(QtCore.QPointF(0, 0), self._frame.size())
