@@ -93,7 +93,6 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
             item.setBrush(color)
             item.setPen(QtGui.QPen(QtCore.Qt.NoPen))
-            item.setZValue(self.BACKGROUND_LAYER)
         layer = 'bg'
         result[key] = (layer, item)
 
@@ -191,8 +190,6 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         self._frame = frame
         newGeometry = QtCore.QRectF(p(self.pos), frame.size())
 
-        parentItem = self._contentItem()
-
         addItems = {}
         removeItems = dict(self._items)
         
@@ -200,6 +197,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             try:
                 del removeItems[key]
             except KeyError:
+                parentItem = self._contentItem(layer)
                 item.setParentItem(parentItem)
                 addItems[key] = item
         
@@ -408,6 +406,8 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         if result is None:
             result = QtGui.QGraphicsWidget(self)
             result.setAcceptedMouseButtons(QtCore.Qt.NoButton)
+            if key == 'bg':
+                result.setZValue(self.BACKGROUND_LAYER)
             self._helperItems[key] = result
 
         return result
