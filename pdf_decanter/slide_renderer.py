@@ -144,12 +144,12 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             # add 1px border for partial volume effects:
             coveredRect = _frameBoundingRect(item).adjusted(-1, -1, 1, 1)
 
-            for key, staticItem in staticItems:
+            for okey, staticItem in staticItems:
                 # remove items covered by custom content:
                 if coveredRect.contains(_frameBoundingRect(staticItem)):
                     # print "%s covers %s, del'ing %s -> %s..." % (
                     #     _frameBoundingRect(item), _frameBoundingRect(staticItem), key, staticItem)
-                    del result[key]
+                    del result[okey]
             result[item] = item
             item.show()
 
