@@ -30,6 +30,11 @@ class FrameRenderer(QtGui.QGraphicsWidget):
     * one QGraphicsRectItem for implementing the 'covered' state
     * custom items
     * optionally, QGraphicsRectItems for debugging link rects"""
+
+    BACKGROUND_LAYER = -1
+    # CONTENT_LAYER = 0
+    # HEADER_LAYER = 1
+    # FOOTER_LAYER = 2
     
     DEBUG = False # True
 
@@ -82,35 +87,37 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
         color = frame.backgroundColor() if not self.DEBUG else QtGui.QColor(230, 200, 200)
         key = 'bg_%d_%d_%d' % color.getRgb()[:3]
-        bgItem = self._items.get(key, None)
-        if bgItem is None:
-            bgItem = QtGui.QGraphicsRectItem(self._frameRect(), self)
-            bgItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-            bgItem.setBrush(color)
-            bgItem.setPen(QtGui.QPen(QtCore.Qt.NoPen))
-            bgItem.setZValue(-1)
-        result[key] = bgItem
+        item = self._items.get(key, None)
+        if item is None:
+            item = QtGui.QGraphicsRectItem(self._frameRect(), self)
+            item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
+            item.setBrush(color)
+            item.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+            item.setZValue(self.BACKGROUND_LAYER)
+        result[key] = item
 
         debugRects = []
 
         for patch in frame.content():
-            pmItem = self._items.get(patch, None)
-            if pmItem is None:
-                pmItem = QtGui.QGraphicsPixmapItem()
-                pmItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-                pmItem.setPos(QtCore.QPointF(patch.pos()))
-                pmItem.setPixmap(patch.pixmap())
-                pmItem.setTransformationMode(QtCore.Qt.SmoothTransformation)
-            result[patch] = pmItem
+            key = patch
+            item = self._items.get(key, None)
+            if item is None:
+                item = QtGui.QGraphicsPixmapItem()
+                item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
+                item.setPos(QtCore.QPointF(patch.pos()))
+                item.setPixmap(patch.pixmap())
+                item.setTransformationMode(QtCore.Qt.SmoothTransformation)
+            result[key] = item
 
-            debugRects.append(('DEBUG_%s' % patch, _frameBoundingRect(pmItem),
+            debugRects.append(('DEBUG_%s' % patch, _frameBoundingRect(item),
                                QtCore.Qt.magenta
                                if not patch.flags() else
                                QtCore.Qt.green))
 
         for rect, link in frame.linkRects():
             if link.startswith('file:') and link.endswith('.mng'):
-                item = self._items.get(link, None)
+                key = link
+                item = self._items.get(key, None)
                 if item is None:
                     if rect.width() < 1 and rect.height() < 1:
                         # bug in XeLaTeX w.r.t. images used in hyperlinks?
@@ -128,7 +135,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                     item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
                     item.setPos(rect.topLeft())
                     movie.start()
-                result[link] = item
+                result[key] = item
 
         staticItems = result.items()
 
@@ -153,12 +160,12 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                 debugRects.append(('DEBUG_%s' % link, rect, QtCore.Qt.yellow))
 
             for key, rect, color in debugRects:
-                borderItem = self._items.get(key, None)
-                if borderItem is None:
-                    borderItem = QtGui.QGraphicsRectItem(rect)
-                    borderItem.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-                    borderItem.setPen(QtGui.QPen(color))
-                result[key] = borderItem
+                item = self._items.get(key, None)
+                if item is None:
+                    item = QtGui.QGraphicsRectItem(rect)
+                    item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
+                    item.setPen(QtGui.QPen(color))
+                result[key] = item
 
         return result
 
