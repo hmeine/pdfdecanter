@@ -347,14 +347,18 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                  'opacity', 0.0, 1.0),
             ):
             if items:
-                parentItem = self._contentItem(contentName)
-                for key, (layer, item) in items.iteritems():
-                    item.setParentItem(parentItem)
+                parentItems = set()
 
-                anim = QtCore.QPropertyAnimation(parentItem, propName, self._animation)
-                anim.setDuration(duration)
-                anim.setStartValue(startValue)
-                anim.setEndValue(endValue)
+                for key, (layer, item) in items.iteritems():
+                    parentItem = self._contentItem("%s-%s" % (layer, contentName))
+                    item.setParentItem(parentItem)
+                    parentItems.add(parentItem)
+
+                for parentItem in parentItems:
+                    anim = QtCore.QPropertyAnimation(parentItem, propName, self._animation)
+                    anim.setDuration(duration)
+                    anim.setStartValue(startValue)
+                    anim.setEndValue(endValue)
 
         self._items.update(addItems)
         self._pendingRemove = removeItems
@@ -373,12 +377,13 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         for i in range(self._animation.animationCount()):
             anim = self._animation.animationAt(i)
             for item in p(anim.targetObject).childItems():
-                item.setParentItem(parentItem)
                 # custom items are special, because they're just
                 # moved/reparented/hidden, but not created on the fly:
                 origParent = self._originalCustomItemState.get(item)
                 if origParent:
                     item.setParentItem(origParent)
+                else:
+                    item.setParentItem(parentItem)
 
         self._removeItems(self._pendingRemove)
 
@@ -414,7 +419,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         if result is None:
             result = QtGui.QGraphicsWidget(self)
             result.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-            if key == 'bg':
+            if isinstance(key, str) and key.startswith('bg'):
                 result.setZValue(self.BACKGROUND_LAYER)
             self._helperItems[key] = result
 
