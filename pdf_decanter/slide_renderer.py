@@ -93,6 +93,8 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
             item.setBrush(color)
             item.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+        else:
+            _, item = item
         layer = 'bg'
         result[key] = (layer, item)
 
@@ -107,6 +109,8 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                 item.setPos(QtCore.QPointF(patch.pos()))
                 item.setPixmap(patch.pixmap())
                 item.setTransformationMode(QtCore.Qt.SmoothTransformation)
+            else:
+                _, item = item
             if patch.flag(presentation.Patch.FLAG_HEADER):
                 layer = 'header'
             elif patch.flag(presentation.Patch.FLAG_FOOTER):
@@ -138,6 +142,8 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                     item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
                     item.setPos(rect.topLeft())
                     movie.start()
+                else:
+                    _, item = item
                 layer = 'content'
                 result[key] = (layer, item)
 
@@ -173,6 +179,8 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                     item = QtGui.QGraphicsRectItem(rect)
                     item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
                     item.setPen(QtGui.QPen(color))
+                else:
+                    _, item = item
                 result[key] = (layer, item)
 
         return result
@@ -199,7 +207,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             except KeyError:
                 parentItem = self._contentItem(layer)
                 item.setParentItem(parentItem)
-                addItems[key] = item
+                addItems[key] = (layer, item)
         
         return newGeometry, addItems, removeItems
 
@@ -225,7 +233,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         self._removeItems(removeItems)
 
     def _removeItems(self, items):
-        for key, item in items.iteritems():
+        for key, (layer, item) in items.iteritems():
             # we must not remove custom items from the scene:
             if key is item:
                 item.hide() # just hide them
@@ -267,61 +275,61 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             fadeOut = dict(removeItems)
             fadeIn = addItems
         else:
-            for oldKey, oldItem in removeItems.iteritems():
+            for oldKey, (oldLayer, oldItem) in removeItems.iteritems():
                 # always slide custom items:
                 if oldKey is oldItem:
-                    slideOut[oldKey] = oldItem
+                    slideOut[oldKey] = (oldLayer, oldItem)
                     continue
 
                 # always fade non-Patches (e.g. backgrounds, movies, ...)
                 if not isinstance(oldKey, presentation.Patch):
-                    fadeOut[oldKey] = oldItem
+                    fadeOut[oldKey] = (oldLayer, oldItem)
                     continue
 
                 # always fade header & footer:
                 if (isinstance(oldKey, presentation.Patch) and
                     oldKey.flag(presentation.Patch.FLAG_HEADER | presentation.Patch.FLAG_FOOTER)):
-                    fadeOut[oldKey] = oldItem
+                    fadeOut[oldKey] = (oldLayer, oldItem)
                     continue
 
-                slideOut[oldKey] = oldItem
+                slideOut[oldKey] = (oldLayer, oldItem)
 
-            for newKey, newItem in addItems.iteritems():
+            for newKey, (newLayer, newItem) in addItems.iteritems():
                 # always slide custom items:
                 if newKey is newItem:
-                    slideIn[newKey] = newItem
+                    slideIn[newKey] = (newLayer, newItem)
                     continue
 
                 # always fade non-Patches (e.g. backgrounds, movies, ...)
                 if not isinstance(newKey, presentation.Patch):
-                    fadeIn[newKey] = newItem
+                    fadeIn[newKey] = (newLayer, newItem)
                     continue
 
                 # always fade header & footer:
                 if (isinstance(newKey, presentation.Patch) and
                     newKey.flag(presentation.Patch.FLAG_HEADER | presentation.Patch.FLAG_FOOTER)):
-                    fadeIn[newKey] = newItem
+                    fadeIn[newKey] = (newLayer, newItem)
                     continue
 
                 # look for pairs (oldItem, newItem) of Patches where
                 # newKey.isSuccessorOf(oldKey) => fade out/in
                 changed = False
-                for oldKey, oldItem in removeItems.iteritems():
+                for oldKey, (oldLayer, oldItem) in removeItems.iteritems():
                     if not isinstance(oldKey, presentation.Patch):
                         continue
                     if newKey.isSuccessorOf(oldKey):
                         changed = True
-                        fadeOut[oldKey] = oldItem
-                        fadeIn[newKey] = newItem
+                        fadeOut[oldKey] = (oldLayer, oldItem)
+                        fadeIn[newKey] = (newLayer, newItem)
                         del slideOut[oldKey]
                         break
                 if not changed:
-                    slideIn[newKey] = newItem
+                    slideIn[newKey] = (newLayer, newItem)
 
         # don't fade out items that are completely covered by items that fade in:
-        for newKey, newItem in fadeIn.iteritems():
+        for newKey, (newLayer, newItem) in fadeIn.iteritems():
             coveredRect = _frameBoundingRect(newItem)
-            for oldKey, oldItem in fadeOut.items():
+            for oldKey, (oldLayer, oldItem) in fadeOut.items():
                 if coveredRect.contains(_frameBoundingRect(oldItem)):
                     del fadeOut[oldKey]
 
@@ -340,7 +348,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             ):
             if items:
                 parentItem = self._contentItem(contentName)
-                for key, item in items.iteritems():
+                for key, (layer, item) in items.iteritems():
                     item.setParentItem(parentItem)
 
                 anim = QtCore.QPropertyAnimation(parentItem, propName, self._animation)
