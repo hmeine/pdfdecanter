@@ -385,9 +385,9 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                 # moved/reparented/hidden, but not created on the fly:
                 origParent = self._originalCustomItemState.get(item)
                 if origParent:
-                    #item.setParentItem(origParent)
-                    assert origParent is parentItem
-                item.setParentItem(parentItem)
+                    item.setParentItem(origParent)
+                else:
+                    item.setParentItem(parentItem)
 
         self._animation = None
         self._staticParents = {}
