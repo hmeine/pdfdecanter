@@ -476,4 +476,4 @@ def load_classifier(basename):
         try:
             classifier, navigation_examples = bz2_pickle.unpickle(filename)
         except ImportError, e:
-            sys.stderr.write("%s\n")
+            sys.stderr.write("%s\n" % e)
