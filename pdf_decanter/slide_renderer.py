@@ -161,6 +161,8 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                     # print "%s covers %s, del'ing %s -> %s..." % (
                     #     _frameBoundingRect(item), _frameBoundingRect(staticItem), key, staticItem)
                     del result[okey]
+
+            key = item
             layer = 'content'
             result[key] = (layer, item)
             item.show()
@@ -201,7 +203,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
         addItems = {}
         removeItems = dict(self._items)
-        
+
         for key, (layer, item) in self._frameItems(frame).iteritems():
             try:
                 del removeItems[key]
@@ -209,7 +211,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                 parentItem = self._contentItem(layer)
                 item.setParentItem(parentItem)
                 addItems[key] = (layer, item)
-        
+
         return newGeometry, addItems, removeItems
 
     def resetItems(self):
