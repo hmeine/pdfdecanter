@@ -331,6 +331,7 @@ def extract_patches(frames):
             key = patch.key()
             patch = cache.get(key, patch)
             patch.addOccurrence(frame)
+            cache[key] = patch
 
             patches.append(patch)
 
