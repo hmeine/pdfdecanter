@@ -84,48 +84,69 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             cls._originalCustomItemState[item] = item.parentItem()
 
     def _frameItems(self, frame):
-        result = {}
+        class ResultItems(object):
+            def __init__(self, items):
+                self._existingItems = items
+                self._newItems = {}
+                self._key = None
+            
+            def get_existing_item(self, key):
+                self._key = key
+                layer, item = self._existingItems.get(key, (None, None))
+                return item
+
+            def add(self, item, layer, key = None):
+                if key is None:
+                    key = self._key
+                    assert key is not None
+                else:
+                    assert self._key is None
+                self._newItems[key] = (layer, item)
+                self._key = None
+
+            def __delitem__(self, index):
+                del self._newItems[index]
+                
+            def items(self):
+                return self._newItems.items()
+
+            def added(self):
+                return self._newItems
+        
+        result = ResultItems(self._items)
 
         color = frame.backgroundColor() if not self.DEBUG else QtGui.QColor(230, 200, 200)
-        key = 'bg_%d_%d_%d' % color.getRgb()[:3]
-        item = self._items.get(key, None)
+        item = result.get_existing_item(key = 'bg_%d_%d_%d' % color.getRgb()[:3])
         if item is None:
             item = QtGui.QGraphicsRectItem(self._frameRect(), self)
             item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
             item.setBrush(color)
             item.setPen(QtGui.QPen(QtCore.Qt.NoPen))
-        else:
-            _, item = item
-        layer = 'bg'
-        result[key] = (layer, item)
+        result.add(item, layer = 'bg')
 
         debugRects = []
 
         for patch in frame.content():
-            key = patch
-            item = self._items.get(key, None)
+            item = result.get_existing_item(key = patch)
             if item is None:
                 item = QtGui.QGraphicsPixmapItem()
                 item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
                 item.setPos(QtCore.QPointF(patch.pos()))
                 item.setPixmap(patch.pixmap())
                 item.setTransformationMode(QtCore.Qt.SmoothTransformation)
-            else:
-                _, item = item
             if patch.flag(presentation.Patch.FLAG_HEADER):
                 layer = 'header'
             elif patch.flag(presentation.Patch.FLAG_FOOTER):
                 layer = 'footer'
             else:
                 layer = 'content'
-            result[key] = (layer, item)
+            result.add(item, layer)
 
             debugRects.append(('DEBUG_%s' % patch, _frameBoundingRect(item), layer))
 
         for rect, link in frame.linkRects():
             if link.startswith('file:') and link.endswith('.mng'):
-                key = link
-                item = self._items.get(key, None)
+                item = result.get_existing_item(key = link)
                 if item is None:
                     if rect.width() < 1 and rect.height() < 1:
                         # bug in XeLaTeX w.r.t. images used in hyperlinks?
@@ -143,10 +164,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                     item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
                     item.setPos(rect.topLeft())
                     movie.start()
-                else:
-                    _, item = item
-                layer = 'content'
-                result[key] = (layer, item)
+                result.add(item, layer = 'content')
 
         staticItems = result.items()
 
@@ -162,10 +180,8 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                     #     _frameBoundingRect(item), _frameBoundingRect(staticItem), key, staticItem)
                     del result[okey]
 
-            key = item
-            layer = 'content'
-            result[key] = (layer, item)
             item.show()
+            result.add(item, layer = 'content', key = item)
 
             debugRects.append(('DEBUG_%s' % item, _frameBoundingRect(item), layer))
 
@@ -174,7 +190,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                 debugRects.append(('DEBUG_%s' % link, rect, QtCore.Qt.yellow))
 
             for key, rect, layer in debugRects:
-                item = self._items.get(key, None)
+                item = result.get_existing_item(key)
                 if item is None:
                     color = (QtCore.Qt.magenta
                              if layer == 'content' else
@@ -182,11 +198,9 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                     item = QtGui.QGraphicsRectItem(rect)
                     item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
                     item.setPen(QtGui.QPen(color))
-                else:
-                    _, item = item
-                result[key] = (layer, item)
+                result.add(item, layer)
 
-        return result
+        return result.added()
 
     def frame(self):
         return self._frame
