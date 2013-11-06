@@ -423,7 +423,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         """Return corresponding Patch instance which is rendered by
         the given item.  Return None if the item does not represent a
         Patch, or if the item does not belong to this renderer."""
-        for key, thisItem in self._items.iteritems():
+        for key, (layer, thisItem) in self._items.iteritems():
             if thisItem is item:
                 if isinstance(key, presentation.Patch):
                     return key
