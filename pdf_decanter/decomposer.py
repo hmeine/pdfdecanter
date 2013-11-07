@@ -2,7 +2,7 @@
 i.e. creating a Presentation instance from a sequence of images."""
 
 import numpy, os, sys, time
-from dynqt import QtCore, array2qimage
+from dynqt import QtCore, QtGui, qimage2ndarray
 import pdf_infos, pdf_renderer, bz2_pickle
 #import alpha
 
@@ -48,8 +48,8 @@ class ChangedRect(ObjectWithFlags):
     def image(self):
         """Returns RGBA QImage with only the changed pixels non-transparent."""
         rgb = self.subarray(self._originalImage)
-        alpha = numpy.uint8(255) * self.changed()
-        return array2qimage(numpy.dstack((rgb, alpha)))
+        alpha_channel = numpy.uint8(255) * self.changed()
+        return qimage2ndarray.array2qimage(numpy.dstack((rgb, alpha_channel)))
 
     def isSuccessorOf(self, other):
         """Return whether this ChangedRect is likely to be the

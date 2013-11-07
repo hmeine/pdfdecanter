@@ -1,5 +1,5 @@
 import numpy, hashlib, itertools
-from dynqt import QtCore, QtGui, raw_view
+from dynqt import QtCore, QtGui, qimage2ndarray
 import pdf_infos
 
 
@@ -61,7 +61,7 @@ class Patch(ObjectWithFlags):
         return self._pos.x(), self._pos.y()
 
     def ndarray(self):
-        return raw_view(self._image)
+        return qimage2ndarray.raw_view(self._image)
 
     def pixmap(self):
         if self._pixmap is None:
@@ -99,7 +99,7 @@ class Patch(ObjectWithFlags):
         h, w = patch.shape
         self._pos = QtCore.QPoint(x, y)
         self._image = QtGui.QImage(w, h, QtGui.QImage.Format_ARGB32)
-        raw_view(self._image)[:] = patch
+        qimage2ndarray.raw_view(self._image)[:] = patch
         self._pixmap = None
 
     def __repr__(self):

@@ -83,23 +83,10 @@ class QtDriver(object):
 
 import numpy
 
-def array2qimage_pure_python(arr):
-	assert numpy.ndim(arr) == 3 and arr.shape[2] == 3
-	h, w = arr.shape[:2]
-	aligned = numpy.zeros((h, w, 4), numpy.uint8)
-	aligned[:,:,2::-1] = arr
-	result = QtGui.QImage(aligned.data, w, h, QtGui.QImage.Format_RGB32)
-	return result.copy()
-
 qt = QtDriver()
 QtCore = qt.QtCore
 QtGui = qt.QtGui
 QtOpenGL = qt.QtOpenGL
 getprop = qt.getprop()
 
-if qt.name() == 'PySide':
-	array2qimage = array2qimage_pure_python
-	raw_view = None
-else:
-	import qimage2ndarray
-	from qimage2ndarray import array2qimage, raw_view
+import qimage2ndarray
