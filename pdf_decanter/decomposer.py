@@ -54,20 +54,20 @@ class ChangedRect(ObjectWithFlags):
             result |= (labelROI == l)
         return result
 
-    def image(self, bg = None):
+    def image(self, bgColor = None):
         """Returns RGBA QImage with only the changed pixels non-transparent."""
         changed = self.changed()
         if changed is None:
             return None
         rgb = self.subarray(self._originalImage)
-        if bg is not None:
-            fg = most_common_color(rgb[changed])
-            alpha_channel = alpha.verified_unblend(rgb, bg, fg)
+        if bgColor is not None:
+            fgColor = most_common_color(rgb[changed])
+            alpha_channel = alpha.verified_unblend(rgb, bgColor, fgColor)
             if alpha_channel is not None:
                 self._flags |= Patch.FLAG_MONOCHROME
-                r, g, b = fg
+                r, g, b = fgColor
                 self._color = QtGui.QColor(r, g, b)
-                fg, _ = numpy.broadcast_arrays(fg, rgb)
+                fg, _ = numpy.broadcast_arrays(fgColor, rgb)
                 return qimage2ndarray.array2qimage(numpy.dstack((fg, alpha_channel)))
 
         alpha_channel = numpy.uint8(255) * changed
@@ -347,10 +347,10 @@ def extract_patches(frames):
 
         # extract patches from the page image:
         patches = []
-        bg = None
+        bgColor = None
         for r in content:
             pos = r.pos()
-            image = r.image(bg = bg)
+            image = r.image(bgColor = bgColor)
             if image is not None:
                 patch = Patch(pos, image, r.color())
                 patch._flags = r._flags
@@ -359,7 +359,7 @@ def extract_patches(frames):
                 patch = Patch(pos, r.boundingRect().size(), r.color())
                 assert patch.color() is not None
                 patch._flags = r._flags | Patch.FLAG_RECT
-                bg = r.color().getRgb()[:3]
+                bgColor = r.color().getRgb()[:3]
 
             # reuse existing Patch if it has the same key:
             key = patch.key()
