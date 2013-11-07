@@ -289,6 +289,9 @@ def detect_background_color(rgb_or_rgba, rect = None, outer_color = None):
 
 
 def create_frames(raw_pages):
+    """Create preliminary Frames from raw pages.  The Frame contents
+    will not be Patch instances yet, but ChangedRects."""
+
     raw_pages = list(raw_pages)
 
     result = []
@@ -309,6 +312,9 @@ def create_frames(raw_pages):
 
 
 def extract_patches(frames):
+    """Replace ChangedRects with Patches (in-place) within the given
+    list of Frames."""
+    
     rawPatchCount = 0
     cache = {}
     for frame in frames:

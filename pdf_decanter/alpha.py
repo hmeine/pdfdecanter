@@ -3,6 +3,10 @@ from dynqt import QtGui, qimage2ndarray
 
 
 def unblend_alpha_1d(rgb, bg, c):
+    """Given an Nx3 `rgb` array, a compatible background `bg`
+    (e.g. Nx3 or just a 3-tuple with a fixed bg color), and a
+    foreground color, return alpha array."""
+    
     rgb = numpy.require(rgb, dtype = numpy.int32) * 256
     bg  = numpy.require(bg,  dtype = numpy.int32) * 256
     c   = numpy.require(c,   dtype = numpy.int32) * 256
