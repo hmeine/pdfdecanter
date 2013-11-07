@@ -45,7 +45,8 @@ class Patch(ObjectWithFlags):
     FLAG_FOOTER     = 2
     MASK_NAVIGATION = (FLAG_HEADER | FLAG_FOOTER)
     FLAG_RECT       = 4
-    MASK_TYPE       = (FLAG_RECT)
+    FLAG_MONOCHROME = 8
+    MASK_TYPE       = (FLAG_RECT | FLAG_MONOCHROME)
 
     def __init__(self, pos, image, color = None):
         super(Patch, self).__init__()
@@ -71,6 +72,8 @@ class Patch(ObjectWithFlags):
 
     def ndarray(self):
         assert not self.flag(self.FLAG_RECT)
+        if self.flag(self.FLAG_MONOCHROME):
+            return qimage2ndarray.alpha_view(self._image)
         return qimage2ndarray.raw_view(self._image)
 
     def pixmap(self):
@@ -83,7 +86,10 @@ class Patch(ObjectWithFlags):
         """Return number of pixels as some kind of measurement of memory usage."""
         if self.flag(self.FLAG_RECT):
             return 0
-        return self._image.width() * self._image.height()
+        result = self._image.width() * self._image.height()
+        if self.flag(self.FLAG_MONOCHROME):
+            result /= 4
+        return result
 
     def occurrenceCount(self):
         # self._occurrences may be either a list or just an integer count
@@ -125,15 +131,20 @@ class Patch(ObjectWithFlags):
             self._pos = QtCore.QPoint(x, y) # (integer pos)
             h, w = patch.shape
             self._image = QtGui.QImage(w, h, QtGui.QImage.Format_ARGB32)
-            qimage2ndarray.raw_view(self._image)[:] = patch
+            if self.flag(self.FLAG_MONOCHROME):
+                qimage2ndarray.raw_view(self._image)[:] = color
+                qimage2ndarray.alpha_view(self._image)[:] = patch
+            else:
+                qimage2ndarray.raw_view(self._image)[:] = patch
         self._pixmap = None
         self._color = QtGui.QColor(color)
 
     def __repr__(self):
         flags = []
-        for flag, desc in ((self.FLAG_HEADER, 'HEADER'),
-                           (self.FLAG_FOOTER, 'FOOTER'),
-                           (self.FLAG_RECT,   'RECT')):
+        for flag, desc in ((self.FLAG_HEADER,     'HEADER'),
+                           (self.FLAG_FOOTER,     'FOOTER'),
+                           (self.FLAG_RECT,       'RECT'),
+                           (self.FLAG_MONOCHROME, 'MONOCHROME')):
             if self.flag(flag):
                 flags.append(desc)
         if flags:

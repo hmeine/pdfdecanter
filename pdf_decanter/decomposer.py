@@ -4,7 +4,7 @@ i.e. creating a Presentation instance from a sequence of images."""
 import numpy, os, sys, time
 from dynqt import QtCore, QtGui, qimage2ndarray
 import pdf_infos, pdf_renderer, bz2_pickle
-#import alpha
+import alpha
 
 from presentation import ObjectWithFlags, Patch, Frame, Presentation
 
@@ -48,17 +48,28 @@ class ChangedRect(ObjectWithFlags):
         if not self._labels:
             return None
         labelROI = self.labelROI()
+        #return (labelROI[...,None] == self._labels).any(-1)
         result = (labelROI == self._labels[0])
         for l in self._labels[1:]:
             result |= (labelROI == l)
         return result
 
-    def image(self):
+    def image(self, bg = None):
         """Returns RGBA QImage with only the changed pixels non-transparent."""
         changed = self.changed()
         if changed is None:
             return None
         rgb = self.subarray(self._originalImage)
+        if bg is not None:
+            fg = most_common_color(rgb[changed])
+            alpha_channel = alpha.verified_unblend(rgb, bg, fg)
+            if alpha_channel is not None:
+                self._flags |= Patch.FLAG_MONOCHROME
+                r, g, b = fg
+                self._color = QtGui.QColor(r, g, b)
+                fg, _ = numpy.broadcast_arrays(fg, rgb)
+                return qimage2ndarray.array2qimage(numpy.dstack((fg, alpha_channel)))
+
         alpha_channel = numpy.uint8(255) * changed
         return qimage2ndarray.array2qimage(numpy.dstack((rgb, alpha_channel)))
 
@@ -336,17 +347,19 @@ def extract_patches(frames):
 
         # extract patches from the page image:
         patches = []
+        bg = None
         for r in content:
             pos = r.pos()
-            image = r.image()
+            image = r.image(bg = bg)
             if image is not None:
-                patch = Patch(pos, image)
+                patch = Patch(pos, image, r.color())
                 patch._flags = r._flags
             else:
                 assert r.color() is not None
                 patch = Patch(pos, r.boundingRect().size(), r.color())
                 assert patch.color() is not None
                 patch._flags = r._flags | Patch.FLAG_RECT
+                bg = r.color().getRgb()[:3]
 
             # reuse existing Patch if it has the same key:
             key = patch.key()
@@ -371,9 +384,16 @@ def decompose_pages(pages, infos = None):
     # could alternatively be done before filtering duplicates, but this is faster:
     result = Presentation(infos)
     result.addFrames(frames)
+
+    monochromePatchCount = sum(bool(patch.flag(Patch.FLAG_MONOCHROME))
+                               for patch in result.patchSet())
+    monochromeColorCount = len(set(patch.color().rgb()
+                                   for patch in result.patchSet()
+                                   if patch.flag(Patch.FLAG_MONOCHROME)))
         
-    print "%d slides, %d frames, %d distinct patches (of %d)" % (
-        result.slideCount(), result.frameCount(), uniquePatchCount, rawPatchCount)
+    print "%d slides, %d frames, %d distinct patches (of %d), %d monochrome (%d colors)" % (
+        result.slideCount(), result.frameCount(),
+        uniquePatchCount, rawPatchCount, monochromePatchCount, monochromeColorCount)
     return result
 
 
