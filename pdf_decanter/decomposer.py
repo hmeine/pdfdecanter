@@ -54,21 +54,29 @@ class ChangedRect(ObjectWithFlags):
             result |= (labelROI == l)
         return result
 
-    def image(self, bgColor = None):
+    def image(self, bgColor = None, knownColors = set()):
         """Returns RGBA QImage with only the changed pixels non-transparent."""
         changed = self.changed()
         if changed is None:
             return None
         rgb = self.subarray(self._originalImage)
         if bgColor is not None:
-            fgColor = most_common_color(rgb[changed])
-            alpha_channel = alpha.verified_unblend(rgb, bgColor, fgColor)
-            if alpha_channel is not None:
-                self._flags |= Patch.FLAG_MONOCHROME
-                r, g, b = fgColor
-                self._color = QtGui.QColor(r, g, b)
-                fg, _ = numpy.broadcast_arrays(fgColor, rgb)
-                return qimage2ndarray.array2qimage(numpy.dstack((fg, alpha_channel)))
+            def tryColors():
+                for fgColor in knownColors:
+                    yield fgColor
+                fgColor = tuple(most_common_color(rgb[changed]))
+                if fgColor not in knownColors:
+                    knownColors.add(fgColor)
+                    yield fgColor
+
+            for fgColor in tryColors():
+                alpha_channel = alpha.verified_unblend(rgb, bgColor, fgColor)
+                if alpha_channel is not None:
+                    self._flags |= Patch.FLAG_MONOCHROME
+                    r, g, b = fgColor
+                    self._color = QtGui.QColor(r, g, b)
+                    fg, _ = numpy.broadcast_arrays(fgColor, rgb)
+                    return qimage2ndarray.array2qimage(numpy.dstack((fg, alpha_channel)))
 
         alpha_channel = numpy.uint8(255) * changed
         return qimage2ndarray.array2qimage(numpy.dstack((rgb, alpha_channel)))
