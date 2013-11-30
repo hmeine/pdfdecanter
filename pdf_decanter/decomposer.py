@@ -124,12 +124,17 @@ class ChangedRect(ObjectWithFlags):
         assert self._labelImage is other._labelImage
         assert self._originalImage is other._originalImage
         assert self._alphaImage is other._alphaImage
-        return ChangedRect(
+        assert self._color == other._color
+        assert self._flags == other._flags
+        result = ChangedRect(
             self._rect | other._rect,
             self._labels + other._labels,
             self._labelImage,
             self._originalImage,
-            self._alphaImage)
+            self._alphaImage,
+            self._color)
+        result._flags = self._flags
+        return result
 
 
 def join_close_rects(rects):
@@ -154,16 +159,17 @@ def join_close_rects(rects):
             for other in rects:
                 joined = None
                 if bigger.intersects(other.boundingRect()):
-                    joined = r | other
-                    if joined.area() > r.area() + other.area() + pixel_threshold:
-                        joined = None
+                    try:
+                        joined = r | other
+                        if joined.area() <= r.area() + other.area() + pixel_threshold:
+                            r = joined
+                            bigger = r.boundingRect().adjusted(-dx, -dy, dx, dy)
+                            changed = True
+                            continue
+                    except AssertionError:
+                        pass
                     
-                if joined:
-                    r = joined
-                    bigger = r.boundingRect().adjusted(-dx, -dy, dx, dy)
-                    changed = True
-                else:
-                    rest.append(other)
+                rest.append(other)
             rects = rest
 
         result.append(r)
@@ -335,6 +341,7 @@ def detect_background_color(rgb_or_rgba, rect = None, outer_color = None):
 def changed_rects_ndimage(changed, original):
     labelImage, cnt = scipy.ndimage.measurements.label(changed)
     alpha = numpy.empty(original.shape[:2], dtype = numpy.uint8)
+    alpha[:] = 0
     
     result = []
     for i, (y, x) in enumerate(scipy.ndimage.measurements.find_objects(labelImage, cnt)):
@@ -359,6 +366,10 @@ def create_frames(raw_pages):
         changed = (page != bgColor).any(-1)
         rects = changed_rects_ndimage(changed, page)
 
+        for r in rects:
+            #if not r.flag(Patch.FLAG_RECT):
+            r.detectAlpha(bgColor = bgColor)
+        
         rects = join_close_rects(rects)
 
         h, w = page.shape[:2]
@@ -396,7 +407,6 @@ def extract_patches(frames):
         for r in content:
             pos = r.pos()
             if not r.flag(Patch.FLAG_RECT):
-                r.detectAlpha(bgColor = bgColor)
                 image = r.image()
                 patch = Patch(pos, image, r.color())
             else:
