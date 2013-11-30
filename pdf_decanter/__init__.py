@@ -273,7 +273,7 @@ class PDFDecanter(QtCore.QObject):
             wallClockTime = time.time()
             cpuTime = time.clock()
 
-            slides = decomposer.load_presentation(pdfFilename, sizePX = self.slideSize())
+            slides = decomposer.decompose_pdf(pdfFilename, sizePX = self.slideSize())
             
             print "complete rendering took %.3gs. (%.3gs. real time)" % (
                 time.clock() - cpuTime, time.time() - wallClockTime)

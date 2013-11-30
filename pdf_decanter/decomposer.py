@@ -358,7 +358,7 @@ def decompose_pages(pages, infos = None):
     return result
 
 
-def load_presentation(pdfFilename, sizePX):
+def decompose_pdf(pdfFilename, sizePX):
     infos = pdf_infos.PDFInfos.create(pdfFilename)
 
     # if infos:
