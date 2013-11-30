@@ -62,10 +62,10 @@ class ChangedRect(ObjectWithFlags):
         rgb = self.subarray(self._originalImage)
         if bgColor is not None:
             def tryColors():
+                for fgColor in knownColors:
+                    yield fgColor
                 fgColor = tuple(most_common_color(rgb[changed]))
                 if fgColor not in knownColors:
-                    yield fgColor
-                for fgColor in knownColors:
                     yield fgColor
 
             for fgColor in tryColors():
