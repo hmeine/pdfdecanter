@@ -62,16 +62,17 @@ class ChangedRect(ObjectWithFlags):
         rgb = self.subarray(self._originalImage)
         if bgColor is not None:
             def tryColors():
-                for fgColor in knownColors:
-                    yield fgColor
                 fgColor = tuple(most_common_color(rgb[changed]))
                 if fgColor not in knownColors:
-                    knownColors.add(fgColor)
+                    yield fgColor
+                for fgColor in knownColors:
                     yield fgColor
 
             for fgColor in tryColors():
                 alpha_channel = alpha.verified_unblend(rgb, bgColor, fgColor)
                 if alpha_channel is not None:
+                    if fgColor not in knownColors:
+                        knownColors.add(fgColor)
                     self._flags |= Patch.FLAG_MONOCHROME
                     r, g, b = fgColor
                     self._color = QtGui.QColor(r, g, b)
@@ -322,7 +323,6 @@ def create_frames(raw_pages):
         changed = (page != bgColor).any(-1)
         rects = changed_rects_ndimage(changed, page)
 
-        #occurences = collect_occurences(rects)
         rects = join_close_rects(rects)
 
         h, w = page.shape[:2]
