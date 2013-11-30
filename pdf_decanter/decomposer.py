@@ -8,6 +8,29 @@ import alpha
 
 from presentation import ObjectWithFlags, Patch, Frame, Presentation
 
+class MostFrequentlyUsedColors(object):
+    def __init__(self):
+        self._colors = []
+        self._counts = []
+
+    def __iter__(self):
+        return iter(self._colors)
+
+    def add(self, color):
+        try:
+            i = self._colors.index(color)
+            self._counts[i] += 1
+            if i > 0 and self._counts[i-1] < self._counts[i]:
+                self._colors[i] = self._colors[i-1]
+                self._colors[i-1] = color
+                count = self._counts[i]
+                self._counts[i] = self._counts[i-1]
+                self._counts[i-1] = count
+        except ValueError:
+            self._colors.append(color)
+            self._counts.append(1)
+
+
 class ChangedRect(ObjectWithFlags):
     """Represents changes, i.e. a bounding box (rect()) and a number
     of labels within that ROI.  Plain rectangles are represented with
@@ -54,7 +77,7 @@ class ChangedRect(ObjectWithFlags):
             result |= (labelROI == l)
         return result
 
-    def image(self, bgColor = None, knownColors = set()):
+    def image(self, bgColor = None, knownColors = MostFrequentlyUsedColors()):
         """Returns RGBA QImage with only the changed pixels non-transparent."""
         changed = self.changed()
         if changed is None:
@@ -71,8 +94,7 @@ class ChangedRect(ObjectWithFlags):
             for fgColor in tryColors():
                 alpha_channel = alpha.verified_unblend(rgb, bgColor, fgColor)
                 if alpha_channel is not None:
-                    if fgColor not in knownColors:
-                        knownColors.add(fgColor)
+                    knownColors.add(fgColor)
                     self._flags |= Patch.FLAG_MONOCHROME
                     r, g, b = fgColor
                     self._color = QtGui.QColor(r, g, b)
