@@ -36,14 +36,15 @@ class ChangedRect(ObjectWithFlags):
     of labels within that ROI.  Plain rectangles are represented with
     an empty list of labels and a float QRectF."""
     
-    __slots__ = ('_rect', '_labels', '_labelImage', '_originalImage', '_color')
+    __slots__ = ('_rect', '_labels', '_labelImage', '_originalImage', '_color', '_alphaImage')
 
-    def __init__(self, rect, labels, labelImage, originalImage, color = None):
+    def __init__(self, rect, labels, labelImage, originalImage, alphaImage, color = None):
         super(ChangedRect, self).__init__()
         self._rect = rect
         self._labels = labels
         self._labelImage = labelImage
         self._originalImage = originalImage
+        self._alphaImage = alphaImage
         self._color = color
 
     def boundingRect(self):
@@ -77,17 +78,15 @@ class ChangedRect(ObjectWithFlags):
             result |= (labelROI == l)
         return result
 
-    def image(self, bgColor = None, knownColors = MostFrequentlyUsedColors()):
-        """Returns RGBA QImage with only the changed pixels non-transparent."""
-        changed = self.changed()
-        if changed is None:
-            return None
+    def detectAlpha(self, bgColor = None, knownColors = MostFrequentlyUsedColors()):
+        assert self._labels, "don't call with FLAG_RECT"
+
         rgb = self.subarray(self._originalImage)
         if bgColor is not None:
             def tryColors():
                 for fgColor in knownColors:
                     yield fgColor
-                fgColor = tuple(most_common_color(rgb[changed]))
+                fgColor = tuple(most_common_color(rgb[self.changed()]))
                 if fgColor not in knownColors:
                     yield fgColor
 
@@ -98,11 +97,21 @@ class ChangedRect(ObjectWithFlags):
                     self._flags |= Patch.FLAG_MONOCHROME
                     r, g, b = fgColor
                     self._color = QtGui.QColor(r, g, b)
-                    fg, _ = numpy.broadcast_arrays(fgColor, rgb)
-                    return qimage2ndarray.array2qimage(numpy.dstack((fg, alpha_channel)))
+                    self.subarray(self._alphaImage)[:] = alpha_channel
+                    return
+        
+    def image(self):
+        """Returns RGBA QImage with only the changed pixels non-transparent."""
+        assert self._labels, "don't call with FLAG_RECT"
 
-        alpha_channel = numpy.uint8(255) * changed
-        return qimage2ndarray.array2qimage(numpy.dstack((rgb, alpha_channel)))
+        result = QtGui.QImage(self._rect.width(), self._rect.height(), QtGui.QImage.Format_ARGB32)
+        if self.flag(Patch.FLAG_MONOCHROME):
+            qimage2ndarray.rgb_view(result)[:] = self._color.getRgb()[:3]
+            qimage2ndarray.alpha_view(result)[:] = self.subarray(self._alphaImage)
+        else:
+            qimage2ndarray.rgb_view(result)[:] = self.subarray(self._originalImage)
+            qimage2ndarray.alpha_view(result)[:] = numpy.uint8(255) * self.changed()
+        return result
 
     def isSuccessorOf(self, other):
         """Return whether this ChangedRect is likely to be the
@@ -114,11 +123,13 @@ class ChangedRect(ObjectWithFlags):
         """Return union of this and other ChangedRect.  (Both must belong to the same image & labelImage.)"""
         assert self._labelImage is other._labelImage
         assert self._originalImage is other._originalImage
+        assert self._alphaImage is other._alphaImage
         return ChangedRect(
             self._rect | other._rect,
             self._labels + other._labels,
             self._labelImage,
-            self._originalImage)
+            self._originalImage,
+            self._alphaImage)
 
 
 def join_close_rects(rects):
@@ -323,13 +334,14 @@ def detect_background_color(rgb_or_rgba, rect = None, outer_color = None):
 
 def changed_rects_ndimage(changed, original):
     labelImage, cnt = scipy.ndimage.measurements.label(changed)
+    alpha = numpy.empty(original.shape[:2], dtype = numpy.uint8)
     
     result = []
     for i, (y, x) in enumerate(scipy.ndimage.measurements.find_objects(labelImage, cnt)):
         rect = QtCore.QRect(x.start, y.start,
                             x.stop - x.start, y.stop - y.start)
         labels = [i + 1]
-        result.append(ChangedRect(rect, labels, labelImage, original))
+        result.append(ChangedRect(rect, labels, labelImage, original, alpha))
 
     return result
 
@@ -352,7 +364,7 @@ def create_frames(raw_pages):
         h, w = page.shape[:2]
         r, g, b = bgColor
         bgColor = QtGui.QColor(r, g, b)
-        bg = ChangedRect(QtCore.QRectF(0, 0, w, h), (), None, None, bgColor)
+        bg = ChangedRect(QtCore.QRectF(0, 0, w, h), (), None, None, None, bgColor)
         bg.setFlag(Patch.FLAG_RECT)
         frame = Frame(QtCore.QSizeF(w, h), [bg] + rects)
         result.append(frame)
@@ -384,7 +396,8 @@ def extract_patches(frames):
         for r in content:
             pos = r.pos()
             if not r.flag(Patch.FLAG_RECT):
-                image = r.image(bgColor = bgColor)
+                r.detectAlpha(bgColor = bgColor)
+                image = r.image()
                 patch = Patch(pos, image, r.color())
             else:
                 assert r.color() is not None
