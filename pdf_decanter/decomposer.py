@@ -300,6 +300,8 @@ def detect_background_color_four_borders(rgb_or_rgba, border_width = 2):
 
 
 def detect_background_color(rgb_or_rgba, rect = None, outer_color = None):
+    """Detect constant background color by looking at leftmost /
+    rightmost pixels in given ROI."""
     h, w, channelCount = rgb_or_rgba.shape
     
     if rect is None:
@@ -351,6 +353,7 @@ def create_frames(raw_pages):
         r, g, b = bgColor
         bgColor = QtGui.QColor(r, g, b)
         bg = ChangedRect(QtCore.QRectF(0, 0, w, h), (), None, None, bgColor)
+        bg.setFlag(Patch.FLAG_RECT)
         frame = Frame(QtCore.QSizeF(w, h), [bg] + rects)
         result.append(frame)
 
@@ -380,16 +383,15 @@ def extract_patches(frames):
         bgColor = None
         for r in content:
             pos = r.pos()
-            image = r.image(bgColor = bgColor)
-            if image is not None:
+            if not r.flag(Patch.FLAG_RECT):
+                image = r.image(bgColor = bgColor)
                 patch = Patch(pos, image, r.color())
-                patch._flags = r._flags
             else:
                 assert r.color() is not None
                 patch = Patch(pos, r.boundingRect().size(), r.color())
                 assert patch.color() is not None
-                patch._flags = r._flags | Patch.FLAG_RECT
                 bgColor = r.color().getRgb()[:3]
+            patch._flags = r._flags
 
             # reuse existing Patch if it has the same key:
             key = patch.key()
