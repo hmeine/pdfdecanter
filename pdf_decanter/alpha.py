@@ -19,6 +19,9 @@ def unblend_alpha_1d(rgb, bg, c):
 def unblend_alpha(rgb, bg, c):
     rgb, bg = numpy.broadcast_arrays(rgb, bg)
     diff = rgb - bg
+    diff *= (c - bg)
+    if not diff.any():
+        return None
     changed_y, changed_x = numpy.nonzero(diff.any(-1))
 
     rgb_i = rgb[changed_y, changed_x]
@@ -50,6 +53,9 @@ def blend_images(bg, alpha, c):
 
 def verified_unblend(rgb, bg, c, maxAbsDiff = 1):
     alpha = unblend_alpha(rgb, bg, c)
+    if alpha is None:
+        return None
     composed = blend_images(bg, alpha, c)
     if numpy.all(numpy.abs((composed - rgb).view(numpy.int8)) <= maxAbsDiff):
         return alpha
+    return None
