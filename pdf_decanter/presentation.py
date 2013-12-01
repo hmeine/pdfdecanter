@@ -110,7 +110,7 @@ class Patch(ObjectWithFlags):
     def key(self):
         if self.flag(self.FLAG_RECT):
             return (self.xy(), self.sizePair(), self._color and self._color.rgb())
-        return (self.xy(), hashlib.md5(self.ndarray()).digest(), self._color and self._color.rgb())
+        return (self.xy(), hashlib.md5(self.ndarray().ravel()).digest(), self._color and self._color.rgb())
 
     def color(self):
         return self._color

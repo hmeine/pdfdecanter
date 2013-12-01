@@ -1,5 +1,8 @@
 from __future__ import division
-import QtPoppler
+try:
+    import popplerqt4 as QtPoppler
+except ImportError:
+    import QtPoppler
 from PyQt4 import QtCore
 import qimage2ndarray
 import sys
