@@ -417,7 +417,6 @@ def extract_patches(frames):
 
         # extract patches from the page image:
         patches = []
-        bgColor = None
         for r in content:
             pos = r.pos()
             if not r.flag(Patch.FLAG_RECT):
@@ -427,7 +426,6 @@ def extract_patches(frames):
                 assert r.color() is not None
                 patch = Patch(pos, r.boundingRect().size(), r.color())
                 assert patch.color() is not None
-                bgColor = r.color().getRgb()[:3]
             patch._flags = r._flags
 
             # reuse existing Patch if it has the same key:
