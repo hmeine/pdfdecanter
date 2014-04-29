@@ -105,13 +105,14 @@ class PDFInfos(object):
 
     @staticmethod
     def createFromPdfminer(filename):
-        import pdfminer.pdfparser, pdfminer.pdftypes
+        from pdfminer.pdfparser import PDFParser
+        from pdfminer.pdfdocument import PDFDocument
+        from pdfminer.pdfpage import PDFPage
+        from pdfminer.pdftypes import PDFObjRef
 
         fp = open(filename, 'rb')
-        parser = pdfminer.pdfparser.PDFParser(fp)
-        doc = pdfminer.pdfparser.PDFDocument()
-        parser.set_document(doc)
-        doc.set_parser(parser)
+        parser = PDFParser(fp)
+        doc = PDFDocument(parser)
         doc.initialize()
         assert doc.is_extractable
 
@@ -120,14 +121,14 @@ class PDFInfos(object):
                                 for key, value in doc.info[0].items()
                                 if isinstance(value, basestring))
 
-        pageids = [page.pageid for page in doc.get_pages()]
+        pageids = [page.pageid for page in PDFPage.create_pages(doc)]
         result._pageCount = len(pageids)
 
         def get(obj, attr = None):
             """Resolve PDFObjRefs, otherwise a no-op. May also perform
             dict lookup, i.e. get(obj, 'A') is roughly the same as
             get(obj)['A']."""
-            while isinstance(obj, pdfminer.pdftypes.PDFObjRef):
+            while isinstance(obj, PDFObjRef):
                 obj = obj.resolve()
             if attr is not None:
                 return get(obj[attr])
@@ -155,7 +156,7 @@ class PDFInfos(object):
         result._pageInfos = []
 
         # get annotations (links):
-        for page in doc.get_pages():
+        for page in PDFPage.create_pages(doc):
             pageLinks = []
 
             for anno in get(page.annots) or []:
