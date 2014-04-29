@@ -74,9 +74,8 @@ class ChangedRect(ObjectWithFlags):
         return self._color
     
     def subarray(self, array):
-        x1, y1 = self._rect.x(), self._rect.y()
-        x2, y2 = self._rect.right() + 1, self._rect.bottom() + 1
-        return array[y1:y2,x1:x2]
+        x1, y1, x2, y2 = self._rect.getCoords()
+        return array[y1:y2+1,x1:x2+1]
 
     def labelROI(self):
         return self.subarray(self._labelImage)
