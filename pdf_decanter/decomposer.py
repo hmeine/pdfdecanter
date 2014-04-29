@@ -15,7 +15,7 @@
 """Module containing code for decomposing frames into page components,
 i.e. creating a Presentation instance from a sequence of images."""
 
-import numpy, os, sys, time
+import os, sys, time, hashlib, numpy
 from dynqt import QtCore, QtGui, qimage2ndarray
 import pdf_infos, pdf_renderer, bz2_pickle
 import alpha
@@ -50,7 +50,9 @@ class ChangedRect(ObjectWithFlags):
     of labels within that ROI.  Plain rectangles are represented with
     an empty list of labels and a float QRectF."""
     
-    __slots__ = ('_rect', '_labels', '_labelImage', '_originalImage', '_color', '_alphaImage')
+    __slots__ = ('_rect', '_labels', '_labelImage',
+                 '_originalImage', '_color', '_alphaImage',
+                 '_occurrences')
 
     def __init__(self, rect, labels, labelImage, originalImage, alphaImage, color = None):
         super(ChangedRect, self).__init__()
@@ -60,6 +62,7 @@ class ChangedRect(ObjectWithFlags):
         self._originalImage = originalImage
         self._alphaImage = alphaImage
         self._color = color
+        self._occurrences = []
 
     def boundingRect(self):
         return self._rect
@@ -73,6 +76,12 @@ class ChangedRect(ObjectWithFlags):
     def color(self):
         return self._color
     
+    def addOccurrence(self, frame):
+        self._occurrences.append(frame)
+
+    def occurrenceCount(self):
+        return len(self._occurrences)
+        
     def subarray(self, array):
         x1, y1, x2, y2 = self._rect.getCoords()
         return array[y1:y2+1,x1:x2+1]
@@ -90,6 +99,17 @@ class ChangedRect(ObjectWithFlags):
         for l in self._labels[1:]:
             result |= (labelROI == l)
         return result
+
+    def key(self):
+        if self.flag(Patch.FLAG_RECT):
+            return (self._rect.getCoords(), self._color and self._color.rgb())
+        if self.flag(Patch.FLAG_MONOCHROME):
+            imageData = self.subarray(self._alphaImage)
+        else:
+            imageData = self.subarray(self._originalImage)
+        return (self._rect.x(), self._rect.y(),
+                hashlib.md5(imageData.ravel()).digest(),
+                self._color and self._color.rgb())
 
     def detectAlpha(self, bgColor = None, knownColors = MostFrequentlyUsedColors()):
         assert self._labels, "don't call with FLAG_RECT"
@@ -404,46 +424,67 @@ except ImportError:
     create_frames = create_frames_not_possible
 
 
-def extract_patches(frames):
-    """Replace ChangedRects with Patches (in-place) within the given
-    list of Frames."""
+def find_identical_rects(frames):
+    """Unify ChangedRects with identical key()s."""
     
-    rawPatchCount = 0
+    rawRectCount = 0
     cache = {}
     for frame in frames:
         content = frame.content()
-        rawPatchCount += len(content)
+        rawRectCount += len(content)
 
-        # extract patches from the page image:
+        uniqueContent = []
+        for r in content:
+            key = r.key()
+            r = cache.get(key, r)
+            r.addOccurrence(frame)
+            cache[key] = r
+
+            uniqueContent.append(r)
+
+        content[:] = uniqueContent
+
+    return rawRectCount, len(cache)
+
+
+def extract_patches(frames):
+    """Replace ChangedRects with Patches (in-place) within the given
+    list of Frames."""
+
+    patchMapping = {}
+        
+    for frame in frames:
+        content = frame.content()
+
         patches = []
         for r in content:
-            pos = r.pos()
-            if not r.flag(Patch.FLAG_RECT):
-                image = r.image()
-                patch = Patch(pos, image, r.color())
-            else:
-                assert r.color() is not None
-                patch = Patch(pos, r.boundingRect().size(), r.color())
-                assert patch.color() is not None
-            patch._flags = r._flags
+            # map occurrences of same rect onto same patch:
+            patch = patchMapping.get(r)
+            if patch is None:
+                # convert ChangedRect into Patch (extracting ROI from page image):
+                pos = r.pos()
+                if not r.flag(Patch.FLAG_RECT):
+                    image = r.image()
+                    patch = Patch(pos, image, r.occurrenceCount(), r.color())
+                else:
+                    assert r.color() is not None
+                    patch = Patch(pos, r.boundingRect().size(), r.occurrenceCount(), r.color())
+                    assert patch.color() is not None
+                patch._flags = r._flags
 
-            # reuse existing Patch if it has the same key:
-            key = patch.key()
-            patch = cache.get(key, patch)
-            patch.addOccurrence(frame)
-            cache[key] = patch
+                patchMapping[r] = patch
 
             patches.append(patch)
 
         content[:] = patches
 
-    return rawPatchCount, len(cache)
-
 
 def decompose_pages(pages, infos = None):
     frames = create_frames(pages)
 
-    rawPatchCount, uniquePatchCount = extract_patches(frames)
+    rawPatchCount, uniquePatchCount = find_identical_rects(frames)
+
+    extract_patches(frames)
 
     classify_navigation(frames)
     

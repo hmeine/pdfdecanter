@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import numpy, hashlib, itertools
+import numpy, itertools
 from dynqt import QtCore, QtGui, qimage2ndarray
 import pdf_infos
 
@@ -53,7 +53,7 @@ class Patch(ObjectWithFlags):
     pos() will be a QPointF instead of an integer QPoint).
     May appear on multiple frames / slides."""
     
-    __slots__ = ('_pos', '_image', '_pixmap', '_occurrences', '_color')
+    __slots__ = ('_pos', '_image', '_pixmap', '_occurrenceCount', '_color')
 
     FLAG_HEADER     = 1
     FLAG_FOOTER     = 2
@@ -62,12 +62,12 @@ class Patch(ObjectWithFlags):
     FLAG_MONOCHROME = 8
     MASK_TYPE       = (FLAG_RECT | FLAG_MONOCHROME)
 
-    def __init__(self, pos, image, color = None):
+    def __init__(self, pos, image, occurrenceCount, color = None):
         super(Patch, self).__init__()
         self._pos = pos
         self._image = image
         self._pixmap = None
-        self._occurrences = []
+        self._occurrenceCount = occurrenceCount
         self._color = color
 
     def pos(self):
@@ -106,25 +106,14 @@ class Patch(ObjectWithFlags):
         return result
 
     def occurrenceCount(self):
-        # self._occurrences may be either a list or just an integer count
-        if hasattr(self._occurrences, '__getitem__'):
-            return len(self._occurrences)
-        return self._occurrences
+        return self._occurrenceCount
 
-    def addOccurrence(self, frame):
-        self._occurrences.append(frame)
-    
     def isSuccessorOf(self, other):
         return self.boundingRect() == other.boundingRect()
 
     def __iter__(self):
         yield self._pos
         yield self._image
-
-    def key(self):
-        if self.flag(self.FLAG_RECT):
-            return (self.xy(), self.sizePair(), self._color and self._color.rgb())
-        return (self.xy(), hashlib.md5(self.ndarray().ravel()).digest(), self._color and self._color.rgb())
 
     def color(self):
         return self._color
@@ -136,7 +125,7 @@ class Patch(ObjectWithFlags):
                 self._color and self._color.rgb())
 
     def __setstate__(self, state):
-        (x, y), patch, self._flags, self._occurrences, color = state
+        (x, y), patch, self._flags, self._occurrenceCount, color = state
         if self.flag(self.FLAG_RECT):
             self._pos = QtCore.QPointF(x, y) # (float pos)
             w, h = patch
