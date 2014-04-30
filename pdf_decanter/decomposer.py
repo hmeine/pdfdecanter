@@ -178,6 +178,25 @@ class ChangedRect(ObjectWithFlags):
         return result
 
 
+def join_compatible_rects(rects):
+    result = []
+    while rects:
+        r = rects.pop()
+
+        rest = []
+        for other in rects:
+            try:
+                r |= other
+            except IncompatibleMergeError:
+                rest.append(other)
+
+        rects = rest
+
+        result.append(r)
+
+    return result
+
+
 def join_close_rects(rects):
     dx, dy = 10, 3
     # heuristic that penalizes the cost of extra rects/objects
@@ -411,7 +430,7 @@ def create_frames(raw_pages):
             #if not r.flag(Patch.FLAG_RECT):
             r.detectAlpha(bgColor = bgColor)
         
-        rects = join_close_rects(rects)
+        #rects = join_close_rects(rects)
 
         h, w = page.shape[:2]
         r, g, b = bgColor
@@ -492,6 +511,9 @@ def decompose_pages(pages, infos = None):
 
     rawPatchCount, uniquePatchCount = find_identical_rects(frames)
 
+    for frame in frames:
+        content = frame.content()
+        content[:] = join_compatible_rects(content)
     extract_patches(frames)
 
     classify_navigation(frames)
@@ -506,7 +528,7 @@ def decompose_pages(pages, infos = None):
                                    for patch in result.patchSet()
                                    if patch.flag(Patch.FLAG_MONOCHROME)))
         
-    print "%d slides, %d frames, %d distinct patches (of %d), %d monochrome (%d colors)" % (
+    print "%d slides, %d frames, %d distinct patches (of %d) before merging, %d monochrome (%d colors)" % (
         result.slideCount(), result.frameCount(),
         uniquePatchCount, rawPatchCount, monochromePatchCount, monochromeColorCount)
     return result
