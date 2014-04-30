@@ -142,7 +142,7 @@ class ChangedRect(ObjectWithFlags):
         result = QtGui.QImage(self._rect.width(), self._rect.height(), QtGui.QImage.Format_ARGB32)
         if self.flag(Patch.FLAG_MONOCHROME):
             qimage2ndarray.rgb_view(result)[:] = self._color.getRgb()[:3]
-            qimage2ndarray.alpha_view(result)[:] = self.subarray(self._alphaImage)
+            qimage2ndarray.alpha_view(result)[:] = self.subarray(self._alphaImage) * self.changed()
         else:
             qimage2ndarray.rgb_view(result)[:] = self.subarray(self._originalImage)
             qimage2ndarray.alpha_view(result)[:] = numpy.uint8(255) * self.changed()
