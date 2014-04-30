@@ -271,8 +271,10 @@ class PDFDecanter(QtCore.QObject):
         if cacheFilename is None:
             pdfFilename = os.path.abspath(pdfFilename)
             dirname, basename = os.path.split(pdfFilename)
+            w, h = self.slideSize()
             cacheFilename = os.path.join(
-                dirname, "pdf_decanter_cache_%s.bz2" % os.path.splitext(basename)[0])
+                dirname, "pdf_decanter_cache_%s_%dx%d.bz2" % (
+                    os.path.splitext(basename)[0], w, h))
 
         if useCache is not False:
             if os.path.exists(cacheFilename):
