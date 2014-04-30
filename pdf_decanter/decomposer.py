@@ -44,7 +44,9 @@ class MostFrequentlyUsedColors(object):
             self._colors.append(color)
             self._counts.append(1)
 
-
+class IncompatibleMergeError(RuntimeError):
+    pass
+            
 class ChangedRect(ObjectWithFlags):
     """Represents changes, i.e. a bounding box (rect()) and a number
     of labels within that ROI.  Plain rectangles are represented with
@@ -152,13 +154,18 @@ class ChangedRect(ObjectWithFlags):
         case if both cover exactly the same pixels."""
         return self.boundingRect() == other.boundingRect() and numpy.all(self.changed() == other.changed())
 
+    def canMerge(self, other):
+        return (self._occurrences == other._occurrences and
+                self._labelImage is other._labelImage and
+                self._originalImage is other._originalImage and
+                self._alphaImage is other._alphaImage and
+                self._color == other._color and
+                self._flags == other._flags)
+
     def __or__(self, other):
         """Return union of this and other ChangedRect.  (Both must belong to the same image & labelImage.)"""
-        assert self._labelImage is other._labelImage
-        assert self._originalImage is other._originalImage
-        assert self._alphaImage is other._alphaImage
-        assert self._color == other._color
-        assert self._flags == other._flags
+        if not self.canMerge(other):
+            raise IncompatibleMergeError
         result = ChangedRect(
             self._rect | other._rect,
             self._labels + other._labels,
@@ -166,6 +173,7 @@ class ChangedRect(ObjectWithFlags):
             self._originalImage,
             self._alphaImage,
             self._color)
+        result._occurrences = self._occurrences
         result._flags = self._flags
         return result
 
@@ -199,7 +207,7 @@ def join_close_rects(rects):
                             bigger = r.boundingRect().adjusted(-dx, -dy, dx, dy)
                             changed = True
                             continue
-                    except AssertionError:
+                    except IncompatibleMergeError:
                         pass
                     
                 rest.append(other)
