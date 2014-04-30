@@ -106,7 +106,7 @@ class PDFInfos(object):
     @staticmethod
     def createFromPdfminer(filename):
         from pdfminer.pdfparser import PDFParser
-        from pdfminer.pdfdocument import PDFDocument
+        from pdfminer.pdfdocument import PDFDocument, PDFNoOutlines
         from pdfminer.pdfpage import PDFPage
         from pdfminer.pdftypes import PDFObjRef
 
@@ -150,7 +150,7 @@ class PDFInfos(object):
         try:
             result._outline = [(level, title, actionToPageIndex(a) if a else destToPageIndex(dest))
                                for level, title, dest, a, se in doc.get_outlines()]
-        except pdfminer.pdfparser.PDFNoOutlines:
+        except PDFNoOutlines:
             result._outline = None
 
         result._pageInfos = []
