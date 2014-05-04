@@ -67,6 +67,8 @@ class ChangedRect(ObjectWithFlags):
         self._occurrences = []
 
     def boundingRect(self):
+        if not self._labels:
+            return self._rect.toRect()
         return self._rect
 
     def area(self):
@@ -198,7 +200,7 @@ def join_compatible_rects(rects):
 
 
 def join_close_rects(rects):
-    dx, dy = 10, 3
+    dx, dy = 30, 3
     # heuristic that penalizes the cost of extra rects/objects
     # (area of unchanged pixels included in joint rect):
     pixel_threshold = 800
@@ -495,7 +497,7 @@ def extract_patches(frames):
                     patch = Patch(pos, image, r.occurrenceCount(), r.color())
                 else:
                     assert r.color() is not None
-                    patch = Patch(pos, r.boundingRect().size(), r.occurrenceCount(), r.color())
+                    patch = Patch(pos, r._rect.size(), r.occurrenceCount(), r.color())
                     assert patch.color() is not None
                 patch._flags = r._flags
 
@@ -513,7 +515,8 @@ def decompose_pages(pages, infos = None):
 
     for frame in frames:
         content = frame.content()
-        content[:] = join_compatible_rects(content)
+        content[:] = join_close_rects(content)
+        #content[:] = join_compatible_rects(content)
     extract_patches(frames)
 
     classify_navigation(frames)
