@@ -265,6 +265,9 @@ class Frame(object):
         if self.size() != other.size():
             return False
 
+        if self.header() == other.header():
+            return True
+        
         for patch in other.content():
             found = patch in self._content
             if not found:
