@@ -397,6 +397,9 @@ def detect_background_color(rgb_or_rgba, rect = None, outer_color = None):
     if outer_color is not None:
         horizontal_lines[(rgb_or_rgba[:,x1] == outer_color).all(-1)] = False
 
+    if not numpy.any(horizontal_lines):
+        return detect_background_color_four_borders(rgb_or_rgba)
+        
     return most_common_color(rgb_or_rgba[horizontal_lines,x1])
 
 
