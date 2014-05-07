@@ -171,8 +171,9 @@ class Frame(object):
         self._pdfPageInfos = None
 
     def __repr__(self):
-        return "<Frame %d, size %sx%s, %d patches>" % (
-            self.frameIndex(), self.size().width(), self.size().height(), len(self.content()))
+        return "<Frame %s, size %sx%s, %d patches>" % (
+            self.frameIndex() if self._slide is not None else 'at %0xd' % id(self),
+            self.size().width(), self.size().height(), len(self.content()))
 
     def setSlide(self, slide):
         """Set parent slide; expected to be called by Slide.addFrame()."""
