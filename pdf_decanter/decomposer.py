@@ -153,7 +153,7 @@ class ChangedRect(ObjectWithFlags):
         case if both cover exactly the same pixels."""
         return self.boundingRect() == other.boundingRect() and numpy.all(self.changed() == other.changed())
 
-    def mergeCompatible(self, other):
+    def isMergeCompatible(self, other):
         if not self._labels:
             return False # FLAG_RECTs are not mergeable
         return (self._occurrences == other._occurrences and
@@ -165,7 +165,7 @@ class ChangedRect(ObjectWithFlags):
 
     def __ior__(self, other):
         """Return union of this and other ChangedRect.  (Both must belong to the same image & labelImage.)"""
-        assert self.mergeCompatible(other)
+        assert self.isMergeCompatible(other)
         self._rect |= other._rect
         self._labels.extend(other._labels)
         return self
@@ -178,7 +178,7 @@ def join_compatible_rects(rects):
 
         rest = []
         for other in rects:
-            if r.mergeCompatible(other):
+            if r.isMergeCompatible(other):
                 r |= other
             else:
                 rest.append(other)
@@ -214,7 +214,7 @@ def join_close_rects(rects):
             rest = []
             for other in rects:
                 otherBBox = other.boundingRect()
-                if r.mergeCompatible(other) and bigger.intersects(otherBBox):
+                if r.isMergeCompatible(other) and bigger.intersects(otherBBox):
                     joinedBBox = bbox | otherBBox
                     if _area(joinedBBox) <= _area(bbox) + _area(otherBBox) + pixel_threshold:
                         r |= other
