@@ -163,19 +163,12 @@ class ChangedRect(ObjectWithFlags):
                 self._color == other._color and
                 self._flags == other._flags)
 
-    def __or__(self, other):
+    def __ior__(self, other):
         """Return union of this and other ChangedRect.  (Both must belong to the same image & labelImage.)"""
         assert self.mergeCompatible(other)
-        result = ChangedRect(
-            self._rect | other._rect,
-            self._labels + other._labels,
-            self._labelImage,
-            self._originalImage,
-            self._alphaImage,
-            self._color)
-        result._occurrences = self._occurrences
-        result._flags = self._flags
-        return result
+        self._rect |= other._rect
+        self._labels.extend(other._labels)
+        return self
 
 
 def join_compatible_rects(rects):
