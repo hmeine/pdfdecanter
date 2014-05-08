@@ -44,9 +44,6 @@ class MostFrequentlyUsedColors(object):
             self._colors.append(color)
             self._counts.append(1)
 
-class IncompatibleMergeError(RuntimeError):
-    pass
-            
 class ChangedRect(ObjectWithFlags):
     """Represents changes, i.e. a bounding box (rect()) and a number
     of labels within that ROI.  Plain rectangles are represented with
@@ -156,7 +153,9 @@ class ChangedRect(ObjectWithFlags):
         case if both cover exactly the same pixels."""
         return self.boundingRect() == other.boundingRect() and numpy.all(self.changed() == other.changed())
 
-    def canMerge(self, other):
+    def mergeCompatible(self, other):
+        if not self._labels:
+            return False # FLAG_RECTs are not mergeable
         return (self._occurrences == other._occurrences and
                 self._labelImage is other._labelImage and
                 self._originalImage is other._originalImage and
@@ -166,8 +165,7 @@ class ChangedRect(ObjectWithFlags):
 
     def __or__(self, other):
         """Return union of this and other ChangedRect.  (Both must belong to the same image & labelImage.)"""
-        if not self.canMerge(other):
-            raise IncompatibleMergeError
+        assert self.mergeCompatible(other)
         result = ChangedRect(
             self._rect | other._rect,
             self._labels + other._labels,
@@ -187,9 +185,9 @@ def join_compatible_rects(rects):
 
         rest = []
         for other in rects:
-            try:
+            if r.mergeCompatible(other):
                 r |= other
-            except IncompatibleMergeError:
+            else:
                 rest.append(other)
 
         rects = rest
@@ -198,6 +196,8 @@ def join_compatible_rects(rects):
 
     return result
 
+def _area(rect):
+    return rect.width() * rect.height()
 
 def join_close_rects(rects):
     dx, dy = 30, 3
@@ -210,7 +210,8 @@ def join_close_rects(rects):
     result = []
     while rects:
         r = rects.pop()
-        bigger = r.boundingRect().adjusted(-dx, -dy, dx, dy)
+        bbox = r.boundingRect()
+        bigger = bbox.adjusted(-dx, -dy, dx, dy)
 
         # as long as rect changed (got united with other), we keep
         # looking for new intersecting rects:
@@ -219,17 +220,15 @@ def join_close_rects(rects):
             changed = False
             rest = []
             for other in rects:
-                joined = None
-                if bigger.intersects(other.boundingRect()):
-                    try:
-                        joined = r | other
-                        if joined.area() <= r.area() + other.area() + pixel_threshold:
-                            r = joined
-                            bigger = r.boundingRect().adjusted(-dx, -dy, dx, dy)
-                            changed = True
-                            continue
-                    except IncompatibleMergeError:
-                        pass
+                otherBBox = other.boundingRect()
+                if r.mergeCompatible(other) and bigger.intersects(otherBBox):
+                    joinedBBox = bbox | otherBBox
+                    if _area(joinedBBox) <= _area(bbox) + _area(otherBBox) + pixel_threshold:
+                        r |= other
+                        bbox = r.boundingRect()
+                        bigger = bbox.adjusted(-dx, -dy, dx, dy)
+                        changed = True
+                        continue
                     
                 rest.append(other)
             rects = rest
