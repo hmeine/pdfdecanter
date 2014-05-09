@@ -171,24 +171,6 @@ class ChangedRect(ObjectWithFlags):
         return self
 
 
-def join_compatible_rects(rects):
-    result = []
-    while rects:
-        r = rects.pop()
-
-        rest = []
-        for other in rects:
-            if r.isMergeCompatible(other):
-                r |= other
-            else:
-                rest.append(other)
-
-        rects = rest
-
-        result.append(r)
-
-    return result
-
 def _area(rect):
     return rect.width() * rect.height()
 
