@@ -192,45 +192,56 @@ def join_compatible_rects(rects):
 def _area(rect):
     return rect.width() * rect.height()
 
-def join_close_rects(rects):
+FLAG_MERGED = 512  # marks rects that were merged into other ones ('delete' flag)
+    
+def join_close_rects(frame):
     dx, dy = 30, 3
     # heuristic that penalizes the cost of extra rects/objects
     # (area of unchanged pixels included in joint rect):
     pixel_threshold = 800
 
+    rects = frame.content()
     origCount = len(rects)
-    
+
     result = []
     while rects:
         r = rects.pop()
+        if r.flag(FLAG_MERGED) or r._occurrences[0] is not frame:
+            # Since _occurrences of all compatible rects is the same,
+            # we don't have to try merging on other frames again.
+            result.append(r)
+            continue
         bbox = r.boundingRect()
         bigger = bbox.adjusted(-dx, -dy, dx, dy)
 
+        compatible = [other for other in rects
+                      if r.isMergeCompatible(other)]
+        
         # as long as rect changed (got united with other), we keep
         # looking for new intersecting rects:
         changed = True
         while changed:
             changed = False
-            rest = []
-            for other in rects:
+            for other in compatible:
+                if other.flag(FLAG_MERGED):
+                    continue
                 otherBBox = other.boundingRect()
-                if r.isMergeCompatible(other) and bigger.intersects(otherBBox):
+                if bigger.intersects(otherBBox):
                     joinedBBox = bbox | otherBBox
                     if _area(joinedBBox) <= _area(bbox) + _area(otherBBox) + pixel_threshold:
                         r |= other
+                        other.setFlag(FLAG_MERGED)
                         bbox = r.boundingRect()
                         bigger = bbox.adjusted(-dx, -dy, dx, dy)
                         changed = True
-                        continue
-                    
-                rest.append(other)
-            rects = rest
 
         result.append(r)
 
     #print 'join_close_rects: returning %d/%d rects' % (len(result), origCount)
     if origCount > len(result):
         return join_close_rects(result)
+
+    result = [rect for rect in result if not rect.flag(FLAG_MERGED)]
 
     return result
 
@@ -427,8 +438,6 @@ def create_frames(raw_pages):
             #if not r.flag(Patch.FLAG_RECT):
             r.detectAlpha(bgColor = bgColor)
         
-        #rects = join_close_rects(rects)
-
         h, w = page.shape[:2]
         r, g, b = bgColor
         bgColor = QtGui.QColor(r, g, b)
@@ -509,9 +518,9 @@ def decompose_pages(pages, infos = None):
     rawPatchCount, uniquePatchCount = find_identical_rects(frames)
 
     for frame in frames:
-        content = frame.content()
-        content[:] = join_close_rects(content)
+        frame.content()[:] = join_close_rects(frame)
         #content[:] = join_compatible_rects(content)
+
     extract_patches(frames)
 
     classify_navigation(frames)
