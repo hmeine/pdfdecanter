@@ -137,6 +137,7 @@ class PDFInfos(object):
         def actionToPageIndex(action):
             assert get(action, 'S').name == 'GoTo'
             name = get(action, 'D')
+            # resolve "named destination":
             dest = get(doc.get_dest(name))
             return destToPageIndex(dest)
 
@@ -145,6 +146,8 @@ class PDFInfos(object):
             if isinstance(dest, dict):
                 assert dest.keys() == ['D'], repr(dest)
                 dest = get(dest, 'D')
+            # destinations contain the page as first element,
+            # the rest concerns the ROI / zoom state (various modes there):
             return pageids.index(dest[0].objid)
 
         try:
@@ -160,20 +163,29 @@ class PDFInfos(object):
             pageLinks = []
 
             for anno in get(page.annots) or []:
-                action = get(anno, 'A')
-                subType = get(action, 'S').name
+                anno = get(anno)
                 rect = numpy.array(get(anno, 'Rect'), float).reshape((2, 2))
-                if subType == 'GoTo':
-                    assert sorted(action.keys()) == ['D', 'S']
-                    pageLinks.append((rect, actionToPageIndex(action)))
-                elif subType == 'URI':
-                    #assert sorted(action.keys()) == ['S', 'Type', 'URI']
-                    link = get(action, 'URI')
-                    if link.startswith('file:'):
-                        # resolve relative pathname w.r.t. PDF filename:
-                        link = 'file:' + os.path.join(os.path.dirname(filename),
-                                                      link[5:])
-                    pageLinks.append((rect, link))
+                if 'Dest' in anno:
+                    # 'Dest' is the older (more compatible) way to
+                    # specify links
+                    dest = get(anno, 'Dest')
+                    pageLinks.append((rect, destToPageIndex(dest)))
+                elif 'A' in anno:
+                    # actions are much more general and include 'GoTo'
+                    # (with viewport spec.) with variants for remote
+                    # and embedded documents
+                    action = get(anno, 'A')
+                    subType = get(action, 'S').name
+                    if subType == 'GoTo':
+                        pageLinks.append((rect, actionToPageIndex(action)))
+                    elif subType == 'URI':
+                        #assert sorted(action.keys()) == ['S', 'Type', 'URI']
+                        link = get(action, 'URI')
+                        if link.startswith('file:'):
+                            # resolve relative pathname w.r.t. PDF filename:
+                            link = 'file:' + os.path.join(os.path.dirname(filename),
+                                                          link[5:])
+                        pageLinks.append((rect, link))
 
             pageBox = numpy.array([page.mediabox], float).reshape((2, 2))
 
