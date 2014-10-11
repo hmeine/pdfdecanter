@@ -14,7 +14,7 @@
 
 from __future__ import division
 
-from dynqt import QtCore, QtGui, QtOpenGL, getprop as p
+from dynqt import qt, QtCore, QtGui, QtOpenGL, getprop as p
 
 import numpy, os, sys, time, math, operator
 import bz2_pickle
@@ -338,7 +338,16 @@ class PDFDecanter(QtCore.QObject):
                 r.resetItems()
 
         return True
-        
+
+    def snapshot(self, filename = 'snapshot.svg'):
+        svg = qt.QtSvg.QSvgGenerator()
+        svg.setFileName(filename)
+        svg.setSize(QtCore.QSize(*self.slideSize()))
+        p = QtGui.QPainter(svg)
+        self._scene.render(p)
+        p.end()
+        svg.outputDevice().close()
+            
     def _setupGrid(self):
         self._overviewColumnCount = min(5, int(math.ceil(math.sqrt(len(self._slides)))))
 
