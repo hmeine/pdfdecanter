@@ -617,11 +617,12 @@ def save_classifier(basename):
     return bz2_pickle.pickle(
         filename, (classifier, navigation_examples))
 
+
 def load_classifier(basename):
     global classifier, navigation_examples
     filename = basename + '.pkl.bz2'
     if os.path.exists(filename):
         try:
             classifier, navigation_examples = bz2_pickle.unpickle(filename)
-        except ImportError, e:
+        except (ImportError, TypeError), e:
             sys.stderr.write("%s\n" % e)
