@@ -184,7 +184,7 @@ class PDFDecanter(QtCore.QObject):
             renderer = self._currentRenderer()
             if not renderer:
                 return
-            scale, margin = self._maxpectScaleAndMargin(renderer.frame().size())
+            scale, margin = self._maxpectScaleAndMargin(renderer.frame().sizeF())
             pres.setPos(QtCore.QPointF(margin.width(), margin.height()) - p(renderer.pos) * scale)
         else:
             scale = self._overviewScale()
@@ -368,7 +368,7 @@ class PDFDecanter(QtCore.QObject):
         lastLineBreak = previousWidth = 0
         for i, renderer in enumerate(self._renderers):
             if col > 0:
-                x += PADDING_X * max(previousWidth, renderer.slide().size().width())
+                x += PADDING_X * max(previousWidth, renderer.slide().sizeF().width())
             
             if slideLevel[i] and lastLineBreak < i - 1:
                 y += (1.0 + PADDING_Y + LINEBREAK_PADDING / slideLevel[i]) * rowHeight
@@ -376,14 +376,14 @@ class PDFDecanter(QtCore.QObject):
                 lastLineBreak = i
             elif col >= self._overviewColumnCount:
                 y += (1.0 + PADDING_Y) * rowHeight
-                x = INDENT_X * renderer.slide().size().width() if lastLineBreak else 0
+                x = INDENT_X * renderer.slide().sizeF().width() if lastLineBreak else 0
                 col = rowHeight = 0
 
             renderer.setPos(x, y)
 
-            x += renderer.slide().size().width()
-            previousWidth = renderer.slide().size().width()
-            rowHeight = max(rowHeight, renderer.slide().size().height())
+            x += renderer.slide().sizeF().width()
+            previousWidth = renderer.slide().sizeF().width()
+            rowHeight = max(rowHeight, renderer.slide().sizeF().height())
             col += 1
 
     def _updateCursor(self, animated):
@@ -402,7 +402,7 @@ class PDFDecanter(QtCore.QObject):
             self._cursorPos = None
 
         r = QtCore.QRectF(p(self._currentRenderer().pos),
-                          self._currentRenderer().slide().size())
+                          self._currentRenderer().slide().sizeF())
 
         if not animated:
             self._cursor.setPos(r.topLeft())
@@ -534,7 +534,7 @@ class PDFDecanter(QtCore.QObject):
 
         self._currentFrameIndex = frameIndex
 
-        scale, margin = self._maxpectScaleAndMargin(targetFrame.size())
+        scale, margin = self._maxpectScaleAndMargin(targetFrame.sizeF())
         targetPresentationPos = QtCore.QPointF(margin.width(), margin.height()) - p(renderer.pos) * scale
         
         if not self._inOverview:

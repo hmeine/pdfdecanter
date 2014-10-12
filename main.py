@@ -42,8 +42,8 @@ g.loadPDF(pdfFilename,
           createCache = options.create_cache)
 
 pixelCount = g._slides.pixelCount()
-ss = g._slides[0].size()
-rawCount = g._slides.frameCount() * ss.width() * ss.height()
+sw, sh = g.slideSize() # _slides[0].sizeF()
+rawCount = g._slides.frameCount() * sw * sh
 print "%d pixels out of %d retained. (%.1f%%)" % (pixelCount, rawCount, 100.0 * pixelCount / rawCount)
 
 if not g.hadEventLoop:

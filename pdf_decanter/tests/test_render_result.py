@@ -14,8 +14,8 @@ slides = decompose_pages(pages, infos)
 
 def test_frame_sizes():
     for frame in slides.frames():
-        assert frame.size().width() == sizePX[0]
-        assert frame.size().height() == sizePX[1]
+        assert frame.sizeF().width() == sizePX[0]
+        assert frame.sizeF().height() == sizePX[1]
 
 def test_frame_count():
     assert slides.frameCount() == infos.pageCount()
@@ -39,7 +39,7 @@ scene = QtGui.QGraphicsScene(0, 0, sizePX[0], sizePX[1])
 
 def get_render_result(renderer):
     frame = renderer.frame()
-    img = QtGui.QImage(frame.size().toSize(), QtGui.QImage.Format_RGB32)
+    img = QtGui.QImage(frame.sizeF().toSize(), QtGui.QImage.Format_RGB32)
     img.fill(QtGui.QColor(0, 0, 0).rgb())
     p = QtGui.QPainter(img)
     r = renderer.sceneBoundingRect()

@@ -227,7 +227,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         
         self._resetAnimation()
         self._frame = frame
-        newGeometry = QtCore.QRectF(p(self.pos), frame.size())
+        newGeometry = QtCore.QRectF(p(self.pos), frame.sizeF())
 
         addItems = {}
         removeItems = dict(self._items)
@@ -285,7 +285,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         slide = cmp(targetFrame.slide().slideIndex(),
                     sourceFrame.slide().slideIndex())
 
-        oldGeometry = QtCore.QRectF(p(self.pos), self._frame.size())
+        oldGeometry = QtCore.QRectF(p(self.pos), self._frame.sizeF())
         newGeometry, addItems, removeItems = self._changeFrame(targetFrame)
         if oldGeometry != newGeometry:
             self._geometryAnimation = QtCore.QPropertyAnimation(self, 'geometry', self)
@@ -364,7 +364,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                 if coveredRect.contains(_frameBoundingRect(oldItem)):
                     del fadeOut[oldKey]
 
-        offset = self._frame.size().width() * slide
+        offset = self._frame.sizeF().width() * slide
 
         # set up property animations for sliding/fading in/out:
         for items, contentName, duration, propName, startValue, endValue in (
@@ -423,7 +423,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         self._staticParents = {}
 
     def _frameRect(self):
-        return QtCore.QRectF(QtCore.QPointF(0, 0), self._frame.size())
+        return QtCore.QRectF(QtCore.QPointF(0, 0), self._frame.sizeF())
 
     def headerItems(self):
         return [item for key, (layer, item) in self._items.iteritems()

@@ -173,7 +173,7 @@ class Frame(object):
     def __repr__(self):
         return "<Frame %s, size %sx%s, %d patches>" % (
             self.frameIndex() if self._slide is not None else 'at %0xd' % id(self),
-            self.size().width(), self.size().height(), len(self.content()))
+            self.sizeF().width(), self.sizeF().height(), len(self.content()))
 
     def setSlide(self, slide):
         """Set parent slide; expected to be called by Slide.addFrame()."""
@@ -200,7 +200,7 @@ class Frame(object):
         .slide().presentation()."""
         return self._slide.presentation()
 
-    def size(self):
+    def sizeF(self):
         """Return size (in pixels, as QSizeF) of this Frame"""
         return QtCore.QSizeF(self._size)
 
@@ -230,7 +230,7 @@ class Frame(object):
         if not self._pdfPageInfos:
             return
 
-        frameSize = self.size()
+        frameSize = self.sizeF()
 
         for rect, link in self._pdfPageInfos.relativeLinks():
             if onlyExternal and isinstance(link, int):
@@ -247,7 +247,7 @@ class Frame(object):
         if not self._pdfPageInfos:
             return None
         
-        frameSize = self.size()
+        frameSize = self.sizeF()
         relPos = (pos.x() / frameSize.width(),
                   (frameSize.height() - pos.y()) / frameSize.height())
         for rect, link in self._pdfPageInfos.relativeLinks():
@@ -262,7 +262,7 @@ class Frame(object):
         have a corresponding successor
         (cf. ChangedRect.isSuccessorOf()).
         """
-        if self.size() != other.size():
+        if self.sizeF() != other.sizeF():
             return False
 
         if self.header() == other.header():
@@ -308,8 +308,8 @@ class Slide(object):
         self._currentSubIndex = None
         self._seen = False
 
-    def size(self):
-        return self._frames[0].size()
+    def sizeF(self):
+        return self._frames[0].sizeF()
 
     def presentation(self):
         return self._presentation
@@ -327,7 +327,7 @@ class Slide(object):
         return self._frames.index(frame)
 
     def contentRect(self, margin = 0):
-        result = QtCore.QRectF(0, 0, self.size().width(), self.size().height())
+        result = QtCore.QRectF(QtCore.QPointF(0, 0), self.sizeF())
 
         for frame in self:
             for patch in frame.header():
@@ -345,7 +345,7 @@ class Slide(object):
 
     def addFrame(self, frame):
         if len(self._frames):
-            assert frame.size() == self.size()
+            assert frame.sizeF() == self.sizeF()
         
         self._frames.append(frame)
         frame.setSlide(self)

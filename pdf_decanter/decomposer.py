@@ -588,7 +588,7 @@ def _classify_navigation_fallback(frames):
     # if classifier 
     
     for frame in frames:
-        frame_size = frame.size()
+        frame_size = frame.sizeF()
 
         header_bottom = frame_size.height() * 0.16 # frame_size.height() / 3
         footer_top    = frame_size.height() * 0.75
