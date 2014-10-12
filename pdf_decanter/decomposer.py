@@ -571,12 +571,15 @@ def classify_navigation(frames):
         return _classify_navigation_fallback(frames)
 
     for frame in frames:
+        frameWidth  = frame.sizeF().width()
+        frameHeight = frame.sizeF().height()
         for patch in frame.content():
             key = _classificationKey(patch)
 
             klass = classifier.predict([key])
-            patch.setFlag(Patch.FLAG_HEADER, klass == Patch.FLAG_HEADER)
-            patch.setFlag(Patch.FLAG_FOOTER, klass == Patch.FLAG_FOOTER)
+            top, bottom = key[2:4]
+            patch.setFlag(Patch.FLAG_HEADER, (klass == Patch.FLAG_HEADER) and (bottom < frameHeight / 2))
+            patch.setFlag(Patch.FLAG_FOOTER, (klass == Patch.FLAG_FOOTER) and (top > frameHeight / 2))
             
 
 def _classify_navigation_fallback(frames):
