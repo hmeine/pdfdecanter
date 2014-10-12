@@ -98,25 +98,30 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             cls._originalCustomItemState[item] = item.parentItem()
 
     def _frameItems(self, frame):
+        """Return list of (layer, item) pairs with all items necessary for
+        rendering the given frame.  Each `layer` is a string that
+        eventually determines the parent item."""
+        
         class ResultItems(object):
+            """Local class, because this is closely tied to the algorithm of the
+            surrounding function."""
+            
             def __init__(self, items):
                 self._existingItems = items
                 self._newItems = {}
-                self._key = None
+                self._lastQueriedKey = None
             
             def get_existing_item(self, key):
-                self._key = key
+                self._lastQueriedKey = key
                 layer, item = self._existingItems.get(key, (None, None))
                 return item
 
             def add(self, item, layer, key = None):
                 if key is None:
-                    key = self._key
+                    key = self._lastQueriedKey
                     assert key is not None
-                else:
-                    assert self._key is None
                 self._newItems[key] = (layer, item)
-                self._key = None
+                self._lastQueriedKey = None
 
             def __delitem__(self, index):
                 del self._newItems[index]
@@ -131,6 +136,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
         debugRects = []
 
+        # frame contents
         for patch in frame.content():
             item = result.get_existing_item(key = patch)
             if item is None:
@@ -158,6 +164,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
             debugRects.append(('DEBUG_%s' % patch, _frameBoundingRect(item), layer))
 
+        # movies (.mng links)
         for rect, link in frame.linkRects():
             if link.startswith('file:') and link.endswith('.mng'):
                 item = result.get_existing_item(key = link)
@@ -182,6 +189,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
         staticItems = result.items()
 
+        # additional custom items
         customItems = self._customItems[self._contentItem().scene()]
         for item in customItems[frame]:
             # add 1px border for partial volume effects:
@@ -199,6 +207,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
             debugRects.append(('DEBUG_%s' % item, _frameBoundingRect(item), layer))
 
+        # debug-mode only items (rects around stuff)
         if self.DEBUG:
             for rect, link in frame.linkRects(onlyExternal = False):
                 debugRects.append(('DEBUG_%s' % link, rect, QtCore.Qt.yellow))
@@ -251,7 +260,8 @@ class FrameRenderer(QtGui.QGraphicsWidget):
     
     def setFrame(self, frame):
         """Set rendered frame() to the given frame.  Immediately set
-        up child items for the given frame."""
+        up child items for the given frame.  Will not do anything if
+        self.frame() is already the given frame."""
         
         if self._frame is not frame:
             self._setFrame(frame)
