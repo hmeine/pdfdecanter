@@ -360,9 +360,12 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                         continue
                     if newKey.isSuccessorOf(oldKey):
                         changed = True
+                        if oldKey in slideOut:
+                            del slideOut[oldKey]
+                        else:
+                            print "not found in slideOut (fadeOut: %s): %s" % (oldKey in fadeOut, oldKey)
                         fadeOut[oldKey] = (oldLayer, oldItem)
                         fadeIn[newKey] = (newLayer, newItem)
-                        del slideOut[oldKey]
                         break
                 if not changed:
                     slideIn[newKey] = (newLayer, newItem)
