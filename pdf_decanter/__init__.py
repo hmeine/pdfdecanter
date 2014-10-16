@@ -268,8 +268,9 @@ class PDFDecanter(QtCore.QObject):
     def loadPDF(self, pdfFilename, cacheFilename = None, useCache = None, createCache = False):
         slides = None
 
+        pdfFilename = os.path.abspath(pdfFilename)
+        
         if cacheFilename is None:
-            pdfFilename = os.path.abspath(pdfFilename)
             dirname, basename = os.path.split(pdfFilename)
             w, h = self.slideSize()
             cacheFilename = os.path.join(
@@ -299,6 +300,7 @@ class PDFDecanter(QtCore.QObject):
                 bz2_pickle.pickle(cacheFilename, slides)
 
         self.setSlides(slides)
+        self._view.setWindowFilePath(pdfFilename)
 
     def setSlides(self, slides):
         self._slides = slides
