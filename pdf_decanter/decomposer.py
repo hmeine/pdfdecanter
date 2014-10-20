@@ -627,5 +627,6 @@ def load_classifier(basename):
     if os.path.exists(filename):
         try:
             classifier, navigation_examples = bz2_pickle.unpickle(filename)
-        except (ImportError, TypeError), e:
-            sys.stderr.write("%s\n" % e)
+        except StandardError, e:
+            # base class for ImportError, TypeError, AttributeError
+            sys.stderr.write("Error loading classifier: %s\n" % e)
