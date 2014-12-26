@@ -177,7 +177,7 @@ def _area(rect):
 FLAG_MERGED = 512  # marks rects that were merged into other ones ('delete' flag)
     
 def join_close_rects(frame):
-    dx, dy = 30, 3
+    dx, dy = 100, 30
     # heuristic that penalizes the cost of extra rects/objects
     # (area of unchanged pixels included in joint rect):
     pixel_threshold = 800
