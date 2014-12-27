@@ -31,6 +31,8 @@ op.add_option("--ignore-cache", action = "store_false",
 op.add_option("--no-gui", action = "store_false",
               dest = "show_gui", default = True,
               help = "skip main GUI (use for benchmarking / cache generation)")
+op.add_option("--profile", action = "store_true",
+              help = "enable profiling (and dump to 'pdf_decanter.prof')")
 options, args = op.parse_args()
 
 pdfFilename, = args
@@ -40,9 +42,18 @@ g = pdf_decanter.start(show = options.show_gui)
 if options.use_opengl and options.show_gui:
     g.enableGL()
 
+if options.profile:
+    import cProfile
+    pr = cProfile.Profile()
+    pr.enable()
+
 g.loadPDF(pdfFilename,
           useCache = options.use_cache,
           createCache = options.create_cache)
+
+if options.profile:
+    pr.disable()
+    pr.dump_stats('pdf_decanter.prof')
 
 pixelCount = g._slides.pixelCount()
 sw, sh = g.slideSize() # _slides[0].sizeF()
