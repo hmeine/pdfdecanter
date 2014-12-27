@@ -28,13 +28,16 @@ op.add_option("--cache", action = "store_true",
 op.add_option("--ignore-cache", action = "store_false",
               dest = "use_cache", default = None,
               help = "ignore cache file (even if it seems to be up-to-date)")
+op.add_option("--no-gui", action = "store_false",
+              dest = "show_gui", default = True,
+              help = "skip main GUI (use for benchmarking / cache generation)")
 options, args = op.parse_args()
 
 pdfFilename, = args
 
-g = pdf_decanter.start()
+g = pdf_decanter.start(show = options.show_gui)
 
-if options.use_opengl:
+if options.use_opengl and options.show_gui:
     g.enableGL()
 
 g.loadPDF(pdfFilename,
@@ -46,6 +49,6 @@ sw, sh = g.slideSize() # _slides[0].sizeF()
 rawCount = g._slides.frameCount() * sw * sh
 print "%d pixels out of %d retained. (%.1f%%)" % (pixelCount, rawCount, 100.0 * pixelCount / rawCount)
 
-if not g.hadEventLoop:
+if options.show_gui and not g.hadEventLoop:
     from pdf_decanter.dynqt import QtGui
     sys.exit(QtGui.qApp.exec_())
