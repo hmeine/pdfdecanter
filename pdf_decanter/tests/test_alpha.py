@@ -12,6 +12,8 @@ def color(r, g, b):
 # --------------------------------------------------------------------
 
 def _check_alpha(alpha, max_neg_diff = 0, max_pos_diff = 0):
+    assert alpha is not None
+    assert alpha.dtype == numpy.uint8
     expected_alpha = 255 - imread('test_on_white.png')[...,0]
     diff = (alpha - expected_alpha).view(numpy.int8)
     assert diff.min() >= max_neg_diff
@@ -23,8 +25,6 @@ def test_black_on_white():
     bg = color(255, 255, 255)
     c = color(0, 0, 0)
     alpha = verified_unblend(rgb, bg, c)
-    assert alpha is not None
-    assert alpha.dtype == numpy.uint8
     _check_alpha(alpha, -1)
 
 
@@ -33,7 +33,6 @@ def test_white_on_black():
     bg = color(0, 0, 0)
     c = color(255, 255, 255)
     alpha = verified_unblend(rgb, bg, c)
-    assert alpha is not None
     _check_alpha(alpha)
 
 
@@ -42,7 +41,6 @@ def test_black_on_bg():
     bg = imread('test_bg.png')
     c = color(0, 0, 0)
     alpha = verified_unblend(rgb, bg, c)
-    assert alpha is not None
     _check_alpha(alpha, -4, 1)
 
 
@@ -51,5 +49,4 @@ def test_green_on_bg():
     bg = imread('test_bg.png')
     c = color(181, 255, 64)
     alpha = verified_unblend(rgb, bg, c)
-    assert alpha is not None
     _check_alpha(alpha, -1)
