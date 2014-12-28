@@ -49,20 +49,11 @@ def unblend_alpha(rgb, bg, c):
 
 
 def blend_images(bg, alpha, c):
-    _, bg = numpy.broadcast_arrays(alpha[...,None], bg)
-    composedImg = qimage2ndarray.array2qimage(bg)
+    result = numpy.zeros(alpha.shape + (3, ), numpy.uint8)
 
-    # build fg image:
-    fgImg = QtGui.QImage(composedImg.size(), QtGui.QImage.Format_ARGB32)
-    qimage2ndarray.rgb_view(fgImg)[:] = c
-    qimage2ndarray.alpha_view(fgImg)[:] = alpha
-
-    # compose:
-    p = QtGui.QPainter(composedImg)
-    p.drawImage(0, 0, fgImg)
-    p.end()
-
-    return qimage2ndarray.rgb_view(composedImg)
+    bg = numpy.require(bg, dtype = numpy.uint16) * (255 - alpha)[...,None]
+    fg = numpy.require(c,  dtype = numpy.uint16) * alpha[...,None]
+    return ((bg + fg) / 255).astype(numpy.uint8)
 
 
 def verified_unblend(rgb, bg, c, maxAbsDiff = 1):
@@ -70,6 +61,7 @@ def verified_unblend(rgb, bg, c, maxAbsDiff = 1):
     if alpha is None:
         return None
     composed = blend_images(bg, alpha, c)
-    if numpy.all(numpy.abs((composed - rgb).view(numpy.int8)) <= maxAbsDiff):
+    diff = (composed - rgb).view(numpy.int8)
+    if numpy.all(numpy.abs(diff) <= maxAbsDiff):
         return alpha
     return None
