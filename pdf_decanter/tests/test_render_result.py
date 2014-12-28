@@ -47,11 +47,11 @@ def get_render_result(renderer):
     return qimage2ndarray.rgb_view(img)
 
 
-def assert_render_result(renderer, expected_result):
+def assert_render_result(renderer, expected_result, maxAbsDiff = 1):
     actual_result = get_render_result(renderer)
     assert actual_result.shape == expected_result.shape
-    rendering_differences = actual_result - expected_result
-    assert numpy.all(rendering_differences == 0)
+    rendering_differences = (actual_result - expected_result).view(numpy.int8)
+    assert numpy.abs(rendering_differences).max() <= maxAbsDiff
 
 
 import pytest
