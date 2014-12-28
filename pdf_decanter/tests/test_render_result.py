@@ -35,7 +35,6 @@ hasApp = QtGui.QApplication.instance()
 if not hasApp:
     app = QtGui.QApplication([])
 
-scene = QtGui.QGraphicsScene(0, 0, sizePX[0], sizePX[1])
 
 def get_render_result(renderer):
     frame = renderer.frame()
@@ -55,11 +54,16 @@ def assert_render_result(renderer, expected_result):
     assert numpy.all(rendering_differences == 0)
 
 
-# TODO: add page number argument (splitting up test)
-def test_render_results():
+import pytest
+
+@pytest.fixture(params = range(len(pages)))
+def frame_index(request):
+    return request.param
+
+
+def test_render_results(frame_index):
     renderer = FrameRenderer(None)
+    scene = QtGui.QGraphicsScene(0, 0, sizePX[0], sizePX[1])
     scene.addItem(renderer)
-    for page, frame in zip(pages, slides.frames()):
-        renderer.setFrame(frame)
-        assert_render_result(renderer, page)
-    
+    renderer.setFrame(slides.frame(frame_index))
+    assert_render_result(renderer, pages[frame_index])
