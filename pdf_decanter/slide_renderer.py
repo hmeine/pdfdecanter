@@ -202,6 +202,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                     #     _frameBoundingRect(item), _frameBoundingRect(staticItem), key, staticItem)
                     del result[okey]
 
+            item.setZValue(1) # above non-custom content, independent from dictionary key
             item.show()
             result.add(item, layer = 'content', key = item)
 
