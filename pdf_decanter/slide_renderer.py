@@ -95,6 +95,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         customItems[frame].extend(items)
 
         for item in items:
+            assert item.parentItem() is not None
             cls._originalCustomItemState[item] = item.parentItem()
 
     def _frameItems(self, frame):
@@ -165,14 +166,15 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             debugRects.append(('DEBUG_%s' % patch, _frameBoundingRect(item), layer))
 
         # movies (.mng links)
-        for rect, link in frame.linkRects():
+        for rect, link in frame.linkRects(): # FIXME: does not work anymore in MeVisLab? (Use AkademieDT for testing.)
             if link.startswith('file:') and link.endswith('.mng'):
                 item = result.get_existing_item(key = link)
                 if item is None:
                     if rect.width() < 1 and rect.height() < 1:
                         # bug in XeLaTeX w.r.t. images used in hyperlinks?
                         for patch in frame.patchesAt(QtCore.QPoint(rect.left() + 4, rect.top() - 4)):
-                            rect = rect.united(QtCore.QRectF(patch.boundingRect()))
+                            if not patch.flag(presentation.Patch.FLAG_RECT):
+                                rect = rect.united(QtCore.QRectF(patch.boundingRect()))
 
                     movie = QtGui.QMovie(link[5:])
                     player = QtGui.QLabel()
@@ -184,6 +186,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                     item.setWidget(player)
                     item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
                     item.setPos(rect.topLeft())
+                    item.setZValue(1) # above non-custom content, independent from dictionary key
                     movie.start()
                 result.add(item, layer = 'content')
 
