@@ -211,8 +211,9 @@ class Frame(object):
         return set(self._content)
 
     def patchesAt(self, pos):
+        posF = QtCore.QPointF(pos)
         for patch in self._content:
-            if patch.boundingRect().contains(pos):
+            if patch.boundingRect().contains(pos if not patch.flag(Patch.FLAG_RECT) else posF):
                 yield patch
 
     def frameIndex(self):
