@@ -59,12 +59,14 @@ class PDFDecanter(QtCore.QObject):
     hide neighboring slides in case of a larger window (e.g. 16:9
     fullscreen with 4:3 slides)."""
     
-    def __init__(self, view = None):
+    def __init__(self, view = None, slideSize = (1024, 768)):
         QtCore.QObject.__init__(self)
 
+        self._slideSize = slideSize
+        
         if view is None:
             view = QtGui.QGraphicsView()
-            w, h = self.slideSize()
+            w, h = slideSize
             view.resize(w, h)
         self._view = view
 
@@ -143,7 +145,7 @@ class PDFDecanter(QtCore.QObject):
 
     def slideSize(self):
         """Return size at which to render PDFs"""
-        return 1024, 768 # TODO: make this an option
+        return self._slideSize
 
     def presentationBounds(self):
         result = QtCore.QRectF()
@@ -737,7 +739,7 @@ class PDFDecanter(QtCore.QObject):
             self._updateCursor(animated = True)
 
 
-def start(view = None, show = True):
+def start(view = None, show = True, **kwargs):
     global app
     hasApp = QtGui.QApplication.instance()
     if not hasApp:
@@ -747,7 +749,7 @@ def start(view = None, show = True):
     app.setApplicationName("PDF Decanter")
     app.setApplicationVersion(__version__)
 
-    result = PDFDecanter(view)
+    result = PDFDecanter(view = view, **kwargs)
     result.hadEventLoop = hasattr(app, '_in_event_loop') and app._in_event_loop # IPython support
 
     if show and view is None:

@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import sys
+import sys, re
 import pdf_decanter
 
 from optparse import OptionParser
@@ -22,6 +22,8 @@ op = OptionParser(usage = "%prog [options] <filename.pdf>")
 op.add_option("--no-opengl", action = "store_false",
               dest = "use_opengl", default = True,
               help = "disable OpenGL for rendering (default: use OpenGL)")
+op.add_option("--size", "-s", default = '1024x768',
+              help = "set target rendering / window size in pixels")
 op.add_option("--cache", action = "store_true",
               dest = "create_cache", default = False,
               help = "use caching, create new cache if necessary (default: use if present, but don't create cache file)")
@@ -37,7 +39,13 @@ options, args = op.parse_args()
 
 pdfFilename, = args
 
-g = pdf_decanter.start(show = options.show_gui)
+ma = re.match('([0-9]+)[ x*,/]([0-9]+)', options.size)
+if not ma:
+    sys.stderr.write('ERROR: Could not parse size argument %r; expected format like 1024x768\n')
+    sys.exit(1)
+slideSize = map(int, ma.groups())
+
+g = pdf_decanter.start(show = options.show_gui, slideSize = slideSize)
 
 if options.use_opengl and options.show_gui:
     g.enableGL()
