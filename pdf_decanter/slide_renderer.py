@@ -367,7 +367,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                         if oldKey in slideOut:
                             del slideOut[oldKey]
                         else:
-                            print "not found in slideOut (fadeOut: %s): %s" % (oldKey in fadeOut, oldKey)
+                            print("not found in slideOut (fadeOut: %s): %s" % (oldKey in fadeOut, oldKey))
                         fadeOut[oldKey] = (oldLayer, oldItem)
                         fadeIn[newKey] = (newLayer, newItem)
                         break

@@ -66,7 +66,7 @@ if options.profile:
 pixelCount = g._slides.pixelCount()
 sw, sh = g.slideSize() # _slides[0].sizeF()
 rawCount = g._slides.frameCount() * sw * sh
-print "%d pixels out of %d retained. (%.1f%%)" % (pixelCount, rawCount, 100.0 * pixelCount / rawCount)
+print("%d pixels out of %d retained. (%.1f%%)" % (pixelCount, rawCount, 100.0 * pixelCount / rawCount))
 
 if options.show_gui and not g.hadEventLoop:
     from pdf_decanter.dynqt import QtGui

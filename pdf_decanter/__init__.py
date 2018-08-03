@@ -294,8 +294,8 @@ class PDFDecanter(QtCore.QObject):
 
             slides = decomposer.decompose_pdf(pdfFilename, sizePX = self.slideSize())
             
-            print "complete rendering took %.3gs. (%.3gs. real time)" % (
-                time.clock() - cpuTime, time.time() - wallClockTime)
+            print("complete rendering took %.3gs. (%.3gs. real time)" % (
+                time.clock() - cpuTime, time.time() - wallClockTime))
 
             if createCache:
                 sys.stdout.write("caching in '%s'...\n" % cacheFilename)

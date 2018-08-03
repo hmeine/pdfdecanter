@@ -517,9 +517,9 @@ def decompose_pages(pages, infos = None):
                                    for patch in result.patchSet()
                                    if patch.flag(Patch.FLAG_MONOCHROME)))
         
-    print "%d slides, %d frames, %d distinct patches (of %d) before merging, %d monochrome (%d colors)" % (
+    print("%d slides, %d frames, %d distinct patches (of %d) before merging, %d monochrome (%d colors)" % (
         result.slideCount(), result.frameCount(),
-        uniquePatchCount, rawPatchCount, monochromePatchCount, monochromeColorCount)
+        uniquePatchCount, rawPatchCount, monochromePatchCount, monochromeColorCount))
     return result
 
 

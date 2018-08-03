@@ -54,7 +54,7 @@ def renderAllPages(pdfFilename, **kwargs):
         yield page
         pageIndex += 1
 
-    print
+    print()
     rest, _ = pdftoppm.communicate()
     assert not rest, "pdftoppm returned more than the expected PPM data (%d extra bytes)" % len(rest)
     assert pdftoppm.returncode == 0

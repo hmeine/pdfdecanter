@@ -57,7 +57,7 @@ class PopplerRenderer(object):
 
         self._pageIndex += 1
         if self._pageIndex == pageCount:
-            print
+            print()
 
         return result
 
