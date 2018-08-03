@@ -14,10 +14,22 @@
 
 import bz2, cPickle as pkl
 
-def pickle(filename, obj):
+def pickle(filename, *objs):
+    '''Pickle (and compress) one or more objects into the given file.'''
     with bz2.BZ2File(filename, "w") as f:
-        pkl.dump(obj, f, pkl.HIGHEST_PROTOCOL)
+        for obj in objs:
+            pkl.dump(obj, f, pkl.HIGHEST_PROTOCOL)
         
 def unpickle(filename):
+    '''Uncompress and unpickle exactly one (the first) object from the given file.'''
+    return iter_unpickle(filename).next()
+        
+def iter_unpickle(filename):
+    '''Uncompress and unpickle objects from the given file (generator function).'''
     with bz2.BZ2File(filename) as f:
-        return pkl.Unpickler(f).load()
+        up = pkl.Unpickler(f)
+        while True:
+            try:
+                yield up.load()
+            except EOFError:
+                break
