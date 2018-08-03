@@ -618,15 +618,17 @@ def _classify_navigation_fallback(frames):
 def save_classifier(basename):
     filename = basename + '.pkl.bz2'
     return bz2_pickle.pickle(
-        filename, (classifier, navigation_examples))
+        filename, navigation_examples, classifier)
 
 
 def load_classifier(basename):
     global classifier, navigation_examples
     filename = basename + '.pkl.bz2'
     if os.path.exists(filename):
+        up = bz2_pickle.iter_unpickle(filename)
         try:
-            classifier, navigation_examples = bz2_pickle.unpickle(filename)
+            navigation_examples = up.next()
+            classifier = up.next()
         except StandardError, e:
             # base class for ImportError, TypeError, AttributeError
             sys.stderr.write("Error loading classifier: %s\n" % e)
