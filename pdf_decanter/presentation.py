@@ -13,8 +13,8 @@
 #  limitations under the License.
 
 import numpy, itertools
-from dynqt import QtCore, QtGui, qimage2ndarray
-import pdf_infos
+from .dynqt import QtCore, QtGui, qimage2ndarray
+from . import pdf_infos
 
 
 def boundingRect(rects):

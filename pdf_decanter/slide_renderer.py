@@ -13,8 +13,8 @@
 #  limitations under the License.
 
 import collections
-from dynqt import QtCore, QtGui, getprop as p
-import presentation
+from .dynqt import QtCore, QtGui, getprop as p
+from . import presentation
 
 UNSEEN_OPACITY = 0.5
 FADE_DURATION = 150

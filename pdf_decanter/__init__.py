@@ -14,11 +14,12 @@
 
 from __future__ import division
 
-from dynqt import qt, QtCore, QtGui, QtOpenGL, getprop as p
+
+from .dynqt import qt, QtCore, QtGui, QtOpenGL, getprop as p
 
 import numpy, os, sys, time, math, operator
-import bz2_pickle
-import decomposer, slide_renderer
+from . import bz2_pickle
+from . import decomposer, slide_renderer
 
 __version__ = "0.1"
 

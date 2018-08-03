@@ -16,11 +16,11 @@
 i.e. creating a Presentation instance from a sequence of images."""
 
 import os, sys, time, hashlib, numpy
-from dynqt import QtCore, QtGui, qimage2ndarray
-import pdf_infos, pdf_renderer, bz2_pickle
-import alpha
+from .dynqt import QtCore, QtGui, qimage2ndarray
+from . import pdf_infos, pdf_renderer, bz2_pickle
+from . import alpha
 
-from presentation import ObjectWithFlags, Patch, Frame, Presentation
+from .presentation import ObjectWithFlags, Patch, Frame, Presentation
 
 class MostFrequentlyUsedColors(object):
     def __init__(self):

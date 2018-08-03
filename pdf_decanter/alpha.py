@@ -13,7 +13,7 @@
 #  limitations under the License.
 
 import numpy
-from dynqt import QtGui, qimage2ndarray
+from .dynqt import QtGui, qimage2ndarray
 
 
 def unblend_alpha_1d(rgb, bg, c):

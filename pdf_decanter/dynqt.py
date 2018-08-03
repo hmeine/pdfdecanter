@@ -78,7 +78,7 @@ class QtDriver(object):
 
 	@staticmethod
 	def _initPythonQt():
-		import pythonqt_workarounds
+		from . import pythonqt_workarounds
 
 	def importMod(self, mod):
 		if self._drv == 'PyQt4':
