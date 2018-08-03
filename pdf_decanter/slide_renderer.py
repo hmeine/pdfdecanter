@@ -128,7 +128,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                 del self._newItems[index]
                 
             def items(self):
-                return self._newItems.items()
+                return list(self._newItems.items())
 
             def added(self):
                 return self._newItems
@@ -190,7 +190,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                     movie.start()
                 result.add(item, layer = 'content')
 
-        staticItems = result.items()
+        staticItems = list(result.items())
 
         # additional custom items
         customItems = self._customItems[self._contentItem().scene()]
@@ -245,7 +245,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         addItems = {}
         removeItems = dict(self._items)
 
-        for key, (layer, item) in self._frameItems(frame).iteritems():
+        for key, (layer, item) in self._frameItems(frame).items():
             try:
                 del removeItems[key]
             except KeyError:
@@ -278,7 +278,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         self._removeItems(removeItems)
 
     def _removeItems(self, items):
-        for key, (layer, item) in items.iteritems():
+        for key, (layer, item) in items.items():
             # we must not remove custom items from the scene:
             if key is item:
                 item.hide() # just hide them
@@ -320,7 +320,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             fadeOut = dict(removeItems)
             fadeIn = addItems
         else:
-            for oldKey, (oldLayer, oldItem) in removeItems.iteritems():
+            for oldKey, (oldLayer, oldItem) in removeItems.items():
                 # always slide custom items:
                 if oldKey is oldItem:
                     slideOut[oldKey] = (oldLayer, oldItem)
@@ -339,7 +339,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
 
                 slideOut[oldKey] = (oldLayer, oldItem)
 
-            for newKey, (newLayer, newItem) in addItems.iteritems():
+            for newKey, (newLayer, newItem) in addItems.items():
                 # always slide custom items:
                 if newKey is newItem:
                     slideIn[newKey] = (newLayer, newItem)
@@ -359,7 +359,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                 # look for pairs (oldItem, newItem) of Patches where
                 # newKey.isSuccessorOf(oldKey) => fade out/in
                 changed = False
-                for oldKey, (oldLayer, oldItem) in removeItems.iteritems():
+                for oldKey, (oldLayer, oldItem) in removeItems.items():
                     if not isinstance(oldKey, presentation.Patch):
                         continue
                     if newKey.isSuccessorOf(oldKey):
@@ -375,9 +375,9 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                     slideIn[newKey] = (newLayer, newItem)
 
         # don't fade out items that are completely covered by items that fade in:
-        for newKey, (newLayer, newItem) in fadeIn.iteritems():
+        for newKey, (newLayer, newItem) in fadeIn.items():
             coveredRect = _frameBoundingRect(newItem)
-            for oldKey, (oldLayer, oldItem) in fadeOut.items():
+            for oldKey, (oldLayer, oldItem) in list(fadeOut.items()):
                 if coveredRect.contains(_frameBoundingRect(oldItem)):
                     del fadeOut[oldKey]
 
@@ -397,7 +397,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             if items:
                 parentItems = set()
 
-                for key, (layer, item) in items.iteritems():
+                for key, (layer, item) in items.items():
                     parentItem = self._contentItem("%s-%s" % (layer, contentName))
                     self._staticParents[item] = item.parentItem()
                     item.setParentItem(parentItem)
@@ -443,18 +443,18 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         return QtCore.QRectF(QtCore.QPointF(0, 0), self._frame.sizeF())
 
     def headerItems(self):
-        return [item for key, (layer, item) in self._items.iteritems()
+        return [item for key, (layer, item) in self._items.items()
                 if isinstance(key, presentation.Patch) and key.flag(presentation.Patch.FLAG_HEADER)]
 
     def footerItems(self):
-        return [item for key, (layer, item) in self._items.iteritems()
+        return [item for key, (layer, item) in self._items.items()
                 if isinstance(key, presentation.Patch) and key.flag(presentation.Patch.FLAG_FOOTER)]
 
     def patchOf(self, item):
         """Return corresponding Patch instance which is rendered by
         the given item.  Return None if the item does not represent a
         Patch, or if the item does not belong to this renderer."""
-        for key, (layer, thisItem) in self._items.iteritems():
+        for key, (layer, thisItem) in self._items.items():
             if thisItem is item:
                 if isinstance(key, presentation.Patch):
                     return key

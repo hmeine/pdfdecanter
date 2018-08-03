@@ -144,7 +144,7 @@ class PDFInfos(object):
         def destToPageIndex(dest):
             dest = get(dest)
             if isinstance(dest, dict):
-                assert dest.keys() == ['D'], repr(dest)
+                assert list(dest.keys()) == ['D'], repr(dest)
                 dest = get(dest, 'D')
             # destinations contain the page as first element,
             # the rest concerns the ROI / zoom state (various modes there):
