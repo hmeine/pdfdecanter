@@ -286,7 +286,7 @@ class PDFDecanter(QtCore.QObject):
                     sys.stdout.write("reading cache '%s'...\n" % cacheFilename)
                     try:
                         slides = bz2_pickle.unpickle(cacheFilename)
-                    except Exception, e:
+                    except Exception as e:
                         sys.stderr.write("FAILED to load cache (%s), re-rendering...\n" % (e, ))
         
         if slides is None:

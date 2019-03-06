@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import bz2, cPickle as pkl
+import bz2, pickle as pkl
 
 def pickle(filename, *objs):
     '''Pickle (and compress) one or more objects into the given file.'''
@@ -22,7 +22,7 @@ def pickle(filename, *objs):
         
 def unpickle(filename):
     '''Uncompress and unpickle exactly one (the first) object from the given file.'''
-    return iter_unpickle(filename).next()
+    return next(iter_unpickle(filename))
         
 def iter_unpickle(filename):
     '''Uncompress and unpickle objects from the given file (generator function).'''

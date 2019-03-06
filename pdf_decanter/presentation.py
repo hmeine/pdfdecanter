@@ -413,10 +413,10 @@ class Presentation(list):
         if self._pdfInfos:
             try:
                 it = iter(pdf_infos.labeledBeamerFrames(self._pdfInfos))
-                name, pages = it.next()
+                name, pages = next(it)
                 for pageNumber in itertools.count():
                     if pageNumber > pages[-1]:
-                        name, pages = it.next()
+                        name, pages = next(it)
                     if pageNumber in pages:
                         yield pages.index(pageNumber)
                     else:
@@ -453,12 +453,12 @@ class Presentation(list):
                 yield frame
 
     def slide(self, slideIndex):
-        if isinstance(slideIndex, basestring):
+        if isinstance(slideIndex, str):
             if not self._pdfInfos:
-                raise RuntimeError, "accessing slides by name is not possible without PDFInfos"
+                raise RuntimeError("accessing slides by name is not possible without PDFInfos")
             frameIndex = self._pdfInfos.names().get(slideIndex)
             if frameIndex is None:
-                raise RuntimeError, "no PDF anchor named %r found" % slideIndex
+                raise RuntimeError("no PDF anchor named %r found" % slideIndex)
             slideIndex, subIndex = self._frame2Slide[frameIndex]
         return self[slideIndex]
 

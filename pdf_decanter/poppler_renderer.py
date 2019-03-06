@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from __future__ import division
+
 try:
     import popplerqt4 as QtPoppler
 except ImportError:
@@ -35,7 +35,7 @@ class PopplerRenderer(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         pageCount = self._doc.numPages()
 
         if self._pageIndex >= pageCount:

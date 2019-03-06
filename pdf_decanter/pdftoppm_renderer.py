@@ -45,7 +45,7 @@ def renderAllPages(pdfFilename, **kwargs):
 
         try:
             page = readPPM(pdftoppm.stdout)
-        except IOError, e:
+        except IOError as e:
             if e.errno == 4:
                 break
         if page is None:

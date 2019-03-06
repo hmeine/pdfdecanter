@@ -435,7 +435,7 @@ try:
     import scipy.ndimage
 except ImportError:
     def create_frames_not_possible(raw_pages):
-        raise RuntimeError, "Could not import scipy.ndimage; frame decomposition not possible."
+        raise RuntimeError("Could not import scipy.ndimage; frame decomposition not possible.")
     create_frames = create_frames_not_possible
 
 
@@ -627,8 +627,8 @@ def load_classifier(basename):
     if os.path.exists(filename):
         up = bz2_pickle.iter_unpickle(filename)
         try:
-            navigation_examples = up.next()
-            classifier = up.next()
-        except StandardError, e:
+            navigation_examples = next(up)
+            classifier = next(up)
+        except Exception as e:
             # base class for ImportError, TypeError, AttributeError
             sys.stderr.write("Error loading classifier: %s\n" % e)

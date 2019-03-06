@@ -98,7 +98,7 @@ class PDFInfos(object):
     def create(cls, filename):
         try:
             return cls.createFromPdfminer(filename)
-        except Exception, e:
+        except Exception as e:
             sys.stderr.write("%s\n" % e)
             pass
         return None
@@ -119,7 +119,7 @@ class PDFInfos(object):
         result = PDFInfos()
         result._metaInfo = dict((key, str.decode(value, 'utf-16') if value.startswith('\xfe\xff') else value)
                                 for key, value in doc.info[0].items()
-                                if isinstance(value, basestring))
+                                if isinstance(value, str))
 
         pageids = [page.pageid for page in PDFPage.create_pages(doc)]
         result._pageCount = len(pageids)
@@ -235,6 +235,6 @@ def labeledBeamerFrames(pdfInfos):
             pages.append(page)
         if pages:
             result.append((name, pages))
-    print "%d pages out of %d belong to labeled beamer slides." % (
-        sum(len(pages) for name, pages in result), pdfInfos.pageCount())
-    return sorted(result, key = lambda (name, pages): pages[0])
+    print("%d pages out of %d belong to labeled beamer slides." % (
+        sum(len(pages) for name, pages in result), pdfInfos.pageCount()))
+    return sorted(result, key = lambda name_pages: name_pages[1][0])
