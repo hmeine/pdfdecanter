@@ -631,4 +631,4 @@ def load_classifier(basename):
             classifier = next(up)
         except Exception as e:
             # base class for ImportError, TypeError, AttributeError
-            sys.stderr.write("Error loading classifier: %s\n" % e)
+            sys.stderr.write("%s loading classifier: %s\n" % (type(e).__name__, e))
