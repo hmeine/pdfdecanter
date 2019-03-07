@@ -113,7 +113,8 @@ class PDFInfos(object):
         fp = open(filename, 'rb')
         parser = PDFParser(fp)
         doc = PDFDocument(parser)
-        doc.initialize()
+        if hasattr(doc, 'initialize'): # API change in pdfminer?!
+            doc.initialize() # does not seem to be present in recent versions
         assert doc.is_extractable
 
         result = PDFInfos()
