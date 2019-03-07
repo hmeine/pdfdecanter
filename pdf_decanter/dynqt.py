@@ -34,7 +34,7 @@ def getprop_other(getter):
 	return getter()
 
 class QtDriver(object):
-	DRIVERS = ('PyQt4', 'PySide', 'PythonQt')
+	DRIVERS = ('PyQt5', 'PySide2', 'PythonQt')
 	
 	@classmethod
 	def detect_qt(cls):
@@ -58,16 +58,16 @@ class QtDriver(object):
 		if drv is None:
 			drv = os.environ.get('QT_API')
 		if drv is None:
-			drv = 'PyQt4' # default to PyQt4
-		drv = {'pyside' : 'PySide', 'pyqt' : 'PyQt4'}.get(drv, drv) # map ETS syntax
+			drv = 'PyQt5' # default to PyQt5
+		drv = {'pyside' : 'PySide', 'pyqt' : 'PyQt5'}.get(drv, drv) # map ETS syntax
 		assert drv in self.DRIVERS
 		self._drv = drv
 
 	@staticmethod
-	def _initPyQt4():
-		"""initialize PyQt4 to be compatible with PySide"""
+	def _initPyQt5():
+		"""initialize PyQt5 to be compatible with PySide"""
 		import sip
-		if 'PyQt4.QtCore' in sys.modules:
+		if 'PyQt5.QtCore' in sys.modules:
 			# too late to configure API, let's check that it was properly parameterized...
 			for api in ('QVariant', 'QString'):
 				if sip.getapi(api) != 2:
@@ -81,8 +81,8 @@ class QtDriver(object):
 		from . import pythonqt_workarounds
 
 	def importMod(self, mod):
-		if self._drv == 'PyQt4':
-			self._initPyQt4()
+		if self._drv == 'PyQt5':
+			self._initPyQt5()
 		if self._drv == 'PythonQt':
 			self._initPythonQt()
 		qt = __import__('%s.%s' % (self._drv, mod))
