@@ -296,8 +296,9 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             return None # raise?
 
         # sliding transition (left/right) if Slide changes:
-        slide = cmp(targetFrame.slide().slideIndex(),
+        offset = (targetFrame.slide().slideIndex() -
                     sourceFrame.slide().slideIndex())
+        slideDirection = -1 if offset < 0 else (1 if offset > 0 else 0)
 
         oldGeometry = QtCore.QRectF(p(self.pos), self._frame.sizeF())
         newGeometry, addItems, removeItems = self._changeFrame(targetFrame)
@@ -315,7 +316,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         slideIn = {}
 
         # decide which items to slide and which to fade out/in:
-        if not slide:
+        if not slideDirection:
             # within-Slide animation, no sliding here:
             fadeOut = dict(removeItems)
             fadeIn = addItems
@@ -381,7 +382,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                 if coveredRect.contains(_frameBoundingRect(oldItem)):
                     del fadeOut[oldKey]
 
-        offset = self._frame.sizeF().width() * slide
+        offset = self._frame.sizeF().width() * slideDirection
 
         # set up property animations for sliding/fading in/out:
         for items, contentName, duration, propName, startValue, endValue in (
