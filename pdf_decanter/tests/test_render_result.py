@@ -57,7 +57,7 @@ def assert_render_result(renderer, expected_result):
 
 import pytest
 
-@pytest.fixture(params = range(len(pages)))
+@pytest.fixture(params = list(range(len(pages))))
 def frame_index(request):
     return request.param
 

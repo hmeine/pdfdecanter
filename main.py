@@ -43,7 +43,7 @@ ma = re.match('([0-9]+)[ x*,/]([0-9]+)', options.size)
 if not ma:
     sys.stderr.write('ERROR: Could not parse size argument %r; expected format like 1024x768\n')
     sys.exit(1)
-slideSize = map(int, ma.groups())
+slideSize = list(map(int, ma.groups()))
 
 g = pdf_decanter.start(show = options.show_gui, slideSize = slideSize)
 
