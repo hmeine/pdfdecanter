@@ -19,6 +19,12 @@ def test_renderPDFPage():
 
     assert (page4_buf != page2_buf).any()
     
-        
-#def test_renderAllPages():
-    
+def test_renderAllPages():
+    filename = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'testtalks', 'snakes_and_active_contours.pdf')
+
+    count = 0
+    for page in renderAllPages(filename):
+        count += 1
+        assert len(page.shape) == 3
+
+    assert count == 20
