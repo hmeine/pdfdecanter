@@ -289,7 +289,7 @@ def detectBackground(raw_frames, useFrames = 15):
     if len(raw_frames) > useFrames:
         inc = len(raw_frames)/useFrames
         end = 1 + inc * useFrames
-        bgd.include_frame_indices(range(len(raw_frames))[1:end:inc])
+        bgd.include_frame_indices(list(range(len(raw_frames)))[1:end:inc])
     else:
         useFrames = len(raw_frames)
 
@@ -561,7 +561,7 @@ def train_navigation_classifier():
     from sklearn.ensemble import RandomForestClassifier
     rf = RandomForestClassifier()
 
-    rf.fit(navigation_examples.keys(), navigation_examples.values())
+    rf.fit(list(navigation_examples.keys()), list(navigation_examples.values()))
     
     classifier = rf
 
@@ -631,4 +631,4 @@ def load_classifier(basename):
             classifier = next(up)
         except Exception as e:
             # base class for ImportError, TypeError, AttributeError
-            sys.stderr.write("Error loading classifier: %s\n" % e)
+            sys.stderr.write("%s loading classifier: %s\n" % (type(e).__name__, e))

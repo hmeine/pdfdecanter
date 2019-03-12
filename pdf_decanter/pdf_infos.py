@@ -113,7 +113,8 @@ class PDFInfos(object):
         fp = open(filename, 'rb')
         parser = PDFParser(fp)
         doc = PDFDocument(parser)
-        doc.initialize()
+        if hasattr(doc, 'initialize'): # API change in pdfminer?!
+            doc.initialize() # does not seem to be present in recent versions
         assert doc.is_extractable
 
         result = PDFInfos()
@@ -181,10 +182,10 @@ class PDFInfos(object):
                     elif subType == 'URI':
                         #assert sorted(action.keys()) == ['S', 'Type', 'URI']
                         link = get(action, 'URI')
-                        if link.startswith('file:'):
+                        if link.startswith(b'file:'):
                             # resolve relative pathname w.r.t. PDF filename:
                             link = 'file:' + os.path.join(os.path.dirname(filename),
-                                                          link[5:])
+                                                          link[5:].decode('utf-8'))
                         pageLinks.append((rect, link))
 
             pageBox = numpy.array([page.mediabox], float).reshape((2, 2))
@@ -229,7 +230,7 @@ def labeledBeamerFrames(pdfInfos):
     for name in names:
         pages = []
         for subframe in itertools.count(1):
-            page = names.get(name + '<%d>' % subframe)
+            page = names.get(name + b'<%d>' % subframe)
             if page is None:
                 break
             pages.append(page)

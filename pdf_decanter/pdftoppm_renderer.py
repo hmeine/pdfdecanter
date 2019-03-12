@@ -59,34 +59,36 @@ def renderAllPages(pdfFilename, **kwargs):
     assert not rest, "pdftoppm returned more than the expected PPM data (%d extra bytes)" % len(rest)
     assert pdftoppm.returncode == 0
 
-def readPPM(file):
-    def _readWord(prefix = ""):
+def readPPM(file_handle):
+    def _readWord(prefix = b''):
         result = prefix
         while True:
-            ch = file.read(1)
+            ch = file_handle.read(1)
             if not ch:
                 return None
-            elif ch in string.whitespace:
+            elif ch in b' \t\n\r\x0b\x0c':
                 if result:
                     break
                 continue
-            elif ch == '#':
-                file.readline()
+            elif ch == b'#':
+                file_handle.readline()
             result += ch
         return result
 
     header = _readWord()
     if header is None:
         return None
-    assert header == "P6"
+    assert header == b'P6'
     
     width = int(_readWord())
     height = int(_readWord())
     maxVal = int(_readWord())
     assert maxVal < 65536
 
-    pixelData = numpy.fromfile(
-        file,
-        dtype = numpy.uint8 if maxVal < 256 else numpy.uint16,
-        count = width * height * 3)
+    dtype = numpy.dtype(
+        numpy.uint8 if maxVal < 256 else numpy.uint16)
+    
+    pixelData = numpy.frombuffer(
+        file_handle.read(width * height * 3 * dtype.itemsize),
+        dtype = dtype)
     return pixelData.reshape((height, -1, 3))
