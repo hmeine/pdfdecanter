@@ -387,13 +387,13 @@ class FrameRenderer(QtWidgets.QGraphicsWidget):
         # set up property animations for sliding/fading in/out:
         for items, contentName, duration, propName, startValue, endValue in (
                 (slideOut, 'slideOut', SLIDE_DURATION,
-                 'pos', QtCore.QPoint(0, 0), QtCore.QPoint(-offset, 0)),
+                 b'pos', QtCore.QPoint(0, 0), QtCore.QPoint(-offset, 0)),
                 (slideIn, 'slideIn', SLIDE_DURATION,
-                 'pos', QtCore.QPoint(offset, 0), QtCore.QPoint(0, 0)),
+                 b'pos', QtCore.QPoint(offset, 0), QtCore.QPoint(0, 0)),
                 (fadeOut, 'fadeOut', FADE_DURATION,
-                 'opacity', 1.0, 0.0),
+                 b'opacity', 1.0, 0.0),
                 (fadeIn, 'fadeIn', FADE_DURATION,
-                 'opacity', 0.0, 1.0),
+                 b'opacity', 0.0, 1.0),
             ):
             if items:
                 parentItems = set()
