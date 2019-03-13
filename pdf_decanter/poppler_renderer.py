@@ -13,13 +13,11 @@
 #  limitations under the License.
 
 
-try:
-    import popplerqt4 as QtPoppler
-except ImportError:
-    import QtPoppler
-from PyQt4 import QtCore
+import popplerqt5 as QtPoppler
+from PyQt5 import QtCore
 import qimage2ndarray
 import sys
+
 
 class PopplerRenderer(object):
     def __init__(self, pdfFilename, sizePX = None, dpi = None, pageCount = None):
