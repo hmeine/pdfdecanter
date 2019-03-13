@@ -13,7 +13,7 @@
 #  limitations under the License.
 
 import collections
-from .dynqt import QtCore, QtGui, getprop as p
+from .dynqt import QtCore, QtGui, QtWidgets, getprop as p
 from . import presentation
 
 UNSEEN_OPACITY = 0.5
@@ -31,7 +31,7 @@ def _frameBoundingRect(item):
     result.translate(pos)
     return result
 
-class FrameRenderer(QtGui.QGraphicsWidget):
+class FrameRenderer(QtWidgets.QGraphicsWidget):
     """QGraphicsWidget that renders a Frame instance.
 
     The FrameRenderer itself is a QGraphicsWidget in order to
@@ -61,7 +61,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
     _originalCustomItemState = {}
 
     def __init__(self, parentItem):
-        QtGui.QGraphicsWidget.__init__(self, parentItem)
+        QtWidgets.QGraphicsWidget.__init__(self, parentItem)
 
         self._frame = None
         self._linkHandler = None
@@ -142,13 +142,13 @@ class FrameRenderer(QtGui.QGraphicsWidget):
             item = result.get_existing_item(key = patch)
             if item is None:
                 if patch.flag(presentation.Patch.FLAG_RECT):
-                    item = QtGui.QGraphicsRectItem()
+                    item = QtWidgets.QGraphicsRectItem()
                     item.setRect(patch.boundingRect())
                     item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
                     item.setBrush(patch.color())
                     item.setPen(QtGui.QPen(QtCore.Qt.NoPen))
                 else:
-                    item = QtGui.QGraphicsPixmapItem()
+                    item = QtWidgets.QGraphicsPixmapItem()
                     item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
                     item.setPos(QtCore.QPointF(patch.pos()))
                     item.setPixmap(patch.pixmap())
@@ -177,12 +177,12 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                                 rect = rect.united(QtCore.QRectF(patch.boundingRect()))
 
                     movie = QtGui.QMovie(link[5:])
-                    player = QtGui.QLabel()
+                    player = QtWidgets.QLabel()
                     player.setMovie(movie)
                     movie.setScaledSize(rect.size().toSize())
                     player.resize(round(rect.width()), round(rect.height()))
 
-                    item = QtGui.QGraphicsProxyWidget()
+                    item = QtWidgets.QGraphicsProxyWidget()
                     item.setWidget(player)
                     item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
                     item.setPos(rect.topLeft())
@@ -222,7 +222,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                     color = (QtCore.Qt.magenta
                              if layer == 'content' else
                              QtCore.Qt.green)
-                    item = QtGui.QGraphicsRectItem(rect)
+                    item = QtWidgets.QGraphicsRectItem(rect)
                     item.setAcceptedMouseButtons(QtCore.Qt.NoButton)
                     item.setPen(QtGui.QPen(color))
                 result.add(item, layer)
@@ -468,7 +468,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
         result = self._helperItems.get(key, None)
 
         if result is None:
-            result = QtGui.QGraphicsWidget(self)
+            result = QtWidgets.QGraphicsWidget(self)
             result.setAcceptedMouseButtons(QtCore.Qt.NoButton)
             if isinstance(key, str) and key.startswith('bg'):
                 result.setZValue(self.BACKGROUND_LAYER)
@@ -483,7 +483,7 @@ class FrameRenderer(QtGui.QGraphicsWidget):
                 if self._linkHandler(link):
                     event.accept()
                     return
-        QtGui.QGraphicsWidget.mousePressEvent(self, event)
+        QtWidgets.QGraphicsWidget.mousePressEvent(self, event)
 
 
 class SlideRenderer(FrameRenderer):    
@@ -506,7 +506,7 @@ class SlideRenderer(FrameRenderer):
         result = self._helperItems.get('cover')
         
         if result is None:
-            result = QtGui.QGraphicsRectItem(self._frameRect(), self)
+            result = QtWidgets.QGraphicsRectItem(self._frameRect(), self)
             result.setAcceptedMouseButtons(QtCore.Qt.NoButton)
             result.setBrush(QtCore.Qt.black)
             result.setOpacity(1.0 - UNSEEN_OPACITY)

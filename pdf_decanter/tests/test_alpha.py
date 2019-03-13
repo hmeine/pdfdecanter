@@ -1,4 +1,4 @@
-from PyQt4 import QtGui
+from PyQt5 import QtGui
 import qimage2ndarray, numpy, os
 from ..alpha import verified_unblend
 

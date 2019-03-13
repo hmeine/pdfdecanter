@@ -19,4 +19,3 @@ except ImportError as e:
     from .pdftoppm_renderer import renderAllPages
 else:
     from .poppler_renderer import renderAllPages
-

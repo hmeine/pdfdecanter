@@ -100,6 +100,7 @@ import numpy
 qt = QtDriver()
 QtCore = qt.QtCore
 QtGui = qt.QtGui
+QtWidgets = qt.QtWidgets
 QtOpenGL = qt.QtOpenGL
 getprop = qt.getprop()
 
