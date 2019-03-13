@@ -69,5 +69,5 @@ rawCount = g._slides.frameCount() * sw * sh
 print("%d pixels out of %d retained. (%.1f%%)" % (pixelCount, rawCount, 100.0 * pixelCount / rawCount))
 
 if options.show_gui and not g.hadEventLoop:
-    from pdf_decanter.dynqt import QtGui
-    sys.exit(QtGui.qApp.exec_())
+    from pdf_decanter.dynqt import QtWidgets
+    sys.exit(QtWidgets.qApp.exec_())

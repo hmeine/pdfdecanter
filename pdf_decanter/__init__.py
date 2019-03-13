@@ -14,7 +14,7 @@
 
 
 
-from .dynqt import qt, QtCore, QtGui, QtOpenGL, getprop as p
+from .dynqt import qt, QtCore, QtGui, QtWidgets, QtOpenGL, getprop as p
 
 import numpy, os, sys, time, math, operator
 from . import bz2_pickle
@@ -65,7 +65,7 @@ class PDFDecanter(QtCore.QObject):
         self._slideSize = slideSize
         
         if view is None:
-            view = QtGui.QGraphicsView()
+            view = QtWidgets.QGraphicsView()
             w, h = slideSize
             view.resize(w, h)
         self._view = view
@@ -74,7 +74,7 @@ class PDFDecanter(QtCore.QObject):
 
         self._view.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.SmoothPixmapTransform)
 
-        self._view.setFrameStyle(QtGui.QFrame.NoFrame)
+        self._view.setFrameStyle(QtWidgets.QFrame.NoFrame)
         self._view.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self._view.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
 
@@ -82,16 +82,16 @@ class PDFDecanter(QtCore.QObject):
             self._scene = view.scene()
             self._scene.setSceneRect(0, 0, p(self._view.width), p(self._view.height))
         else:
-            self._scene = QtGui.QGraphicsScene(0, 0, p(self._view.width), p(self._view.height))
+            self._scene = QtWidgets.QGraphicsScene(0, 0, p(self._view.width), p(self._view.height))
             self._view.setScene(self._scene)
         self._scene.setBackgroundBrush(QtCore.Qt.black)
         self._scene.installEventFilter(self) # for MouseButtonRelease events
 
-        self._presentationItem = QtGui.QGraphicsWidget()
+        self._presentationItem = QtWidgets.QGraphicsWidget()
         self._scene.addItem(self._presentationItem)
 
-        self._slideViewport = QtGui.QGraphicsRectItem(self._presentationItem)
-        self._slideViewport.setFlag(QtGui.QGraphicsItem.ItemClipsChildrenToShape)
+        self._slideViewport = QtWidgets.QGraphicsRectItem(self._presentationItem)
+        self._slideViewport.setFlag(QtWidgets.QGraphicsItem.ItemClipsChildrenToShape)
 
         self._cursor = None
 
@@ -135,7 +135,7 @@ class PDFDecanter(QtCore.QObject):
             return False
 
         self._view.setViewport(glWidget)
-        self._view.setViewportUpdateMode(QtGui.QGraphicsView.FullViewportUpdate)
+        self._view.setViewportUpdateMode(QtWidgets.QGraphicsView.FullViewportUpdate)
         self._view.viewport().setMouseTracking(True)
         self._view.viewport().installEventFilter(self)
         return True
@@ -243,7 +243,7 @@ class PDFDecanter(QtCore.QObject):
                     if patch is not None:
                         if self.toggleNavigationFlag(patch):
                             return
-            QtGui.qApp.beep() # no valid item found
+            QtWidgets.qApp.beep() # no valid item found
             return
         
         if not self._inOverview:
@@ -396,8 +396,8 @@ class PDFDecanter(QtCore.QObject):
         changed if animated == False."""
         
         if self._cursor is None:
-            self._cursor = QtGui.QGraphicsWidget(self._slideViewport)
-            self._cursorRect = QtGui.QGraphicsRectItem(self._cursor)
+            self._cursor = QtWidgets.QGraphicsWidget(self._slideViewport)
+            self._cursorRect = QtWidgets.QGraphicsRectItem(self._cursor)
             self._cursorRect.setPen(QtGui.QPen(QtCore.Qt.yellow, 25))
             self._cursorRect.setBrush(QtGui.QBrush(QtGui.QColor(255, 255, 0, 100)))
             self._cursor.setZValue(-10)
@@ -741,9 +741,9 @@ class PDFDecanter(QtCore.QObject):
 
 def start(view = None, show = True, **kwargs):
     global app
-    hasApp = QtGui.QApplication.instance()
+    hasApp = QtWidgets.QApplication.instance()
     if not hasApp:
-        app = QtGui.QApplication(sys.argv)
+        app = QtWidgets.QApplication(sys.argv)
     else:
         app = hasApp
     app.setApplicationName("PDF Decanter")
